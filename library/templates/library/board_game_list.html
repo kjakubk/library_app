@@ -1,0 +1,22 @@
+{% extends 'library/base.html' %}
+
+{% block title %}Kolekcja gier planszowych{% endblock %}
+
+{% block content %}
+<h1 class="mb-4 text-success border-bottom pb-2">Moja półka:</h1>
+
+<div class="row">
+    {% for item in items %}
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm h-100 border-success border-opacity-25">
+                <div class="card-body">
+                    <h5 class="card-title">{{ item.title }}</h5>
+                    <h3 class="card-text mt-3">{{item.is_expansion}}
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="col-12"><div class="alert alert-info">Brak gry w bazie.</div></div>
+    {% endfor %}
+</div>
+{% endblock %}

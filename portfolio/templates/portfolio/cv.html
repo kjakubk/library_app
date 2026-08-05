@@ -1,0 +1,46 @@
+{% extends 'library/base.html' %}
+
+{% block title %}Moje CV i Doświadczenie{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Kolumna z krótkim opisem (statyczna) -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm border-dark">
+            <div class="card-body text-center">
+                <h2 class="card-title mt-3">Jakub Kępczyński</h2>
+                <h5 class="text-muted">Data Analyst / Power BI Developer</h5>
+                <hr>
+                <p class="text-start mt-3">
+                    Inżynier Informatyki ze specjalizacją w Programowaniu i Analizie Danych. 
+                    Skupiam się na przekuwaniu surowych danych w czytelne dashboardy i automatyzacji procesów analitycznych.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kolumna z historią zatrudnienia z bazy danych -->
+    <div class="col-md-8">
+        <h2 class="mb-4 text-dark border-bottom pb-2">Doświadczenie Zawodowe</h2>
+        
+        {% for job in experiences %}
+            <div class="card shadow-sm mb-3 border-secondary border-opacity-25">
+                <div class="card-body">
+                    <h4 class="card-title text-primary">{{ job.job_title }}</h4>
+                    <h6 class="card-subtitle mb-3 text-muted">
+                        {{ job.company }} | {{ job.start_date|date:"M Y" }} - 
+                        {% if job.end_date %}
+                            {{ job.end_date|date:"M Y" }}
+                        {% else %}
+                            Obecnie
+                        {% endif %}
+                    </h6>
+                    <p class="card-text">{{ job.description }}</p>
+                </div>
+            </div>
+        {% empty %}
+            <div class="alert alert-secondary">Dodaj swoje doświadczenie w panelu administratora!</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

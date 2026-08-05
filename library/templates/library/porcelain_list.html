@@ -1,0 +1,317 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Porcelana - Kolekcje{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-2 px-md-4 py-4 mb-5">
+    
+    <!-- SEKCJA KAFELKÓW ZE STATYSTYKAMI -->
+    <div class="row g-3 mb-4">
+        <!-- Kafelek 1: Podsumowanie elementów (Typy) -->
+        <div class="col-12 col-lg-6">
+            <div class="card bg-body shadow-sm border rounded-4 p-3 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small fw-bold text-muted text-uppercase" style="letter-spacing: 0.5px;">☕ Rodzaje elementów</span>
+                    <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1 rounded-pill" style="font-size: 0.7rem;">Top 5</span>
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-1">
+                    {% for stat in name_stats %}
+                        <div class="badge bg-body-secondary border text-body px-3 py-2 rounded-3 d-flex align-items-center gap-2 fw-normal text-start">
+                            <span>{{ stat.name }}</span>
+                            <span class="badge bg-primary text-white rounded-pill px-2">{{ stat.count }}</span>
+                        </div>
+                    {% empty %}
+                        <span class="text-muted small fst-italic">Brak danych do podsumowania.</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Kafelek 2: Podsumowanie sygnatur (Marki) -->
+        <div class="col-12 col-lg-6">
+            <div class="card bg-body shadow-sm border rounded-4 p-3 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small fw-bold text-muted text-uppercase" style="letter-spacing: 0.5px;">🏺 Sygnatury i marki</span>
+                    <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1 rounded-pill" style="font-size: 0.7rem;">Top 5</span>
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-1">
+                    {% for stat in signature_stats %}
+                        <div class="badge bg-body-secondary border text-body px-3 py-2 rounded-3 d-flex align-items-center justify-content-between gap-3 fw-normal text-start w-100" style="max-width: none;">
+                            <span class="text-wrap">{{ stat.signature }}</span>
+                            <span class="badge bg-success text-white rounded-pill px-2 flex-shrink-0">{{ stat.count }}</span>
+                        </div>
+                    {% empty %}
+                        <span class="text-muted small fst-italic">Brak przypisanych sygnatur.</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Górny panel akcji, wyszukiwarki i filtrów -->
+    <div class="bg-body px-3 py-3 px-md-4 rounded-4 shadow-sm border mb-4">
+        <form method="GET" action="" class="row g-3 align-items-center">
+            
+            <!-- Wyszukiwarka tekstowa -->
+            <div class="col-12 col-xl-4">
+                <div class="input-group input-group-sm bg-body-secondary rounded-pill border px-3 py-2 align-items-center">
+                    <span class="text-muted me-2">🔍</span>
+                    <input type="text" name="q" value="{{ request.GET.q|default:'' }}" class="form-control form-control-sm border-0 bg-transparent shadow-none text-body" placeholder="Szukaj w tabeli...">
+                </div>
+            </div>
+
+            <!-- Filtr po stylu -->
+            <div class="col-12 col-sm-6 col-xl-3">
+                <select name="style" class="form-select form-select-sm bg-body-secondary rounded-pill border px-3 py-2 text-body shadow-none" onchange="this.form.submit()">
+                    <option value="">Wszystkie style</option>
+                    {% for st in available_styles %}
+                        <option value="{{ st }}" {% if selected_style == st %}selected{% endif %}>{{ st }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Filtr po sygnaturze -->
+            <div class="col-12 col-sm-6 col-xl-3">
+                <select name="signature" class="form-select form-select-sm bg-body-secondary rounded-pill border px-3 py-2 text-body shadow-none" onchange="this.form.submit()">
+                    <option value="">Wszystkie sygnatury</option>
+                    {% for sig in available_signatures %}
+                        <option value="{{ sig }}" {% if selected_signature == sig %}selected{% endif %}>{{ sig }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Zachowanie aktualnego sortowania w formularzu -->
+            {% if request.GET.sort %}<input type="hidden" name="sort" value="{{ request.GET.sort }}">{% endif %}
+
+            <!-- Przyciski akcji w formularzu -->
+            <div class="col-12 col-xl-2 d-flex gap-2 justify-content-xl-end">
+                <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3 py-2 fw-semibold w-100 shadow-sm">Filtruj</button>
+                {% if request.GET.q or request.GET.style or request.GET.signature or request.GET.sort %}
+                    <a href="{% url 'porcelain_list' %}" class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-2 text-decoration-none d-flex align-items-center justify-content-center" title="Resetuj filtry">🔄</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Pasek podsumowania i dodawania nowego elementu -->
+    <div class="d-flex justify-content-between align-items-center bg-body px-3 py-3 px-md-4 rounded-4 shadow-sm border mb-4">
+        <div class="badge bg-body border text-body px-3 py-2 rounded-pill fw-medium small d-flex align-items-center">
+            Znaleziono elementów: <strong class="text-primary fs-6 ms-2">{{ total_count|default:"0" }}</strong>
+        </div>
+        <div>
+            <a href="{% url 'porcelain_create' %}" class="btn btn-success btn-sm px-4 py-2 rounded-pill fw-semibold d-flex align-items-center justify-content-center gap-1 shadow-sm text-decoration-none">
+                + Dodaj element
+            </a>
+        </div>
+    </div>
+
+    <!-- Główna tabela porcelany -->
+    <div class="card bg-body shadow-sm border rounded-4 overflow-hidden mb-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="ps-3 ps-md-4 py-3" style="width: 70px;">Zdjęcie</th>
+                        
+                        <!-- Sortowanie: Nazwa elementu -->
+                        <th class="py-3" style="min-width: 150px;">
+                            <a href="?sort={% if current_sort == 'name' %}-name{% else %}name{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.style %}&style={{ request.GET.style }}{% endif %}{% if request.GET.signature %}&signature={{ request.GET.signature }}{% endif %}" class="text-white text-decoration-none d-flex align-items-center gap-1">
+                                Nazwa elementu
+                                <span style="font-size: 0.8rem;">
+                                    {% if current_sort == 'name' %}▲{% elif current_sort == '-name' %}▼{% else %}↕{% endif %}
+                                </span>
+                            </a>
+                        </th>
+
+                        <!-- Sortowanie: Sygnatura -->
+                        <th class="py-3" style="min-width: 250px;">
+                            <a href="?sort={% if current_sort == 'signature' %}-signature{% else %}signature{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.style %}&style={{ request.GET.style }}{% endif %}{% if request.GET.signature %}&signature={{ request.GET.signature }}{% endif %}" class="text-white text-decoration-none d-flex align-items-center gap-1">
+                                Sygnatura
+                                <span style="font-size: 0.8rem;">
+                                    {% if current_sort == 'signature' %}▲{% elif current_sort == '-signature' %}▼{% else %}↕{% endif %}
+                                </span>
+                            </a>
+                        </th>
+
+                        <th class="py-3 text-center">Styl</th>
+                        <th class="py-3 text-center">Rok</th>
+
+                        <!-- Sortowanie: Stan -->
+                        <th class="py-3 text-center">
+                            <a href="?sort={% if current_sort == 'condition' %}-condition{% else %}condition{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.style %}&style={{ request.GET.style }}{% endif %}{% if request.GET.signature %}&signature={{ request.GET.signature }}{% endif %}" class="text-white text-decoration-none d-inline-flex align-items-center gap-1 justify-content-center">
+                                Stan
+                                <span style="font-size: 0.8rem;">
+                                    {% if current_sort == 'condition' %}▲{% elif current_sort == '-condition' %}▼{% else %}↕{% endif %}
+                                </span>
+                            </a>
+                        </th>
+
+                        <th class="py-3 text-center">Cena</th>
+                        <th class="pe-3 pe-md-4 py-3 text-end" style="min-width: 160px;">Akcje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                        <tr>
+                            <!-- Miniatura -->
+                            <td class="ps-3 ps-md-4 py-2">
+                                <div style="width: 45px; height: 45px;">
+                                    {% if item.image_1 %}
+                                        <img src="{{ item.image_1.url }}" alt="{{ item.name }}" class="w-100 h-100 object-fit-cover rounded-circle shadow-sm border" style="cursor: pointer;" onclick="openGalleryModal({{ item.pk }})">
+                                    {% elif item.signature_image %}
+                                        <img src="{{ item.signature_image.url }}" alt="Sygnatura" class="w-100 h-100 object-fit-cover rounded-circle shadow-sm border" style="cursor: pointer;" onclick="openGalleryModal({{ item.pk }})">
+                                    {% else %}
+                                        <div class="w-100 h-100 bg-body-secondary border border-secondary border-opacity-25 rounded-circle d-flex align-items-center justify-content-center shadow-sm text-muted" style="font-size: 0.6rem;">Brak</div>
+                                    {% endif %}
+                                </div>
+                            </td>
+
+                            <!-- Nazwa -->
+                            <td class="fw-bold text-body">
+                                {{ item.name }}
+                            </td>
+
+                            <!-- Sygnatura -->
+                            <td>
+                                <span class="text-body small d-block">
+                                    {{ item.signature|default:"—" }}
+                                </span>
+                            </td>
+
+                            <!-- Styl -->
+                            <td class="text-center">
+                                <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1 rounded-pill fw-normal">
+                                    {{ item.style|default:"—" }}
+                                </span>
+                            </td>
+
+                            <!-- Rok pochodzenia -->
+                            <td class="text-center">
+                                <span class="font-monospace small text-muted">{{ item.year_of_origin|default:"—" }}</span>
+                            </td>
+
+                            <!-- Stan Zachowania -->
+                            <td class="text-center">
+                                {% if 'Idealny' in item.condition or 'Bardzo dobry' in item.condition %}
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 rounded-pill">{{ item.condition }}</span>
+                                {% elif 'Dobry' in item.condition or 'Średni' in item.condition %}
+                                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-1 rounded-pill">{{ item.condition }}</span>
+                                {% else %}
+                                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2 py-1 rounded-pill">{{ item.condition }}</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Cena -->
+                            <td class="text-center">
+                                <span class="fw-medium text-success small">{{ item.price|default:"—" }}</span>
+                            </td>
+
+                            <!-- Akcje -->
+                            <td class="text-end pe-3 pe-md-4">
+                                <div class="d-flex justify-content-end gap-1">
+                                    {% if item.image_1 or item.image_2 or item.image_3 or item.signature_image %}
+                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-2 border px-2 py-1" onclick="openGalleryModal({{ item.pk }})" title="Przeglądaj wszystkie zdjęcia">👁️ Podgląd</button>
+                                    {% endif %}
+                                    <a href="{% url 'porcelain_edit' item.pk %}" class="btn btn-sm btn-outline-secondary rounded-2 border px-2 py-1" title="Edytuj">✏️ Edytuj</a>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Ukryty kontener z danymi do galerii -->
+                        <div id="item-gallery-{{ item.pk }}" style="display:none;" 
+                             data-title="{% if item.image_1 %}{{ item.name|escapejs }}{% else %}Sygnatura: {{ item.name|escapejs }}{% endif %}"
+                             data-images='[
+                                {% if item.image_1 %}"{{ item.image_1.url }}"{% endif %}
+                                {% if item.image_2 %}{% if item.image_1 %},{% endif %}"{{ item.image_2.url }}"{% endif %}
+                                {% if item.image_3 %}{% if item.image_1 or item.image_2 %},{% endif %}"{{ item.image_3.url }}"{% endif %}
+                                {% if item.signature_image %}{% if item.image_1 or item.image_2 or item.image_3 %},{% endif %}"{{ item.signature_image.url }}"{% endif %}
+                             ]'></div>
+                    {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <p class="text-muted mb-1">Brak elementów spełniających kryteria.</p>
+                                <p class="small text-muted opacity-75">Spróbuj zmienić filtry lub wyszukiwaną frazę.</p>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- MODAL KARUZELI -->
+<div class="modal fade" id="galleryModal" tabindex="-1" aria-labelledby="galleryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-body border rounded-4 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold text-body" id="galleryModalLabel">Podgląd zdjęcia</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-4 position-relative">
+                <div class="d-flex justify-content-center align-items-center" style="min-height: 350px;">
+                    <img id="galleryModalImage" src="" alt="Zdjęcie elementu" class="img-fluid rounded-3 shadow-sm" style="max-height: 70vh; object-fit: contain;">
+                </div>
+                <button id="prevImgBtn" class="position-absolute top-50 start-0 translate-middle-y btn btn-dark bg-opacity-50 border-0 text-white rounded-end px-3 py-3 ms-2" onclick="changeImage(-1)" style="display:none;">❮</button>
+                <button id="nextImgBtn" class="position-absolute top-50 end-0 translate-middle-y btn btn-dark bg-opacity-50 border-0 text-white rounded-start px-3 py-3 me-2" onclick="changeImage(1)" style="display:none;">❯</button>
+            </div>
+            <div class="modal-footer border-top justify-content-center py-2">
+                <span id="galleryCounter" class="small text-muted fw-medium">Zdjęcie 1 z 1</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentGalleryImages = [];
+    let currentIndex = 0;
+
+    function openGalleryModal(itemId) {
+        const dataElement = document.getElementById('item-gallery-' + itemId);
+        if (!dataElement) return;
+
+        const titleText = dataElement.getAttribute('data-title');
+        try {
+            currentGalleryImages = JSON.parse(dataElement.getAttribute('data-images'));
+        } catch (e) {
+            currentGalleryImages = [];
+        }
+
+        currentIndex = 0;
+        document.getElementById('galleryModalLabel').textContent = titleText;
+        updateModalImage();
+
+        const prevBtn = document.getElementById('prevImgBtn');
+        const nextBtn = document.getElementById('nextImgBtn');
+        if (currentGalleryImages.length > 1) {
+            prevBtn.style.display = 'block';
+            nextBtn.style.display = 'block';
+        } else {
+            prevBtn.style.display = 'none';
+            nextBtn.style.display = 'none';
+        }
+
+        var myModal = new bootstrap.Modal(document.getElementById('galleryModal'));
+        myModal.show();
+    }
+
+    function changeImage(direction) {
+        currentIndex += direction;
+        if (currentIndex < 0) {
+            currentIndex = currentGalleryImages.length - 1;
+        } else if (currentIndex >= currentGalleryImages.length) {
+            currentIndex = 0;
+        }
+        updateModalImage();
+    }
+
+    function updateModalImage() {
+        if (currentGalleryImages.length > 0) {
+            document.getElementById('galleryModalImage').src = currentGalleryImages[currentIndex];
+            document.getElementById('galleryCounter').textContent = `Zdjęcie ${currentIndex + 1} z ${currentGalleryImages.length}`;
+        }
+    }
+</script>
+{% endblock %}

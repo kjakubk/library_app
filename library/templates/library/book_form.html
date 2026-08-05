@@ -1,0 +1,292 @@
+{% extends 'library/base.html' %}
+
+{% block title %}
+    {% if form.instance.pk %}Edytuj książkę{% else %}Dodaj książkę{% endif %} - Kolekcje
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-2 px-md-4 py-4 mb-5">
+    
+    <!-- Górny panel akcji -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center bg-body px-3 py-3 px-md-4 rounded-4 shadow-sm border mb-4 gap-3">
+        <div class="d-flex align-items-center gap-2 justify-content-center justify-content-md-start">
+            <span class="fs-4">{% if form.instance.pk %}✏️{% else %}➕{% endif %}</span>
+            <h5 class="mb-0 fw-bold text-body text-center text-md-start">
+                {% if form.instance.pk %}
+                    Edycja: <span class="text-primary">{{ form.instance.title }}</span>
+                {% else %}
+                    Dodaj nową pozycję do bazy
+                {% endif %}
+            </h5>
+        </div>
+        
+        <div class="d-flex justify-content-center">
+            <a href="{% url 'book_list' %}" class="btn btn-outline-secondary btn-sm px-4 py-2 rounded-pill fw-medium d-flex align-items-center justify-content-center gap-2 shadow-sm text-decoration-none w-100 w-md-auto">
+                ✕ Anuluj
+            </a>
+        </div>
+    </div>
+
+    <!-- Karta z formularzem -->
+    <div class="row justify-content-center">
+        <div class="col-xl-9 col-lg-10">
+            <div class="card bg-body shadow-sm border rounded-4 overflow-hidden">
+                <div class="card-body p-3 p-md-5">
+                    
+                    <form method="POST" enctype="multipart/form-data" id="modernDjangoForm">
+                        {% csrf_token %}
+                        
+                        <!-- UKRYTE POLE DO POBRANIA OKŁADKI Z API (ZACHOWUJE WARTOŚĆ PO BŁĘDZIE FORMULARZA) -->
+                        <input type="hidden" name="cover_url" id="id_cover_url" value="{{ request.POST.cover_url|default:'' }}">
+
+                        <!-- Komunikaty o błędach formularza -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger rounded-4 shadow-sm mb-4">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <div class="row g-3 align-items-end">
+                            {% for field in form %}
+                                <div class="col-12 {% if field.name in 'title subtitle description authors categories image tags translators illustrators' %}col-md-12{% else %}col-md-6{% endif %} mb-2 position-relative">
+                                    
+                                    {% if field.field.widget.input_type == 'checkbox' %}
+                                        <div class="form-check form-switch bg-body-secondary p-3 rounded-3 border d-flex align-items-center mb-0 mt-3" style="min-height: 48px;">
+                                            {{ field }}
+                                            <label for="{{ field.id_for_label }}" class="form-check-label fw-bold text-body mb-0 ms-3" style="cursor: pointer;">
+                                                {{ field.label }}
+                                            </label>
+                                        </div>
+                                    {% else %}
+                                        <label for="{{ field.id_for_label }}" class="form-label small fw-bold text-muted text-uppercase mb-1" style="letter-spacing: 0.5px;">
+                                            {{ field.label }} {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                                        </label>
+                                        
+                                        <!-- Magia: Wykrywamy pole ISBN i dodajemy obok przyciski Skanera i API -->
+                                        {% if field.name == 'isbn' %}
+                                            <div class="input-group">
+                                                {{ field }}
+                                                <button type="button" class="btn btn-primary shadow-none px-3 fw-medium d-flex align-items-center gap-2" id="fetchIsbnBtn" title="Pobierz dane po numerze ISBN">
+                                                    🌐 <span class="d-none d-sm-inline">Pobierz</span>
+                                                </button>
+                                                <button type="button" class="btn btn-secondary shadow-none px-3 fw-medium d-flex align-items-center gap-2" id="scanIsbnBtn" title="Zeskanuj kod kreskowy aparatem">
+                                                    📷 <span class="d-none d-sm-inline">Skanuj</span>
+                                                </button>
+                                            </div>
+                                        {% else %}
+                                            {{ field }}
+                                        {% endif %}
+                                        
+                                        {% if field.help_text %}
+                                            <div class="form-text small text-muted mt-1 opacity-75">{{ field.help_text }}</div>
+                                        {% endif %}
+                                    {% endif %}
+
+                                    {% if field.errors %}
+                                        <div class="text-danger small mt-1 fw-bold">
+                                            {{ field.errors|striptags }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <hr class="my-4 border-secondary border-opacity-25">
+
+                        <!-- Przyciski zapisu -->
+                        <div class="d-flex flex-column-reverse flex-sm-row justify-content-end gap-2 gap-sm-3 align-items-stretch align-items-sm-center">
+                            <a href="{% url 'book_list' %}" class="btn btn-light text-muted text-decoration-none small fw-medium py-2 rounded-pill w-100 w-sm-auto text-center border shadow-none">Wróć bez zapisu</a>
+                            <button type="submit" class="btn btn-success px-4 px-sm-5 py-2 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2 w-100 w-sm-auto">
+                                💾 Zapisz zmiany
+                            </button>
+                        </div>
+
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Modal dla skanera -->
+<div class="modal fade" id="scannerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg bg-body">
+            <div class="modal-header border-bottom border-secondary border-opacity-25">
+                <h5 class="modal-title fw-bold fs-6">Skanuj kod ISBN z okładki</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div id="reader" width="100%" class="rounded-bottom-4 overflow-hidden bg-dark"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        
+        // --- 1. Stylowanie formularza ---
+        const formElements = document.querySelectorAll('#modernDjangoForm input, #modernDjangoForm select, #modernDjangoForm textarea');
+        
+        formElements.forEach(function(el) {
+            if (el.type === 'hidden') return;
+
+            if (el.type === 'checkbox' || el.type === 'radio') {
+                el.classList.add('form-check-input', 'shadow-none', 'm-0');
+                el.style.cursor = 'pointer';
+                if(el.type === 'checkbox') {
+                    el.style.width = '2.5em';
+                    el.style.height = '1.25em';
+                }
+            } 
+            else if (el.tagName === 'SELECT') {
+                el.classList.add('form-select', 'bg-body', 'text-body', 'border-secondary', 'border-opacity-50', 'shadow-none', 'rounded-3', 'py-2');
+            } 
+            else {
+                if (el.parentElement.classList.contains('input-group')) {
+                    el.classList.add('form-control', 'bg-body', 'text-body', 'border-secondary', 'border-opacity-50', 'shadow-none', 'py-2');
+                } else {
+                    el.classList.add('form-control', 'bg-body', 'text-body', 'border-secondary', 'border-opacity-50', 'shadow-none', 'rounded-3', 'py-2');
+                }
+                
+                if (el.type === 'file') {
+                    el.classList.add('bg-body-secondary');
+                }
+            }
+        });
+
+        // --- 2. Obsługa API, podglądu okładki i skanera ---
+        const scanBtn = document.getElementById('scanIsbnBtn');
+        const fetchBtn = document.getElementById('fetchIsbnBtn');
+        const scannerModalEl = document.getElementById('scannerModal');
+        const isbnInput = document.getElementById('id_isbn'); 
+        const coverUrlInput = document.getElementById('id_cover_url');
+
+        let html5QrcodeScanner = null;
+
+        // Funkcja renderująca podgląd okładki
+        function renderCoverPreview(coverUrl) {
+            let fileInput = document.getElementById('id_image');
+            if (fileInput && coverUrl) {
+                let previewDiv = document.getElementById('apiCoverPreview');
+                if (!previewDiv) {
+                    previewDiv = document.createElement('div');
+                    previewDiv.id = 'apiCoverPreview';
+                    previewDiv.className = 'mt-3 d-flex align-items-center gap-3 p-3 bg-success bg-opacity-10 border border-success border-opacity-25 rounded-4 shadow-sm';
+                    fileInput.parentElement.appendChild(previewDiv);
+                }
+                previewDiv.innerHTML = `
+                    <img src="${coverUrl}" alt="Podgląd" class="rounded shadow-sm" style="height: 80px; width: 55px; object-fit: cover;">
+                    <div>
+                        <div class="fw-bold text-success mb-1">✓ Gotowe do pobrania okładki</div>
+                        <div class="small text-muted" style="line-height: 1.2;">Obraz z bazy zostanie automatycznie pobrany i zapisany podczas zapisywania formularza.</div>
+                    </div>
+                `;
+                fileInput.parentElement.classList.add('border-success', 'border-2');
+                fileInput.title = "Okładka zostanie pobrana automatycznie!";
+            }
+        }
+
+        // PRZYWRACANIE PODGLĄDU PO BŁĘDZIE FORMULARZA
+        if (coverUrlInput && coverUrlInput.value) {
+            renderCoverPreview(coverUrlInput.value);
+        }
+
+        function fetchBookData(isbn) {
+            if (!isbn) return;
+            
+            const originalText = fetchBtn.innerHTML;
+            fetchBtn.innerHTML = '⏳...';
+            fetchBtn.disabled = true;
+
+            fetch(`/kolekcje/api/ksiazka/${isbn}/`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Nie znaleziono książki w zewnętrznej bazie.');
+                    return response.json();
+                })
+                .then(data => {
+                    // Wypełnianie tekstu
+                    if (data.title && document.getElementById('id_title')) document.getElementById('id_title').value = data.title;
+                    if (data.authors && document.getElementById('id_authors')) document.getElementById('id_authors').value = data.authors;
+                    if (data.publisher && document.getElementById('id_publisher')) document.getElementById('id_publisher').value = data.publisher;
+                    if (data.published_date && document.getElementById('id_published_at')) document.getElementById('id_published_at').value = data.published_date;
+                    if (data.page_count && document.getElementById('id_page_count')) document.getElementById('id_page_count').value = data.page_count;
+                    if (data.description && document.getElementById('id_description')) document.getElementById('id_description').value = data.description;
+                    if (data.categories && document.getElementById('id_categories')) document.getElementById('id_categories').value = data.categories;
+                    if (data.language && document.getElementById('id_language')) document.getElementById('id_language').value = data.language;
+
+                    // PRZECHWYCENIE OKŁADKI I WYŚWIETLENIE PODGLĄDU
+                    let coverUrl = data.cover_url || data.image_url || data.imageLinks?.thumbnail || null;
+                    if (coverUrl && coverUrlInput) {
+                        coverUrlInput.value = coverUrl;
+                        renderCoverPreview(coverUrl);
+                    }
+
+                    isbnInput.style.backgroundColor = 'var(--bs-success-bg-subtle)';
+                    setTimeout(() => { isbnInput.style.backgroundColor = ''; }, 1500);
+                })
+                .catch(error => {
+                    console.error(error);
+                    alert('Nie udało się pobrać danych dla tego ISBN. Wpisz poprawne dane ręcznie.');
+                })
+                .finally(() => {
+                    fetchBtn.innerHTML = originalText;
+                    fetchBtn.disabled = false;
+                });
+        }
+
+        if (fetchBtn && isbnInput) {
+            fetchBtn.addEventListener('click', function() {
+                const isbn = isbnInput.value.trim();
+                if (!isbn) {
+                    alert('Wpisz najpierw numer ISBN.');
+                    return;
+                }
+                fetchBookData(isbn);
+            });
+        }
+
+        if (scanBtn && scannerModalEl && isbnInput) {
+            const scannerModal = new bootstrap.Modal(scannerModalEl);
+
+            scanBtn.addEventListener('click', function() {
+                scannerModal.show();
+                
+                html5QrcodeScanner = new Html5QrcodeScanner(
+                    "reader", 
+                    { fps: 10, qrbox: {width: 250, height: 100} },
+                    false
+                );
+                
+                html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+            });
+
+            function onScanSuccess(decodedText, decodedResult) {
+                isbnInput.value = decodedText;
+                
+                if (html5QrcodeScanner) {
+                    html5QrcodeScanner.clear();
+                }
+                scannerModal.hide();
+
+                fetchBookData(decodedText);
+            }
+
+            function onScanFailure(error) {
+            }
+
+            scannerModalEl.addEventListener('hidden.bs.modal', function () {
+                if (html5QrcodeScanner) {
+                    html5QrcodeScanner.clear().catch(error => console.error("Blad skanera", error));
+                    html5QrcodeScanner = null;
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

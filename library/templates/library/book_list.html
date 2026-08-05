@@ -1,0 +1,433 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Książki - Kolekcje{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-2 px-md-4 py-4 mb-5">
+    
+    <!-- Górny panel akcji i wyszukiwarki (Naprawiony pod Mobile) -->
+    <div class="d-flex flex-column flex-xl-row justify-content-between align-items-stretch align-items-xl-center bg-body px-3 py-3 px-md-4 rounded-4 shadow-sm border mb-4 gap-3">
+        
+        <!-- Wyszukiwarka i przycisk filtrów -->
+        <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 flex-grow-1">
+            <div class="input-group input-group-sm bg-body-secondary rounded-pill border px-3 py-2 align-items-center flex-grow-1" style="max-width: 100%;">
+                <span class="text-muted me-2">🔍</span>
+                <input type="text" id="searchInput" class="form-control form-control-sm border-0 bg-transparent shadow-none text-body" placeholder="Szukaj po tytule, autorze lub wydawnictwie...">
+            </div>
+            <button class="btn btn-outline-info btn-sm rounded-pill px-4 py-2 fw-medium d-flex justify-content-center align-items-center gap-1" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse" aria-expanded="false" aria-controls="filtersCollapse">
+                ⚙️ Filtry
+            </button>
+        </div>
+        
+        <!-- Prawy panel (Licznik i akcje) -->
+        <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 justify-content-xl-end">
+            <div class="badge bg-body border text-body px-3 py-2 rounded-pill fw-medium small d-flex justify-content-center align-items-center">
+                Wszystkich: <strong class="text-primary fs-6 ms-2" id="totalCountBadge">{{ total_count }}</strong>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'book_import_csv' %}" class="btn btn-outline-secondary btn-sm px-3 py-2 rounded-pill fw-medium d-flex justify-content-center align-items-center gap-1 text-decoration-none flex-grow-1">
+                    📁 Import CSV
+                </a>
+                <a href="{% url 'book_create' %}" class="btn btn-success btn-sm px-4 py-2 rounded-pill fw-semibold d-flex justify-content-center align-items-center gap-1 shadow-sm text-decoration-none flex-grow-1">
+                    + Dodaj
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel filtrów -->
+    <div class="collapse mb-4" id="filtersCollapse">
+        <div class="card card-body bg-body shadow-sm border rounded-4 p-3 p-md-4">
+            <h6 class="fw-bold text-body mb-2 small text-uppercase" style="letter-spacing: 0.5px;">Status czytania:</h6>
+            <div class="d-flex flex-wrap gap-2 mb-3" id="statusFiltersContainer">
+                <button type="button" class="btn btn-sm btn-secondary active status-filter-btn rounded-pill px-3" data-status="ALL">Wszystkie</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary status-filter-btn rounded-pill px-3" data-status="read">Przeczytane</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary status-filter-btn rounded-pill px-3" data-status="unread">Nieprzeczytane</button>
+            </div>
+
+            <hr class="my-2 border-secondary border-opacity-25">
+
+            <h6 class="fw-bold text-body mb-2 mt-2 small text-uppercase" style="letter-spacing: 0.5px;">Filtruj według gatunku:</h6>
+            <div class="d-flex flex-wrap gap-2" id="genreFiltersContainer">
+                <button type="button" class="btn btn-sm btn-secondary active genre-filter-btn rounded-pill px-3" data-genre="ALL">Wszystkie gatunki</button>
+                <button type="button" class="btn btn-sm btn-outline-warning genre-filter-btn text-body rounded-pill px-3" data-genre="NONE">⚠️ Brak kategorii</button>
+                <!-- Tutaj skrypt dynamicznie doładuje resztę przycisków -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Formularz masowych akcji i Tabela -->
+    <form id="bulkActionForm" method="POST" action="{% url 'book_bulk_update' %}">
+        {% csrf_token %}
+        <input type="hidden" name="selected_books" id="selectedBooksInput">
+        <input type="hidden" name="action_type" id="actionTypeInput" value="category">
+
+        <div class="card bg-body shadow-sm border rounded-4 overflow-hidden mb-3">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="booksTable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 40px;" class="ps-3 ps-md-4 py-3">
+                                <input type="checkbox" id="selectAllCheckbox" class="form-check-input shadow-none cursor-pointer" title="Zaznacz widoczne">
+                            </th>
+                            <th style="width: 70px;" class="py-3">Okładka</th>
+                            <th class="py-3" style="min-width: 200px;">Tytuł i Autor</th>
+                            <th class="py-3">Gatunki</th>
+                            <th class="py-3">Wydawnictwo</th>
+                            <th class="py-3 text-center" style="width: 140px;">Przeczytana</th>
+                            <th class="py-3 text-center" style="width: 80px;">Kopie</th>
+                            <th class="py-3 text-end pe-3 pe-md-4" style="min-width: 100px;">Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for letter, books_in_group in grouped_books %}
+                            {% for book in books_in_group %}
+                                <tr class="book-row" 
+                                    data-id="{{ book.pk }}"
+                                    data-title="{{ book.title|lower }}" 
+                                    data-author="{{ book.authors|lower }}" 
+                                    data-publisher="{{ book.publisher|default:''|lower }}"
+                                    data-categories="{{ book.categories|default:''|lower }}"
+                                    data-is-read="{% if book.read %}true{% else %}false{% endif %}">
+                                    
+                                    <!-- Checkbox -->
+                                    <td class="ps-3 ps-md-4 py-2">
+                                        <input type="checkbox" class="form-check-input book-checkbox shadow-none cursor-pointer" value="{{ book.pk }}">
+                                    </td>
+
+                                    <!-- Miniatura -->
+                                    <td class="py-2">
+                                        <a href="{% url 'book_detail' book.pk %}" class="d-block text-decoration-none" style="width: 40px; height: 55px;">
+                                            {% if book.image %}
+                                                <img src="{{ book.image.url }}" alt="{{ book.title }}" class="w-100 h-100 object-fit-cover rounded shadow-sm">
+                                            {% else %}
+                                                <div class="w-100 h-100 bg-body-secondary border border-secondary border-opacity-25 rounded d-flex align-items-center justify-content-center shadow-sm overflow-hidden p-1" title="Brak okładki">
+                                                    <img src="/media/library_images/cat_placeholder.png" alt="Brak okładki" class="w-100 h-100 object-fit-contain opacity-75">
+                                                </div>
+                                            {% endif %}
+                                        </a>
+                                    </td>
+
+                                    <!-- Tytuł i autor -->
+                                    <td>
+                                        <a href="{% url 'book_detail' book.pk %}" class="text-decoration-none text-body fw-bold text-truncate d-block" style="max-width: 250px;" title="{{ book.title }}">
+                                            {{ book.title }}
+                                        </a>
+                                        <small class="text-muted text-truncate d-block" style="max-width: 250px;">{{ book.authors|default:"Nieznany autor" }}</small>
+                                    </td>
+
+                                    <!-- Kategorie -->
+                                    <td>
+                                        <span class="badge bg-secondary bg-opacity-10 text-body border text-truncate d-inline-block rounded-pill px-2 py-1 fw-normal" style="max-width: 150px;">
+                                            {{ book.categories|default:"Brak" }}
+                                        </span>
+                                    </td>
+
+                                    <!-- Wydawnictwo -->
+                                    <td>
+                                        <span class="text-muted small text-truncate d-block" style="max-width: 150px;" title="{{ book.publisher|default:'' }}">
+                                            {{ book.publisher|default:"—" }}
+                                        </span>
+                                    </td>
+
+                                    <!-- Suwak Statusu (AJAX) -->
+                                    <td class="text-center">
+                                        <div class="form-check form-switch d-inline-block m-0 p-0">
+                                            <input class="form-check-input read-toggle-switch shadow-none" type="checkbox" role="switch" 
+                                                   data-book-id="{{ book.pk }}" 
+                                                   id="switch_{{ book.pk }}" 
+                                                   {% if book.read %}checked{% endif %}
+                                                   style="cursor: pointer; width: 2.5em; height: 1.25em; margin-left: 0;">
+                                            <label class="form-check-label visually-hidden" for="switch_{{ book.pk }}">Status przeczytania</label>
+                                        </div>
+                                    </td>
+
+                                    <!-- Kopie -->
+                                    <td class="text-center">
+                                        <span class="badge bg-body-secondary text-body border px-2 py-1 rounded-pill">{{ book.number_of_copies|default:1 }}</span>
+                                    </td>
+
+                                    <!-- Akcje -->
+                                    <td class="text-end pe-3 pe-md-4">
+                                        <div class="d-flex gap-1 justify-content-end">
+                                            <a href="{% url 'book_edit' book.pk %}" class="btn btn-sm btn-outline-secondary rounded-2 border px-2 py-1" title="Edytuj">✏️</a>
+                                            <a href="{% url 'book_detail' book.pk %}" class="btn btn-sm btn-outline-info rounded-2 border px-2 py-1" title="Szczegóły">👁️</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    Brak książek spełniających kryteria wyszukiwania.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pływający panel masowych akcji (Floating Pill) -->
+        <div id="bulkActionsBar" class="position-fixed bottom-0 start-50 translate-middle-x mb-4 bg-body-tertiary border p-2 p-md-3 rounded-4 rounded-md-pill shadow-lg" style="display: none; z-index: 1050; width: 95vw; max-width: 600px;">
+            <div class="d-flex flex-column flex-md-row align-items-center gap-2 gap-md-3 justify-content-center">
+                
+                <div class="text-body px-2 border-md-end border-secondary border-opacity-25 pe-md-3 text-center w-100 w-md-auto border-bottom border-md-bottom-0 pb-2 pb-md-0">
+                    <span class="fw-bold fs-5 text-primary" id="selectedCount">0</span> 
+                    <span class="small fw-medium">zaznaczonych</span>
+                </div>
+                
+                <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 w-100 w-md-auto">
+                    <!-- Przypisz kategorię -->
+                    <div class="input-group input-group-sm flex-grow-1">
+                        <select name="new_category" id="bulkCategorySelect" class="form-select rounded-start-pill bg-body text-body shadow-none">
+                            <option value="">Kategoria...</option>
+                            {% for cat in categories_list %}
+                                <option value="{{ cat }}">{{ cat }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="button" class="btn btn-primary rounded-end-pill px-3 fw-semibold shadow-none" id="applyCategoryBtn">Nadaj</button>
+                    </div>
+
+                    <!-- Zmiana statusu -->
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-success rounded-pill px-3 fw-semibold shadow-none flex-grow-1" id="markReadBtn">✓ Przecz.</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-semibold shadow-none flex-grow-1" id="markUnreadBtn">○ Do przecz.</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+</div>
+
+<!-- Skrypty (Pozostają bez zmian) -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const searchInput = document.getElementById('searchInput');
+        const bookRows = document.querySelectorAll('.book-row');
+        const genreContainer = document.getElementById('genreFiltersContainer');
+        const statusBtns = document.querySelectorAll('.status-filter-btn');
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        const bookCheckboxes = document.querySelectorAll('.book-checkbox');
+        const bulkBar = document.getElementById('bulkActionsBar');
+        const selectedCountSpan = document.getElementById('selectedCount');
+        const bulkForm = document.getElementById('bulkActionForm');
+        const selectedBooksInput = document.getElementById('selectedBooksInput');
+        const actionTypeInput = document.getElementById('actionTypeInput');
+        
+        let activeGenre = 'ALL';
+        let activeStatus = 'ALL';
+        let searchQuery = '';
+
+        // Automatyczne zbieranie gatunków
+        let genresSet = new Set();
+        bookRows.forEach(row => {
+            let cats = row.getAttribute('data-categories');
+            if (cats) {
+                cats.split(',').forEach(c => {
+                    let cleanCat = c.trim();
+                    if (cleanCat) genresSet.add(cleanCat);
+                });
+            }
+        });
+
+        genresSet.forEach(genre => {
+            let btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-sm btn-outline-secondary genre-filter-btn text-capitalize rounded-pill px-3';
+            btn.setAttribute('data-genre', genre);
+            btn.textContent = genre;
+            genreContainer.appendChild(btn);
+        });
+
+        // Obsługa suwaków AJAX (zmiana statusu w locie)
+        document.querySelectorAll('.read-toggle-switch').forEach(toggle => {
+            toggle.addEventListener('change', function() {
+                let bookId = this.getAttribute('data-book-id');
+                let isChecked = this.checked;
+                let row = this.closest('.book-row');
+
+                fetch(`/kolekcje/ksiazki/${bookId}/toggle-read/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        row.setAttribute('data-is-read', data.is_read ? 'true' : 'false');
+                        filterTable();
+                    } else {
+                        alert('Wystąpił błąd podczas zmiany statusu.');
+                        this.checked = !isChecked; 
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    this.checked = !isChecked;
+                });
+            });
+        });
+
+        // Filtry gatunków
+        const allGenreBtns = document.querySelectorAll('.genre-filter-btn');
+        allGenreBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                allGenreBtns.forEach(b => {
+                    b.classList.remove('active', 'btn-secondary', 'btn-warning');
+                    if (b.getAttribute('data-genre') === 'NONE') {
+                        b.classList.add('btn-outline-warning', 'text-body');
+                    } else {
+                        b.classList.add('btn-outline-secondary');
+                    }
+                });
+                
+                activeGenre = this.getAttribute('data-genre');
+                if (activeGenre === 'NONE') {
+                    this.classList.remove('btn-outline-warning', 'text-body');
+                    this.classList.add('active', 'btn-warning', 'text-dark');
+                } else {
+                    this.classList.remove('btn-outline-secondary');
+                    this.classList.add('active', 'btn-secondary');
+                }
+                filterTable();
+            });
+        });
+
+        // Filtry statusu
+        statusBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                statusBtns.forEach(b => {
+                    b.classList.remove('active', 'btn-secondary');
+                    b.classList.add('btn-outline-secondary');
+                });
+                this.classList.remove('btn-outline-secondary');
+                this.classList.add('active', 'btn-secondary');
+                activeStatus = this.getAttribute('data-status');
+                filterTable();
+            });
+        });
+
+        // Wyszukiwanie
+        searchInput.addEventListener('input', function() {
+            searchQuery = this.value.toLowerCase().trim();
+            filterTable();
+        });
+
+        function filterTable() {
+            let visibleTotal = 0;
+            bookRows.forEach(row => {
+                let title = row.getAttribute('data-title');
+                let author = row.getAttribute('data-author');
+                let publisher = row.getAttribute('data-publisher');
+                let categories = row.getAttribute('data-categories').trim();
+                let isRead = row.getAttribute('data-is-read') === 'true';
+
+                let matchesSearch = (searchQuery === '' || title.includes(searchQuery) || author.includes(searchQuery) || publisher.includes(searchQuery));
+                
+                let matchesGenre = true;
+                if (activeGenre === 'NONE') {
+                    matchesGenre = (categories === '' || categories === 'brak');
+                } else if (activeGenre !== 'ALL') {
+                    matchesGenre = categories.includes(activeGenre.toLowerCase());
+                }
+
+                let matchesStatus = (activeStatus === 'ALL') || (activeStatus === 'read' && isRead) || (activeStatus === 'unread' && !isRead);
+
+                if (matchesSearch && matchesGenre && matchesStatus) {
+                    row.style.display = '';
+                    visibleTotal++;
+                } else {
+                    row.style.display = 'none';
+                    row.querySelector('.book-checkbox').checked = false;
+                }
+            });
+            document.getElementById('totalCountBadge').textContent = visibleTotal;
+            updateBulkBar();
+        }
+
+        // Obsługa zaznaczania
+        function updateBulkBar() {
+            let checkedCount = 0;
+            bookCheckboxes.forEach(cb => {
+                let row = cb.closest('.book-row');
+                if (cb.checked && row.style.display !== 'none') {
+                    checkedCount++;
+                }
+            });
+            selectedCountSpan.textContent = checkedCount;
+            if (checkedCount > 0) {
+                bulkBar.style.display = 'block';
+            } else {
+                bulkBar.style.display = 'none';
+            }
+        }
+
+        selectAllCheckbox.addEventListener('change', function() {
+            bookCheckboxes.forEach(cb => {
+                let row = cb.closest('.book-row');
+                if (row.style.display !== 'none') {
+                    cb.checked = selectAllCheckbox.checked;
+                }
+            });
+            updateBulkBar();
+        });
+
+        bookCheckboxes.forEach(cb => {
+            cb.addEventListener('change', updateBulkBar);
+        });
+
+        // Przyciski akcji masowych
+        document.getElementById('applyCategoryBtn').addEventListener('click', function() {
+            let catVal = document.getElementById('bulkCategorySelect').value;
+            if (!catVal) {
+                alert('Wybierz kategorię z listy!');
+                return;
+            }
+            submitBulk('category');
+        });
+
+        document.getElementById('markReadBtn').addEventListener('click', function() {
+            createStatusHiddenInput('true');
+            submitBulk('read_status');
+        });
+
+        document.getElementById('markUnreadBtn').addEventListener('click', function() {
+            createStatusHiddenInput('false');
+            submitBulk('read_status');
+        });
+
+        function createStatusHiddenInput(val) {
+            let existing = document.getElementById('statusValInput');
+            if (existing) existing.remove();
+            let inp = document.createElement('input');
+            inp.type = 'hidden';
+            inp.name = 'status_val';
+            inp.id = 'statusValInput';
+            inp.value = val;
+            bulkForm.appendChild(inp);
+        }
+
+        function submitBulk(actionType) {
+            let ids = [];
+            bookCheckboxes.forEach(cb => {
+                let row = cb.closest('.book-row');
+                if (cb.checked && row.style.display !== 'none') {
+                    ids.push(cb.value);
+                }
+            });
+            if (ids.length === 0) {
+                alert('Zaznacz przynajmniej jedną książkę!');
+                return;
+            }
+            selectedBooksInput.value = ids.join(',');
+            actionTypeInput.value = actionType;
+            bulkForm.submit();
+        }
+    });
+</script>
+{% endblock %}

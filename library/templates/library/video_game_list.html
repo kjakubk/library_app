@@ -1,0 +1,32 @@
+{% extends 'library/base.html' %}
+
+{% block title %}Kolekcja gier video{% endblock %}
+
+{% block content %}
+<h1 class="mb-4 text-success border-bottom pb-2">Moja półka:</h1>
+
+<div class="row">
+    {% for item in items %}
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm h-100 border-success border-opacity-25">
+                <!-- NOWA SEKCJA ZDJĘCIA -->
+    {% if item.image %}
+        <!-- Styl object-fit: cover sprawia, że zdjęcie ładnie wypełnia ramy nie tracąc proporcji -->
+        <img src="{{ item.image.url }}" class="card-img-top" alt="{{ item.title }}" style="height: 250px; object-fit: cover;">
+    {% else %}
+        <div class="card-img-top bg-secondary bg-opacity-25 d-flex align-items-center justify-content-center" style="height: 250px;">
+            <span class="text-muted small">Brak zdjęcia</span>
+        </div>
+    {% endif %}
+    <!-- KONIEC SEKCJI ZDJĘCIA -->
+                <div class="card-body">
+                    <h5 class="card-title">{{ item.title }}</h5>
+                    <h3 class="card-text mt-3">{{item.platform}}
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="col-12"><div class="alert alert-info">Brak gry w bazie.</div></div>
+    {% endfor %}
+</div>
+{% endblock %}

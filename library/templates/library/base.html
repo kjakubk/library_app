@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pl" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Kolekcje Bazy Danych{% endblock %}</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-width: 260px;
+        }
+        body {
+            min-height: 100vh;
+            background-color: var(--bs-tertiary-bg);
+            color: var(--bs-body-color);
+            overflow-x: hidden;
+        }
+        
+        /* -- SIDEBAR -- */
+        .sidebar {
+            width: var(--sidebar-width);
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            z-index: 1040;
+            background-color: #111827;
+            color: #9ca3af;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            transition: transform 0.3s ease-in-out;
+        }
+        .sidebar-brand {
+            padding: 1.25rem 1.5rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .sidebar-menu {
+            padding: 1rem 0.75rem;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        .menu-category {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6b7280;
+            padding: 0.75rem 0.75rem 0.35rem 0.75rem;
+            font-weight: 600;
+        }
+        .sidebar .nav-link {
+            color: #9ca3af;
+            padding: 0.6rem 0.85rem;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.2rem;
+            transition: all 0.2s ease;
+        }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            color: #ffffff;
+            background-color: rgba(255, 255, 255, 0.08);
+        }
+
+        /* -- GŁÓWNA ZAWARTOŚĆ -- */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.3s ease-in-out;
+        }
+        .top-navbar {
+            background-color: var(--bs-body-bg);
+            border-bottom: 1px solid var(--bs-border-color);
+            padding: 0.85rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* -- RESPONSYWNOŚĆ DLA TELEFONÓW (Poniżej 992px) -- */
+        @media (max-width: 991.98px) {
+            .sidebar {
+                transform: translateX(-100%); /* Ukryj sidebar poza ekranem */
+            }
+            .sidebar.show {
+                transform: translateX(0); /* Pokaż sidebar gdy ma klasę 'show' */
+            }
+            .main-content {
+                margin-left: 0; /* Zwiń margines dla telefonu */
+            }
+            /* Ciemne tło przykrywające resztę ekranu gdy menu jest otwarte */
+            .sidebar-overlay {
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 1030;
+                display: none;
+            }
+            .sidebar-overlay.show {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Ciemne tło na telefonie (Overlay) -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Boczne menu (Sidebar) -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="bg-primary text-white rounded d-flex align-items-center justify-content-center fw-bold" style="width: 28px; height: 28px; font-size: 0.85rem;">Z</div>
+            <span>Kolekcje Bazy</span>
+            <!-- Przycisk zamykania tylko dla telefonu -->
+            <button class="btn btn-sm btn-link text-white d-lg-none ms-auto text-decoration-none fs-5" id="closeSidebarBtn">✕</button>
+        </div>
+
+        <div class="sidebar-menu">
+            <div class="menu-category">Ogólne</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a href="{% url 'cv_view' %}" class="nav-link">👤 O mnie / CV</a>
+                </li>
+            </ul>
+
+            <div class="menu-category mt-3">Kolekcje</div>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a href="{% url 'porcelain_list' %}" class="nav-link">☕ Porcelana</a></li>
+                <li class="nav-item"><a href="{% url 'vinyl_list' %}" class="nav-link">🎵 Winyle</a></li>
+                <li class="nav-item"><a href="{% url 'book_list' %}" class="nav-link active">📚 Książki</a></li>
+                <li class="nav-item"><a href="{% url 'board_game_list' %}" class="nav-link">🎲 Planszówki</a></li>
+                <li class="nav-item"><a href="{% url 'video_game_list' %}" class="nav-link">🎮 Gry Wideo</a></li>
+            </ul>
+        </div>
+
+        <!-- Dolna sekcja użytkownika + Przełącznik motywu -->
+        <div class="p-3 border-top border-secondary border-opacity-25 mt-auto">
+            <button id="themeToggleBtn" class="btn btn-sm w-100 d-flex align-items-center justify-content-center gap-2 text-light bg-dark border border-secondary border-opacity-50 mb-3 py-2 rounded-2">
+                <span id="themeIcon">🌙</span>
+                <span id="themeText" class="small fw-medium">Tryb ciemny</span>
+            </button>
+            
+            <div class="d-flex align-items-center gap-2 pt-2 border-top border-secondary border-opacity-25">
+                <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px; font-size: 0.8rem;">JK</div>
+                <div class="overflow-hidden">
+                    <div class="text-white small fw-semibold text-truncate">Jakub</div>
+                    <div class="text-muted" style="font-size: 0.7rem;">Administrator</div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Główna zawartość strony -->
+    <div class="main-content">
+        <!-- Górny pas nawigacyjny -->
+        <header class="top-navbar">
+            <div class="d-flex align-items-center gap-3">
+                <!-- Hamburger Menu tylko dla urządzeń mobilnych -->
+                <button class="btn btn-outline-secondary btn-sm d-lg-none shadow-none" id="openSidebarBtn">
+                    <span class="fs-5">☰</span>
+                </button>
+                <div class="fw-semibold small text-muted d-none d-sm-block">Panel Zarządzania Kolekcjami</div>
+            </div>
+            
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-secondary bg-opacity-15 text-body border px-2 py-1" style="font-size: 0.75rem;">System v2.0</span>
+            </div>
+        </header>
+
+        <!-- Dynamiczna treść widoków -->
+        <main class="flex-grow-1 p-2 p-md-4">
+            {% block content %}
+            {% endblock %}
+        </main>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Skrypt obsługujący UI (Menu na telefon + Motyw) -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // -- OBSŁUGA MOTYWU JASNY/CIEMNY --
+            const themeBtn = document.getElementById('themeToggleBtn');
+            const themeIcon = document.getElementById('themeIcon');
+            const themeText = document.getElementById('themeText');
+            const htmlElement = document.documentElement;
+
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            htmlElement.setAttribute('data-bs-theme', savedTheme);
+            updateButtonUI(savedTheme);
+
+            if (themeBtn) {
+                themeBtn.addEventListener('click', function() {
+                    let currentTheme = htmlElement.getAttribute('data-bs-theme');
+                    let newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                    
+                    htmlElement.setAttribute('data-bs-theme', newTheme);
+                    localStorage.setItem('theme', newTheme);
+                    updateButtonUI(newTheme);
+                });
+            }
+
+            function updateButtonUI(theme) {
+                if (theme === 'dark') {
+                    themeIcon.textContent = '☀️';
+                    themeText.textContent = 'Tryb jasny';
+                } else {
+                    themeIcon.textContent = '🌙';
+                    themeText.textContent = 'Tryb ciemny';
+                }
+            }
+
+            // -- OBSŁUGA BOCZNEGO MENU NA TELEFONACH --
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const openBtn = document.getElementById('openSidebarBtn');
+            const closeBtn = document.getElementById('closeSidebarBtn');
+
+            function toggleSidebar() {
+                sidebar.classList.toggle('show');
+                overlay.classList.toggle('show');
+            }
+
+            if(openBtn) openBtn.addEventListener('click', toggleSidebar);
+            if(closeBtn) closeBtn.addEventListener('click', toggleSidebar);
+            if(overlay) overlay.addEventListener('click', toggleSidebar); // Zamknij menu po kliknięciu w tło
+        });
+    </script>
+</body>
+</html>

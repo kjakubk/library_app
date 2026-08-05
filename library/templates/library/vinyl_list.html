@@ -1,0 +1,42 @@
+{% extends 'library/base.html' %}
+
+{% block title %}Kolekcja Winyli{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+    <h1 class="text-info m-0">Moja Kolekcja Winyli</h1>
+    <a href="{% url 'vinyl_create' %}" class="btn btn-info text-white">+ Dodaj płytę</a>
+</div>
+
+<div class="row">
+    {% for item in items %}
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm h-100 border-info border-opacity-25">
+                <div class="card-body">
+                    <!-- Tytuł albumu jako główny nagłówek karty -->
+                    <h5 class="card-title">{{ item.album_title }}</h5>
+                    
+                    <!-- Wykonawca poniżej na szaro -->
+                    <h6 class="card-subtitle mb-3 text-muted">{{ item.artist }}</h6>
+                    
+                    <p class="card-text mt-auto">
+                        <!-- Rok wydania -->
+                        <span class="badge bg-info text-dark">Rok: {{ item.release_year }}</span>
+                        
+                        <!-- Gatunek muzyczny (jeśli istnieje) -->
+                        {% if item.genre %}
+                            <span class="badge bg-secondary">{{ item.genre }}</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                Brak płyt w bazie. Czas dodać pierwsze rockowe perełki z lat 80. i 90. przez panel administratora!
+            </div>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

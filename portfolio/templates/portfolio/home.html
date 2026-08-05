@@ -1,0 +1,41 @@
+{% extends 'library/base.html' %}
+
+{% block title %}Jakub Kępczyński - Portfolio i Kolekcje{% endblock %}
+
+{% block content %}
+<div class="px-4 py-5 my-5 text-center">
+    <h1 class="display-5 fw-bold text-dark">Witaj w moim świecie!</h1>
+    <div class="col-lg-6 mx-auto">
+        <p class="lead mb-4 mt-3">
+            Nazywam się Jakub. Na co dzień jako Data Analyst i Power BI Developer przekuwam surowe dane w czytelne dashboardy, wdrażam analitykę HR i automatyzuję procesy. 
+            <br><br>
+            Po godzinach projektuję tę aplikację, aby w końcu zapanować nad swoimi zbiorami – od bogatej kolekcji niemieckiej porcelany, przez winylowe klasyki rocka z lat 80. i 90., aż po pudełka z grami planszowymi takimi jak <em>The Witcher: Old World</em> ze wszystkimi swoimi dodatkami.
+        </p>
+        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mt-4">
+            <a href="{% url 'cv_view' %}" class="btn btn-primary btn-lg px-4 gap-3">Zobacz moje CV</a>
+            <a href="{% url 'board_game_list' %}" class="btn btn-outline-secondary btn-lg px-4">Przeglądaj kolekcje</a>
+        </div>
+    </div>
+</div>
+
+<div class="row text-center mt-5">
+    <div class="col-md-4 mb-3">
+        <div class="p-3 border bg-light rounded shadow-sm">
+            <h4 class="text-primary">⚙️ Python & Django</h4>
+            <p class="small text-muted">Aplikacja w pełni oparta na solidnym backendzie.</p>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="p-3 border bg-light rounded shadow-sm">
+            <h4 class="text-success">🐘 PostgreSQL</h4>
+            <p class="small text-muted">Wydajna i bezpieczna relacyjna baza danych.</p>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="p-3 border bg-light rounded shadow-sm">
+            <h4 class="text-info">📊 Analityka</h4>
+            <p class="small text-muted">Zarządzanie danymi to moja specjalność.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
