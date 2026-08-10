@@ -1,0 +1,166 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Portfolio Fotograficzne{% endblock %}
+
+{% block content %}
+<style>
+    /* Magia kaskadowej siatki (Masonry) w czystym CSS! */
+    .masonry-grid {
+        column-count: 1;
+        column-gap: 1.5rem;
+    }
+    /* Dla telefonów 1 kolumna, dla tabletów 2, dla komputerów 3-4 */
+    @media (min-width: 576px) { .masonry-grid { column-count: 2; } }
+    @media (min-width: 992px) { .masonry-grid { column-count: 3; } }
+    @media (min-width: 1400px) { .masonry-grid { column-count: 4; } }
+    
+    .masonry-item {
+        break-inside: avoid;
+        margin-bottom: 1.5rem;
+        position: relative;
+        border-radius: 12px;
+        overflow: hidden;
+        cursor: zoom-in;
+    }
+    
+    /* Ciemny pasek, który pojawia się po najechaniu myszką */
+    .masonry-overlay {
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+        padding: 20px 15px 15px 15px;
+        color: white;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .masonry-item:hover .masonry-overlay {
+        opacity: 1;
+    }
+
+    /* Modal (Lightbox) - Ciemne Tło */
+    #lightboxModal .modal-content {
+        background-color: transparent;
+        border: none;
+    }
+    #lightboxModal .btn-close {
+        filter: invert(1);
+    }
+</style>
+
+<div class="container-fluid px-2 px-md-4 py-4 mb-5">
+    
+    <!-- Filtry / Kategorie -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div class="d-flex gap-2 overflow-auto py-1" style="white-space: nowrap; max-width: 70%;">
+            <a href="{% url 'portfolio_gallery' %}" class="btn rounded-pill {% if not selected_album %}btn-dark{% else %}btn-outline-secondary{% endif %}">Wszystkie</a>
+            {% for album in albums %}
+                <a href="?album={{ album.id }}" class="btn rounded-pill {% if selected_album == album.id %}btn-dark{% else %}btn-outline-secondary{% endif %}">{{ album.name }}</a>
+            {% endfor %}
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'add_album' %}" class="btn btn-outline-primary rounded-pill shadow-sm">+ Nowy album</a>
+            <a href="{% url 'add_photo' %}" class="btn btn-primary rounded-pill shadow-sm">+ Dodaj zdjęcie</a>
+        </div>
+    </div>
+
+    <!-- Siatka Masonry -->
+    <div class="masonry-grid">
+        {% for photo in photos %}
+            <div class="masonry-item shadow-sm border" onclick="openLightbox('{{ photo.image.url }}', '{{ photo.title|escapejs }}', '{{ photo.camera|default:''|escapejs }}', '{{ photo.focal_length|default:''|escapejs }}', '{{ photo.iso|default:''|escapejs }}')">
+                
+                <img src="{{ photo.image.url }}" class="w-100 d-block" alt="{{ photo.title|default:'Zdjęcie' }}">
+                
+                <div class="masonry-overlay d-flex justify-content-between align-items-end w-100">
+                    <div>
+                        <h6 class="mb-1 fw-bold text-white">{{ photo.title|default:"Bez tytułu" }}</h6>
+                        {% if photo.camera %}
+                            <div class="small opacity-75 d-flex align-items-center gap-2" style="font-size: 0.75rem;">
+                                <span>📷 {{ photo.camera }}</span>
+                                {% if photo.focal_length %}<span>• {{ photo.focal_length }}</span>{% endif %}
+                                {% if photo.iso %}<span>• ISO {{ photo.iso }}</span>{% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <!-- Guzik usuwania (kliknięcie nie wywołuje podglądu dzięki funkcji JS) -->
+                    <button type="button" class="btn btn-sm btn-outline-danger border-0 p-1 mb-1 ms-2" onclick="openDeleteModal(event, '{% url 'delete_photo' photo.id %}')" title="Usuń zdjęcie">
+                        🗑️
+                    </button>
+                </div>
+
+            </div>
+        {% empty %}
+            <div class="col-12 text-center py-5">
+                <p class="text-muted">Jeszcze nic tu nie ma. Czas wrzucić pierwsze kadry!</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Modal / Lightbox -->
+<div class="modal fade" id="lightboxModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content" style="background: rgba(0,0,0,0.95);">
+            <div class="modal-header border-0 position-absolute top-0 end-0 z-3">
+                <button type="button" class="btn-close fs-4 p-3 shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body d-flex flex-column align-items-center justify-content-center p-0 h-100">
+                <img id="lbImage" src="" class="img-fluid" style="max-height: 85vh; object-fit: contain; box-shadow: 0 0 40px rgba(0,0,0,0.5);">
+                <div class="text-center text-white mt-4 px-3">
+                    <h4 id="lbTitle" class="fw-bold mb-1"></h4>
+                    <p id="lbExif" class="text-white-50 small mb-0"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Usuwania -->
+<div class="modal fade" id="deletePhotoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header bg-danger text-white rounded-top-4">
+                <h5 class="modal-title fw-bold">Potwierdzenie usunięcia</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <p class="mb-0 fs-5">Czy na pewno chcesz bezpowrotnie usunąć to zdjęcie?</p>
+            </div>
+            <div class="modal-footer justify-content-center border-0 pb-4">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Anuluj</button>
+                <form id="deletePhotoForm" method="POST" action="">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm">Tak, usuń</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openLightbox(url, title, camera, focal, iso) {
+        document.getElementById('lbImage').src = url;
+        document.getElementById('lbTitle').textContent = title !== 'None' && title !== '' ? title : '';
+        
+        let exifText = '';
+        if(camera !== 'None' && camera !== '') exifText += '📷 ' + camera + ' ';
+        if(focal !== 'None' && focal !== '') exifText += ' • ' + focal;
+        if(iso !== 'None' && iso !== '') exifText += ' • ISO ' + iso;
+        
+        document.getElementById('lbExif').textContent = exifText;
+        
+        new bootstrap.Modal(document.getElementById('lightboxModal')).show();
+    }
+
+    function openDeleteModal(event, deleteUrl) {
+        // Zatrzymujemy kliknięcie, żeby nie otworzył się Lightbox
+        event.stopPropagation();
+        
+        // Podpinamy adres usuwania pod formularz
+        document.getElementById('deletePhotoForm').action = deleteUrl;
+        
+        // Wyświetlamy okienko
+        new bootstrap.Modal(document.getElementById('deletePhotoModal')).show();
+    }
+</script>
+{% endblock %}

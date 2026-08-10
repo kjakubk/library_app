@@ -1,0 +1,40 @@
+{% extends 'library/base.html' %}
+
+{% block title %}Dodaj Album - Portfolio{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-2 px-md-4 py-4 mb-5 d-flex justify-content-center">
+    
+    <div class="card bg-body shadow-sm border rounded-4 overflow-hidden w-100" style="max-width: 600px;">
+        <div class="card-header bg-body border-bottom px-4 py-3">
+            <h4 class="mb-0 fw-bold text-body d-flex align-items-center gap-2">
+                📁 Utwórz nowy album
+            </h4>
+        </div>
+        
+        <div class="card-body p-4 p-md-5">
+            <form method="POST" class="row g-4">
+                {% csrf_token %}
+                
+                <div class="col-12">
+                    <label class="form-label fw-medium text-body">Nazwa albumu (Kategoria)</label>
+                    {{ form.name }}
+                </div>
+                
+                <div class="col-12">
+                    <label class="form-label fw-medium text-body">Opis (opcjonalnie)</label>
+                    {{ form.description }}
+                </div>
+
+                <div class="col-12 mt-5 d-flex justify-content-end gap-2 border-top pt-4">
+                    <a href="{% url 'portfolio_gallery' %}" class="btn btn-outline-secondary rounded-pill px-4">Anuluj</a>
+                    <button type="submit" class="btn btn-primary rounded-pill px-5 fw-semibold shadow-sm">
+                        Utwórz album
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

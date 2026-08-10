@@ -1,46 +1,95 @@
 {% extends 'library/base.html' %}
 
-{% block title %}Moje CV i Doświadczenie{% endblock %}
+{% block title %}O mnie / CV{% endblock %}
 
 {% block content %}
-<div class="row">
-    <!-- Kolumna z krótkim opisem (statyczna) -->
-    <div class="col-md-4 mb-4">
-        <div class="card shadow-sm border-dark">
-            <div class="card-body text-center">
-                <h2 class="card-title mt-3">Jakub Kępczyński</h2>
-                <h5 class="text-muted">Data Analyst / Power BI Developer</h5>
-                <hr>
-                <p class="text-start mt-3">
-                    Inżynier Informatyki ze specjalizacją w Programowaniu i Analizie Danych. 
-                    Skupiam się na przekuwaniu surowych danych w czytelne dashboardy i automatyzacji procesów analitycznych.
+<div class="container-fluid px-2 px-md-4 py-4 mb-5 d-flex justify-content-center">
+    
+    <div class="card bg-body shadow-sm border rounded-4 overflow-hidden w-100" style="max-width: 950px;">
+        <div class="row g-0">
+            
+            <!-- LEWA KOLUMNA (Profil i Umiejętności) -->
+            <div class="col-md-4 bg-body-secondary p-4 p-md-5 border-end">
+                <div class="text-center mb-4">
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3 fw-bold" style="width: 120px; height: 120px; font-size: 3rem;">
+                        JK
+                    </div>
+                    <h3 class="fw-bold text-body">Jakub</h3>
+                    <p class="text-muted mb-1 fw-medium">BI Developer & Data Analyst</p>
+                    <p class="small text-muted mb-0">📍 Słupsk (poch. Gdańsk)</p>
+                </div>
+
+                <hr class="border-secondary border-opacity-25 my-4">
+
+                <h6 class="fw-bold text-body mb-3 text-uppercase" style="letter-spacing: 0.5px; font-size: 0.8rem;">🛠️ Główne Umiejętności</h6>
+                <div class="d-flex flex-wrap gap-2 mb-4">
+                    <span class="badge bg-dark text-white rounded-pill px-3 py-2">Power BI</span>
+                    <span class="badge bg-dark text-white rounded-pill px-3 py-2">Python & Django</span>
+                    <span class="badge bg-dark text-white rounded-pill px-3 py-2">SQL</span>
+                    <span class="badge bg-dark text-white rounded-pill px-3 py-2">Analiza Danych</span>
+                </div>
+
+                <h6 class="fw-bold text-body mb-3 text-uppercase mt-5" style="letter-spacing: 0.5px; font-size: 0.8rem;">❤️ Pasje i Zainteresowania</h6>
+                <ul class="list-unstyled small text-body fw-medium lh-lg">
+                    <li>☕ Niemiecka porcelana (China Blau)</li>
+                    <li>🌳 Genealogia i archiwistyka</li>
+                    <li>🧭 Geocaching</li>
+                    <li>📚 Renowacja starych książek</li>
+                    <li>🎵 Winyle (Rock lat 80. i 90.)</li>
+                    <li>🎮 CS2 & Stardew Valley</li>
+                    <li>🎲 Gry planszowe (m.in. The Witcher)</li>
+                    <li>🌾 Kultura folkowa (EtnoBaltica)</li>
+                    <li>🦐 Akwarystyka</li>
+                </ul>
+            </div>
+
+            <!-- PRAWA KOLUMNA (Doświadczenie i Edukacja) -->
+            <div class="col-md-8 p-4 p-md-5">
+                
+                <h4 class="fw-bold text-body mb-3">O mnie</h4>
+                <p class="text-muted mb-5" style="line-height: 1.7;">
+                    Inżynier Informatyki ze specjalizacją w programowaniu i analizie danych. Na co dzień zajmuję się budowaniem rozwiązań Business Intelligence oraz optymalizacją procesów e-commerce. W wolnym czasie pracuję nad własnymi projektami webowymi, przeszukuję archiwa diecezjalne, ratuję stare książki i kolekcjonuję przedmioty z duszą.
                 </p>
+
+                <!-- DOŚWIADCZENIE -->
+                <h5 class="fw-bold text-body mb-4 d-flex align-items-center gap-2">
+                    💼 Doświadczenie zawodowe
+                </h5>
+                
+                <div class="mb-4 position-relative ps-4" style="border-left: 2px solid var(--bs-primary);">
+                    <h6 class="fw-bold text-body mb-0">Data Analyst / Power BI Developer</h6>
+                    <p class="text-primary small fw-semibold mb-2">Gonito • Mar 2022 - Obecnie</p>
+                    <p class="text-muted small mb-0" style="line-height: 1.6;">
+                        Projektowanie zaawansowanych raportów w Power BI, modelowanie danych oraz wsparcie analityczne procesów agencji e-commerce. Praca z dużymi wolumenami danych.
+                    </p>
+                </div>
+
+                <div class="mb-5 position-relative ps-4" style="border-left: 2px solid var(--bs-secondary); opacity: 0.85;">
+                    <h6 class="fw-bold text-body mb-0">Shift Manager</h6>
+                    <p class="text-muted small fw-medium mb-2">Costa Coffee Poland • Cze 2018 - Lut 2021</p>
+                    <p class="text-muted small mb-0" style="line-height: 1.6;">
+                        Zarządzanie zmianą, nadzór nad standardami obsługi klienta oraz koordynowanie pracy zespołu kawiarni.
+                    </p>
+                </div>
+
+                <!-- EDUKACJA -->
+                <h5 class="fw-bold text-body mb-4 d-flex align-items-center gap-2 mt-5">
+                    🎓 Edukacja
+                </h5>
+                
+                <div class="mb-4 position-relative ps-4" style="border-left: 2px solid var(--bs-secondary);">
+                    <h6 class="fw-bold text-body mb-0">Inżynier Informatyki</h6>
+                    <p class="text-muted small fw-medium mb-1">Specjalność: Programowanie i Analiza Danych</p>
+                </div>
+
+                <div class="mb-0 position-relative ps-4" style="border-left: 2px solid var(--bs-secondary);">
+                    <h6 class="fw-bold text-body mb-0">Wymiana Studencka</h6>
+                    <p class="text-muted small fw-medium mb-1">Hamburski Uniwersytet Techniczny (TUHH)</p>
+                </div>
+
             </div>
         </div>
     </div>
 
-    <!-- Kolumna z historią zatrudnienia z bazy danych -->
-    <div class="col-md-8">
-        <h2 class="mb-4 text-dark border-bottom pb-2">Doświadczenie Zawodowe</h2>
-        
-        {% for job in experiences %}
-            <div class="card shadow-sm mb-3 border-secondary border-opacity-25">
-                <div class="card-body">
-                    <h4 class="card-title text-primary">{{ job.job_title }}</h4>
-                    <h6 class="card-subtitle mb-3 text-muted">
-                        {{ job.company }} | {{ job.start_date|date:"M Y" }} - 
-                        {% if job.end_date %}
-                            {{ job.end_date|date:"M Y" }}
-                        {% else %}
-                            Obecnie
-                        {% endif %}
-                    </h6>
-                    <p class="card-text">{{ job.description }}</p>
-                </div>
-            </div>
-        {% empty %}
-            <div class="alert alert-secondary">Dodaj swoje doświadczenie w panelu administratora!</div>
-        {% endfor %}
-    </div>
 </div>
 {% endblock %}
