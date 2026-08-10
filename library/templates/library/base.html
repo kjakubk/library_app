@@ -4,20 +4,53 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Kolekcje Bazy Danych{% endblock %}</title>
+    
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
     <style>
+        /* Zmienne główne */
         :root {
-            --sidebar-width: 260px;
+            --sidebar-width: 280px;
         }
+
+        /* Kolory dostosowujące się do motywu (Jasny) */
+        [data-bs-theme="light"] {
+            --sidebar-bg: #f9fafb;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --tree-line: #d1d5db;
+            --hover-bg: rgba(0, 0, 0, 0.05);
+            --active-item-bg: #ffffff;
+            --active-item-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --sidebar-border: #e5e7eb;
+        }
+
+        /* Kolory dostosowujące się do motywu (Ciemny) */
+        [data-bs-theme="dark"] {
+            --sidebar-bg: #111827;
+            --text-main: #f9fafb;
+            --text-muted: #9ca3af;
+            --tree-line: #374151;
+            --hover-bg: rgba(255, 255, 255, 0.05);
+            --active-item-bg: #1f2937;
+            --active-item-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+            --sidebar-border: rgba(255, 255, 255, 0.08);
+        }
+
         body {
             min-height: 100vh;
             background-color: var(--bs-tertiary-bg);
             color: var(--bs-body-color);
             overflow-x: hidden;
+            font-family: system-ui, -apple-system, sans-serif;
         }
         
-        /* -- SIDEBAR -- */
+        /* =========================================
+           SIDEBAR (Nowy Design)
+           ========================================= */
         .sidebar {
             width: var(--sidebar-width);
             position: fixed;
@@ -25,54 +58,146 @@
             left: 0;
             bottom: 0;
             z-index: 1040;
-            background-color: #111827;
-            color: #9ca3af;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--sidebar-border);
             display: flex;
             flex-direction: column;
-            border-right: 1px solid rgba(255, 255, 255, 0.05);
             transition: transform 0.3s ease-in-out;
+            padding: 1.5rem 1rem;
+            /* Opcjonalne zaokrąglenie w prawym górnym rogu z mockupu */
+            border-top-right-radius: 20px;
         }
+
         .sidebar-brand {
-            padding: 1.25rem 1.5rem;
-            font-weight: 700;
-            font-size: 1.1rem;
-            color: #ffffff;
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 0 0.5rem 1.5rem 0.5rem;
+            color: var(--text-main);
+            font-weight: 700;
+            font-size: 1.15rem;
+            margin-bottom: 0.5rem;
         }
+
         .sidebar-menu {
-            padding: 1rem 0.75rem;
+            list-style: none;
+            padding: 0;
+            margin: 0;
             overflow-y: auto;
             flex-grow: 1;
         }
-        .menu-category {
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: #6b7280;
-            padding: 0.75rem 0.75rem 0.35rem 0.75rem;
-            font-weight: 600;
+        
+        .sidebar-menu::-webkit-scrollbar {
+            width: 4px;
         }
-        .sidebar .nav-link {
-            color: #9ca3af;
-            padding: 0.6rem 0.85rem;
-            border-radius: 0.5rem;
-            font-size: 0.9rem;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 0.2rem;
-            transition: all 0.2s ease;
-        }
-        .sidebar .nav-link:hover, .sidebar .nav-link.active {
-            color: #ffffff;
-            background-color: rgba(255, 255, 255, 0.08);
+        .sidebar-menu::-webkit-scrollbar-thumb {
+            background-color: var(--tree-line);
+            border-radius: 4px;
         }
 
-        /* -- GŁÓWNA ZAWARTOŚĆ -- */
+        /* Główne linki (Rodzice) */
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            padding: 10px 14px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-link:hover {
+            background-color: var(--hover-bg);
+            color: var(--text-main);
+        }
+
+        .sidebar-link.active-parent {
+            color: var(--text-main);
+        }
+
+        .sidebar-icon {
+            font-size: 1.25rem;
+            margin-right: 14px;
+        }
+
+        .sidebar-chevron {
+            margin-left: auto;
+            font-size: 0.8rem;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-link[aria-expanded="true"] .sidebar-chevron {
+            transform: rotate(180deg);
+        }
+
+        /* --- LINIE DRZEWKA (Tree Submenu) --- */
+        .tree-submenu {
+            list-style: none;
+            padding-left: 0;
+            margin-left: 22px; /* Pozycjonowanie pod ikoną rodzica */
+            margin-top: 4px;
+            position: relative;
+        }
+
+        .tree-submenu::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 20px;
+            left: 0;
+            width: 2px;
+            background-color: var(--tree-line);
+        }
+
+        .tree-submenu-item {
+            position: relative;
+            padding-left: 24px;
+            margin-bottom: 2px;
+        }
+
+        .tree-submenu-item::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 16px;
+            height: 22px;
+            border-left: 2px solid var(--tree-line);
+            border-bottom: 2px solid var(--tree-line);
+            border-bottom-left-radius: 12px;
+        }
+
+        /* Linki wewnątrz drzewka */
+        .submenu-link {
+            display: flex;
+            align-items: center;
+            padding: 8px 14px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .submenu-link:hover {
+            color: var(--text-main);
+        }
+
+        /* Aktywny element w drzewku (Biała/Ciemna karta z cieniem) */
+        .submenu-link.active {
+            background-color: var(--active-item-bg);
+            color: var(--text-main);
+            font-weight: 600;
+            box-shadow: var(--active-item-shadow);
+        }
+
+
+        /* =========================================
+           GŁÓWNA ZAWARTOŚĆ & RESPONSYWNOŚĆ
+           ========================================= */
         .main-content {
             margin-left: var(--sidebar-width);
             min-height: 100vh;
@@ -80,6 +205,7 @@
             flex-direction: column;
             transition: margin-left 0.3s ease-in-out;
         }
+
         .top-navbar {
             background-color: var(--bs-body-bg);
             border-bottom: 1px solid var(--bs-border-color);
@@ -89,18 +215,17 @@
             justify-content: space-between;
         }
 
-        /* -- RESPONSYWNOŚĆ DLA TELEFONÓW (Poniżej 992px) -- */
         @media (max-width: 991.98px) {
             .sidebar {
-                transform: translateX(-100%); /* Ukryj sidebar poza ekranem */
+                transform: translateX(-100%);
+                border-top-right-radius: 0;
             }
             .sidebar.show {
-                transform: translateX(0); /* Pokaż sidebar gdy ma klasę 'show' */
+                transform: translateX(0);
             }
             .main-content {
-                margin-left: 0; /* Zwiń margines dla telefonu */
+                margin-left: 0;
             }
-            /* Ciemne tło przykrywające resztę ekranu gdy menu jest otwarte */
             .sidebar-overlay {
                 position: fixed;
                 top: 0; left: 0; right: 0; bottom: 0;
@@ -121,43 +246,83 @@
 
     <!-- Boczne menu (Sidebar) -->
     <nav class="sidebar" id="sidebar">
+        
+        <!-- Marka / Logo -->
         <div class="sidebar-brand">
-            <div class="bg-primary text-white rounded d-flex align-items-center justify-content-center fw-bold" style="width: 28px; height: 28px; font-size: 0.85rem;">Z</div>
+            <div class="bg-primary text-white rounded-3 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                <i class="bi bi-box-seam-fill"></i>
+            </div>
             <span>Kolekcje Bazy</span>
-            <!-- Przycisk zamykania tylko dla telefonu -->
-            <button class="btn btn-sm btn-link text-white d-lg-none ms-auto text-decoration-none fs-5" id="closeSidebarBtn">✕</button>
+            <!-- Przycisk zamykania na telefonie -->
+            <button class="btn btn-sm btn-link text-body d-lg-none ms-auto text-decoration-none fs-5 p-0" id="closeSidebarBtn">✕</button>
         </div>
 
-        <div class="sidebar-menu">
-            <div class="menu-category">Ogólne</div>
-            <ul class="nav flex-column">
-                <li class="nav-item">
-                    <a href="{% url 'cv_view' %}" class="nav-link">👤 O mnie / CV</a>
-                </li>
-            </ul>
+        <!-- Menu z nową strukturą (Drzewko) -->
+        <ul class="sidebar-menu">
+            
+            <!-- CV / O mnie -->
+            <li class="menu-item">
+                <a href="{% url 'cv_view' %}" class="sidebar-link">
+                    <i class="bi bi-person-vcard sidebar-icon"></i>
+                    <span>O mnie / CV</span>
+                </a>
+            </li>
 
-            <div class="menu-category mt-3">Kolekcje</div>
-            <ul class="nav flex-column">
-                <li class="nav-item"><a href="{% url 'porcelain_list' %}" class="nav-link">☕ Porcelana</a></li>
-                <li class="nav-item"><a href="{% url 'vinyl_list' %}" class="nav-link">🎵 Winyle</a></li>
-                <li class="nav-item"><a href="{% url 'book_list' %}" class="nav-link active">📚 Książki</a></li>
-                <li class="nav-item"><a href="{% url 'board_game_list' %}" class="nav-link">🎲 Planszówki</a></li>
-                <li class="nav-item"><a href="{% url 'video_game_list' %}" class="nav-link">🎮 Gry Wideo</a></li>
-            </ul>
-        </div>
+            <!-- Rozwijane menu: Kolekcje -->
+            <li class="menu-item mt-2">
+                <a href="#kolekcjeSubmenu" class="sidebar-link active-parent" data-bs-toggle="collapse" aria-expanded="true">
+                    <i class="bi bi-collection sidebar-icon"></i>
+                    <span>Kolekcje</span>
+                    <i class="bi bi-chevron-down sidebar-chevron"></i>
+                </a>
+                
+                <!-- Drzewko podkategorii -->
+                <ul class="collapse show tree-submenu" id="kolekcjeSubmenu">
+                    <li class="tree-submenu-item">
+                        <a href="{% url 'porcelain_list' %}" class="submenu-link {% if request.resolver_match.url_name == 'porcelain_list' %}active{% endif %}">
+                            <i class="bi bi-cup-hot me-2 text-muted"></i> Porcelana
+                        </a>
+                    </li>
+                    <li class="tree-submenu-item">
+                        <a href="{% url 'vinyl_list' %}" class="submenu-link {% if request.resolver_match.url_name == 'vinyl_list' %}active{% endif %}">
+                            <i class="bi bi-disc me-2 text-muted"></i> Winyle
+                        </a>
+                    </li>
+                    <li class="tree-submenu-item">
+                        <a href="{% url 'book_list' %}" class="submenu-link {% if request.resolver_match.url_name == 'book_list' %}active{% endif %}">
+                            <i class="bi bi-book me-2 text-muted"></i> Książki
+                        </a>
+                    </li>
+                    <li class="tree-submenu-item">
+                        <a href="{% url 'board_game_list' %}" class="submenu-link {% if request.resolver_match.url_name == 'board_game_list' %}active{% endif %}">
+                            <i class="bi bi-dice-5 me-2 text-muted"></i> Planszówki
+                        </a>
+                    </li>
+                    <li class="tree-submenu-item">
+                        <a href="{% url 'video_game_list' %}" class="submenu-link {% if request.resolver_match.url_name == 'video_game_list' %}active{% endif %}">
+                            <i class="bi bi-controller me-2 text-muted"></i> Gry Wideo
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+        </ul>
 
         <!-- Dolna sekcja użytkownika + Przełącznik motywu -->
-        <div class="p-3 border-top border-secondary border-opacity-25 mt-auto">
-            <button id="themeToggleBtn" class="btn btn-sm w-100 d-flex align-items-center justify-content-center gap-2 text-light bg-dark border border-secondary border-opacity-50 mb-3 py-2 rounded-2">
+        <div class="mt-auto pt-3" style="border-top: 1px solid var(--sidebar-border);">
+            
+            <!-- Przełącznik motywu wkomponowany w styl -->
+            <button id="themeToggleBtn" class="btn w-100 d-flex align-items-center justify-content-center gap-2 mb-3 py-2 rounded-3" style="background-color: var(--hover-bg); color: var(--text-main); border: none;">
                 <span id="themeIcon">🌙</span>
-                <span id="themeText" class="small fw-medium">Tryb ciemny</span>
+                <span id="themeText" class="small fw-semibold">Tryb ciemny</span>
             </button>
             
-            <div class="d-flex align-items-center gap-2 pt-2 border-top border-secondary border-opacity-25">
-                <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px; font-size: 0.8rem;">JK</div>
+            <!-- Profil -->
+            <div class="d-flex align-items-center gap-2">
+                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 36px; height: 36px; font-size: 0.85rem;">JK</div>
                 <div class="overflow-hidden">
-                    <div class="text-white small fw-semibold text-truncate">Jakub</div>
-                    <div class="text-muted" style="font-size: 0.7rem;">Administrator</div>
+                    <div class="small fw-bold text-truncate" style="color: var(--text-main);">Jakub</div>
+                    <div class="text-truncate" style="font-size: 0.75rem; color: var(--text-muted);">Administrator</div>
                 </div>
             </div>
         </div>
@@ -168,15 +333,14 @@
         <!-- Górny pas nawigacyjny -->
         <header class="top-navbar">
             <div class="d-flex align-items-center gap-3">
-                <!-- Hamburger Menu tylko dla urządzeń mobilnych -->
                 <button class="btn btn-outline-secondary btn-sm d-lg-none shadow-none" id="openSidebarBtn">
                     <span class="fs-5">☰</span>
                 </button>
-                <div class="fw-semibold small text-muted d-none d-sm-block">Panel Zarządzania Kolekcjami</div>
+                <div class="fw-semibold small text-muted d-none d-sm-block"></div>
             </div>
             
             <div class="d-flex align-items-center gap-3">
-                <span class="badge bg-secondary bg-opacity-15 text-body border px-2 py-1" style="font-size: 0.75rem;">System v2.0</span>
+                <span class="badge bg-secondary bg-opacity-15 text-body border px-2 py-1" style="font-size: 0.75rem;"></span>
             </div>
         </header>
 
@@ -190,7 +354,7 @@
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- Skrypt obsługujący UI (Menu na telefon + Motyw) -->
+    <!-- Skrypty UI -->
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             // -- OBSŁUGA MOTYWU JASNY/CIEMNY --
@@ -237,7 +401,7 @@
 
             if(openBtn) openBtn.addEventListener('click', toggleSidebar);
             if(closeBtn) closeBtn.addEventListener('click', toggleSidebar);
-            if(overlay) overlay.addEventListener('click', toggleSidebar); // Zamknij menu po kliknięciu w tło
+            if(overlay) overlay.addEventListener('click', toggleSidebar);
         });
     </script>
 </body>

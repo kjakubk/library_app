@@ -1,22 +1,266 @@
 {% extends 'library/base.html' %}
+{% load static %}
 
-{% block title %}Kolekcja gier planszowych{% endblock %}
+{% block title %}Planszówki - Kolekcje{% endblock %}
 
 {% block content %}
-<h1 class="mb-4 text-success border-bottom pb-2">Moja półka:</h1>
-
-<div class="row">
-    {% for item in items %}
-        <div class="col-md-4 mb-4">
-            <div class="card shadow-sm h-100 border-success border-opacity-25">
-                <div class="card-body">
-                    <h5 class="card-title">{{ item.title }}</h5>
-                    <h3 class="card-text mt-3">{{item.is_expansion}}
+<div class="container-fluid px-2 px-md-4 py-4 mb-5">
+    
+    <!-- KAFELKI -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-lg-6">
+            <div class="card bg-body shadow-sm border rounded-4 p-3 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small fw-bold text-muted text-uppercase" style="letter-spacing: 0.5px;">🏢 Najczęstsi Wydawcy</span>
+                    <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1 rounded-pill" style="font-size: 0.7rem;">Top 5</span>
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-1">
+                    {% for stat in publisher_stats %}
+                        <div class="badge bg-body-secondary border text-body px-3 py-2 rounded-3 d-flex align-items-center gap-2 fw-normal text-start">
+                            <span>{{ stat.publisher }}</span>
+                            <span class="badge bg-primary text-white rounded-pill px-2">{{ stat.count }}</span>
+                        </div>
+                    {% empty %}
+                        <span class="text-muted small fst-italic">Brak wydawców.</span>
+                    {% endfor %}
                 </div>
             </div>
         </div>
-    {% empty %}
-        <div class="col-12"><div class="alert alert-info">Brak gry w bazie.</div></div>
-    {% endfor %}
+
+        <div class="col-12 col-lg-6">
+            <div class="card bg-body shadow-sm border rounded-4 p-3 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small fw-bold text-muted text-uppercase" style="letter-spacing: 0.5px;">🎲 Kategorie</span>
+                    <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1 rounded-pill" style="font-size: 0.7rem;">Top 5</span>
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-1">
+                    {% for stat in category_stats %}
+                        <div class="badge bg-body-secondary border text-body px-3 py-2 rounded-3 d-flex align-items-center justify-content-between gap-3 fw-normal text-start w-100" style="max-width: none;">
+                            <span class="text-wrap">{{ stat.category }}</span>
+                            <span class="badge bg-success text-white rounded-pill px-2 flex-shrink-0">{{ stat.count }}</span>
+                        </div>
+                    {% empty %}
+                        <span class="text-muted small fst-italic">Brak kategorii.</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANEL GÓRNY -->
+    <div class="bg-body px-3 py-3 px-md-4 rounded-4 shadow-sm border mb-4">
+        <form method="GET" action="" class="row g-3 align-items-center">
+            <div class="col-12 col-xl-5">
+                <div class="input-group input-group-sm bg-body-secondary rounded-pill border px-3 py-2 align-items-center">
+                    <span class="text-muted me-2">🔍</span>
+                    <input type="text" name="q" value="{{ request.GET.q|default:'' }}" class="form-control form-control-sm border-0 bg-transparent shadow-none text-body" placeholder="Szukaj po tytule lub wydawcy...">
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-xl-4">
+                <select name="category" class="form-select form-select-sm bg-body-secondary rounded-pill border px-3 py-2 text-body shadow-none" onchange="this.form.submit()">
+                    <option value="">Wszystkie kategorie</option>
+                    {% for c in available_categories %}
+                        <option value="{{ c }}" {% if selected_category == c %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if request.GET.sort %}<input type="hidden" name="sort" value="{{ request.GET.sort }}">{% endif %}
+            <div class="col-12 col-xl-3 d-flex gap-2 justify-content-xl-end">
+                <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3 py-2 fw-semibold w-100 shadow-sm">Filtruj</button>
+                {% if request.GET.q or request.GET.category or request.GET.sort %}
+                    <a href="{% url 'board_game_list' %}" class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-2 text-decoration-none d-flex align-items-center justify-content-center" title="Resetuj filtry">🔄</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- PASEK INFO & DODAJ -->
+    <div class="d-flex justify-content-between align-items-center bg-body px-3 py-3 px-md-4 rounded-4 shadow-sm border mb-4">
+        <div class="badge bg-body border text-body px-3 py-2 rounded-pill fw-medium small d-flex align-items-center">
+            Znaleziono gier: <strong class="text-primary fs-6 ms-2">{{ total_count|default:"0" }}</strong>
+        </div>
+        <div>
+            <a href="{% url 'board_game_create' %}" class="btn btn-success btn-sm px-4 py-2 rounded-pill fw-semibold d-flex align-items-center justify-content-center gap-1 shadow-sm text-decoration-none">
+                + Dodaj grę
+            </a>
+        </div>
+    </div>
+
+    <!-- TABELA -->
+    <div class="card bg-body shadow-sm border rounded-4 overflow-hidden mb-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="ps-3 ps-md-4 py-3" style="width: 70px;">Pudełko</th>
+                        <th class="py-3" style="min-width: 220px;">
+                            <a href="?sort={% if current_sort == 'title' %}-title{% else %}title{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}" class="text-white text-decoration-none d-flex align-items-center gap-1">
+                                Tytuł gry
+                                <span style="font-size: 0.8rem;">{% if current_sort == 'title' %}▲{% elif current_sort == '-title' %}▼{% else %}↕{% endif %}</span>
+                            </a>
+                        </th>
+                        <th class="py-3" style="min-width: 150px;">
+                            <a href="?sort={% if current_sort == 'publisher' %}-publisher{% else %}publisher{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}" class="text-white text-decoration-none d-flex align-items-center gap-1">
+                                Wydawca
+                                <span style="font-size: 0.8rem;">{% if current_sort == 'publisher' %}▲{% elif current_sort == '-publisher' %}▼{% else %}↕{% endif %}</span>
+                            </a>
+                        </th>
+                        <th class="py-3 text-center">Kategoria</th>
+                        <th class="py-3 text-center">Gracze</th>
+                        <th class="py-3 text-center">
+                            <a href="?sort={% if current_sort == 'release_year' %}-release_year{% else %}release_year{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}" class="text-white text-decoration-none d-inline-flex align-items-center gap-1 justify-content-center">
+                                Rok
+                                <span style="font-size: 0.8rem;">{% if current_sort == 'release_year' %}▲{% elif current_sort == '-release_year' %}▼{% else %}↕{% endif %}</span>
+                            </a>
+                        </th>
+                        <th class="py-3 text-center">Stan</th>
+                        <th class="pe-3 pe-md-4 py-3 text-end" style="min-width: 160px;">Akcje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                        <tr>
+                            <td class="ps-3 ps-md-4 py-2">
+                                <div style="width: 45px; height: 45px;">
+                                    {% if item.box_image %}
+                                        <img src="{{ item.box_image.url }}" alt="{{ item.title }}" class="w-100 h-100 object-fit-cover rounded-2 shadow-sm border" style="cursor: pointer;" onclick="openGalleryModal({{ item.pk }})">
+                                    {% elif item.board_image %}
+                                        <img src="{{ item.board_image.url }}" alt="Komponenty" class="w-100 h-100 object-fit-cover rounded-2 shadow-sm border" style="cursor: pointer;" onclick="openGalleryModal({{ item.pk }})">
+                                    {% else %}
+                                        <div class="w-100 h-100 bg-body-secondary border border-secondary border-opacity-25 rounded-2 d-flex align-items-center justify-content-center shadow-sm text-muted" style="font-size: 0.6rem;">Brak</div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="fw-bold text-body">
+                                {{ item.title }}
+                                {% if item.playtime %}
+                                    <span class="text-muted small d-block" style="font-size: 0.75rem;">⏱️ {{ item.playtime }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-body">{{ item.publisher|default:"—" }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1 rounded-pill fw-normal">
+                                    {{ item.category|default:"—" }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-dark bg-opacity-10 text-body border px-2 py-1 rounded-2" style="font-size: 0.8rem;">
+                                    👥 {{ item.min_players }}{% if item.min_players != item.max_players %}-{{ item.max_players }}{% endif %}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="font-monospace fw-medium text-body">{{ item.release_year|default:"—" }}</span>
+                            </td>
+                            <td class="text-center">
+                                {% if item.condition %}
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 rounded-pill">{{ item.condition }}</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-3 pe-md-4">
+                                <div class="d-flex justify-content-end gap-1">
+                                    {% if item.box_image or item.board_image %}
+                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-2 border px-2 py-1" onclick="openGalleryModal({{ item.pk }})" title="Podgląd">👁️ Podgląd</button>
+                                    {% endif %}
+                                    <a href="{% url 'board_game_edit' item.pk %}" class="btn btn-sm btn-outline-secondary rounded-2 border px-2 py-1" title="Edytuj">✏️ Edytuj</a>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Modal Gallery Data -->
+                        <div id="item-gallery-{{ item.pk }}" style="display:none;" 
+                             data-title="{{ item.title|escapejs }}"
+                             data-images='[
+                                {% if item.box_image %}"{{ item.box_image.url }}"{% endif %}
+                                {% if item.board_image %}{% if item.box_image %},{% endif %}"{{ item.board_image.url }}"{% endif %}
+                             ]'></div>
+                    {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <p class="text-muted mb-1">Brak gier w kolekcji.</p>
+                                <p class="small text-muted opacity-75">Kliknij "+ Dodaj grę", aby rozpocząć!</p>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>
+
+<!-- MODAL KARUZELI -->
+<div class="modal fade" id="galleryModal" tabindex="-1" aria-labelledby="galleryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-body border rounded-4 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold text-body" id="galleryModalLabel">Podgląd</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-4 position-relative">
+                <div class="d-flex justify-content-center align-items-center" style="min-height: 350px;">
+                    <img id="galleryModalImage" src="" alt="Zdjęcie gry" class="img-fluid rounded-3 shadow-sm" style="max-height: 70vh; object-fit: contain;">
+                </div>
+                <button id="prevImgBtn" class="position-absolute top-50 start-0 translate-middle-y btn btn-dark bg-opacity-50 border-0 text-white rounded-end px-3 py-3 ms-2" onclick="changeImage(-1)" style="display:none;">❮</button>
+                <button id="nextImgBtn" class="position-absolute top-50 end-0 translate-middle-y btn btn-dark bg-opacity-50 border-0 text-white rounded-start px-3 py-3 me-2" onclick="changeImage(1)" style="display:none;">❯</button>
+            </div>
+            <div class="modal-footer border-top justify-content-center py-2">
+                <span id="galleryCounter" class="small text-muted fw-medium">Zdjęcie 1 z 1</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentGalleryImages = [];
+    let currentIndex = 0;
+
+    function openGalleryModal(itemId) {
+        const dataElement = document.getElementById('item-gallery-' + itemId);
+        if (!dataElement) return;
+
+        const titleText = dataElement.getAttribute('data-title');
+        try {
+            currentGalleryImages = JSON.parse(dataElement.getAttribute('data-images'));
+        } catch (e) {
+            currentGalleryImages = [];
+        }
+
+        currentIndex = 0;
+        document.getElementById('galleryModalLabel').textContent = titleText;
+        updateModalImage();
+
+        const prevBtn = document.getElementById('prevImgBtn');
+        const nextBtn = document.getElementById('nextImgBtn');
+        if (currentGalleryImages.length > 1) {
+            prevBtn.style.display = 'block';
+            nextBtn.style.display = 'block';
+        } else {
+            prevBtn.style.display = 'none';
+            nextBtn.style.display = 'none';
+        }
+
+        var myModal = new bootstrap.Modal(document.getElementById('galleryModal'));
+        myModal.show();
+    }
+
+    function changeImage(direction) {
+        currentIndex += direction;
+        if (currentIndex < 0) {
+            currentIndex = currentGalleryImages.length - 1;
+        } else if (currentIndex >= currentGalleryImages.length) {
+            currentIndex = 0;
+        }
+        updateModalImage();
+    }
+
+    function updateModalImage() {
+        if (currentGalleryImages.length > 0) {
+            document.getElementById('galleryModalImage').src = currentGalleryImages[currentIndex];
+            let label = currentIndex === 0 ? "Pudełko" : "Komponenty";
+            document.getElementById('galleryCounter').textContent = `${label} (${currentIndex + 1} z ${currentGalleryImages.length})`;
+        }
+    }
+</script>
 {% endblock %}

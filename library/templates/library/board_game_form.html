@@ -2,105 +2,103 @@
 {% load static %}
 
 {% block title %}
-    {% if is_edit %}Edytuj winyl - {{ item.title }}{% else %}Dodaj nowy winyl{% endif %}
+    {% if is_edit %}Edytuj grę - {{ item.title }}{% else %}Dodaj nową grę{% endif %}
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid px-2 px-md-4 py-4 mb-5 d-flex justify-content-center">
     
     <div class="card bg-body shadow-sm border rounded-4 overflow-hidden w-100" style="max-width: 800px;">
-        <!-- Nagłówek formularza -->
         <div class="card-header bg-body border-bottom px-4 py-3">
             <h4 class="mb-0 fw-bold text-body d-flex align-items-center gap-2">
                 {% if is_edit %}
-                    ✏️ Edytuj płytę: <span class="text-primary">{{ item.artist }} - {{ item.title }}</span>
+                    ✏️ Edytuj planszówkę: <span class="text-primary">{{ item.title }}</span>
                 {% else %}
-                    ✨ Dodaj nowy winyl do kolekcji
+                    ✨ Dodaj nową grę planszową
                 {% endif %}
             </h4>
         </div>
         
-        <!-- Ciało formularza -->
         <div class="card-body p-4 p-md-5">
-            <!-- enctype="multipart/form-data" jest OBOWIĄZKOWE przy wysyłaniu zdjęć! -->
             <form method="POST" enctype="multipart/form-data" class="row g-4">
                 {% csrf_token %}
                 
                 <div class="col-md-6">
-                    <label class="form-label fw-medium text-body">Wykonawca / Zespół</label>
-                    {{ form.artist }}
+                    <label class="form-label fw-medium text-body">Tytuł gry</label>
+                    {{ form.title }}
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label fw-medium text-body">Tytuł albumu</label>
-                    {{ form.title }}
+                    <label class="form-label fw-medium text-body">Wydawca</label>
+                    {{ form.publisher }}
                 </div>
                 
                 <div class="col-md-6">
-                    <label class="form-label fw-medium text-body">Wytwórnia (Label)</label>
-                    {{ form.label }}
+                    <label class="form-label fw-medium text-body">Kategoria</label>
+                    {{ form.category }}
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label fw-medium text-body">Gatunek (np. Rock)</label>
-                    {{ form.genre }}
+                    <label class="form-label fw-medium text-body">Czas gry</label>
+                    {{ form.playtime }}
                 </div>
 
+                <div class="col-md-4">
+                    <label class="form-label fw-medium text-body">Min. graczy</label>
+                    {{ form.min_players }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-medium text-body">Max. graczy</label>
+                    {{ form.max_players }}
+                </div>
                 <div class="col-md-4">
                     <label class="form-label fw-medium text-body">Rok wydania</label>
                     {{ form.release_year }}
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label fw-medium text-body">Nośnik (Ilość płyt)</label>
-                    {{ form.disc_count }}
+
+                <div class="col-md-8">
+                    <label class="form-label fw-medium text-body">Stan zachowania</label>
+                    {{ form.condition }}
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-medium text-body">Wartość (PLN)</label>
                     {{ form.price }}
                 </div>
-                
-                <div class="col-12">
-                    <label class="form-label fw-medium text-body">Stan zachowania (Płyta / Okładka)</label>
-                    {{ form.condition }}
-                </div>
 
                 <!-- Sekcja Zdjęć -->
                 <div class="col-12 mt-2">
                     <hr class="border-secondary border-opacity-25">
-                    <h6 class="fw-bold text-body mb-3">📸 Zdjęcia okładki</h6>
+                    <h6 class="fw-bold text-body mb-3">📸 Zdjęcia gry</h6>
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label fw-medium text-muted small">Przód okładki (Front)</label>
-                    {{ form.front_cover }}
-                    {% if is_edit and item.front_cover %}
+                    <label class="form-label fw-medium text-muted small">Zdjęcie pudełka</label>
+                    {{ form.box_image }}
+                    {% if is_edit and item.box_image %}
                         <div class="mt-2 p-2 bg-body-secondary rounded-3 d-inline-block border">
-                            <img src="{{ item.front_cover.url }}" alt="Przód" class="rounded" style="height: 100px; object-fit: cover;">
+                            <img src="{{ item.box_image.url }}" alt="Pudełko" class="rounded" style="height: 100px; object-fit: cover;">
                         </div>
                     {% endif %}
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label fw-medium text-muted small">Tył okładki (Back)</label>
-                    {{ form.back_cover }}
-                    {% if is_edit and item.back_cover %}
+                    <label class="form-label fw-medium text-muted small">Zdjęcie komponentów</label>
+                    {{ form.board_image }}
+                    {% if is_edit and item.board_image %}
                         <div class="mt-2 p-2 bg-body-secondary rounded-3 d-inline-block border">
-                            <img src="{{ item.back_cover.url }}" alt="Tył" class="rounded" style="height: 100px; object-fit: cover;">
+                            <img src="{{ item.board_image.url }}" alt="Komponenty" class="rounded" style="height: 100px; object-fit: cover;">
                         </div>
                     {% endif %}
                 </div>
 
                 <!-- Przyciski akcji -->
                 <div class="col-12 mt-5 d-flex justify-content-between border-top pt-4">
-                    <!-- Lewa strona: Usuwanie (tylko w trybie edycji) -->
                     <div>
                         {% if is_edit %}
                             <button type="button" class="btn btn-outline-danger rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#deleteModal">
-                                🗑️ Usuń płytę
+                                🗑️ Usuń grę
                             </button>
                         {% endif %}
                     </div>
-                    
-                    <!-- Prawa strona: Zapisz / Anuluj -->
                     <div class="d-flex gap-2">
-                        <a href="{% url 'vinyl_list' %}" class="btn btn-outline-secondary rounded-pill px-4">Anuluj</a>
+                        <a href="{% url 'board_game_list' %}" class="btn btn-outline-secondary rounded-pill px-4">Anuluj</a>
                         <button type="submit" class="btn btn-primary rounded-pill px-5 fw-semibold shadow-sm">
                             {% if is_edit %}Zapisz zmiany{% else %}Dodaj do kolekcji{% endif %}
                         </button>
@@ -112,7 +110,7 @@
 </div>
 
 {% if is_edit %}
-<!-- Modal z potwierdzeniem usunięcia -->
+<!-- Modal usuwania -->
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
@@ -121,19 +119,17 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4 text-center">
-                <p class="mb-0 fs-5">Czy na pewno chcesz bezpowrotnie usunąć płytę<br><strong>{{ item.artist }} - {{ item.title }}</strong>?</p>
+                <p class="mb-0 fs-5">Czy na pewno chcesz bezpowrotnie usunąć grę<br><strong>{{ item.title }}</strong>?</p>
             </div>
             <div class="modal-footer justify-content-center border-0 pb-4">
                 <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Anuluj</button>
-                <form method="POST" action="{% url 'vinyl_delete' item.pk %}">
+                <form method="POST" action="{% url 'board_game_delete' item.pk %}">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm">Tak, usuń płytę</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm">Tak, usuń grę</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
 {% endif %}
-
-</div>
 {% endblock %}

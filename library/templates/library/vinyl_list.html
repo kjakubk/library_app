@@ -1,42 +1,313 @@
 {% extends 'library/base.html' %}
+{% load static %}
 
-{% block title %}Kolekcja Winyli{% endblock %}
+{% block title %}Winyle - Kolekcje{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
-    <h1 class="text-info m-0">Moja Kolekcja Winyli</h1>
-    <a href="{% url 'vinyl_create' %}" class="btn btn-info text-white">+ Dodaj płytę</a>
-</div>
-
-<div class="row">
-    {% for item in items %}
-        <div class="col-md-4 mb-4">
-            <div class="card shadow-sm h-100 border-info border-opacity-25">
-                <div class="card-body">
-                    <!-- Tytuł albumu jako główny nagłówek karty -->
-                    <h5 class="card-title">{{ item.album_title }}</h5>
-                    
-                    <!-- Wykonawca poniżej na szaro -->
-                    <h6 class="card-subtitle mb-3 text-muted">{{ item.artist }}</h6>
-                    
-                    <p class="card-text mt-auto">
-                        <!-- Rok wydania -->
-                        <span class="badge bg-info text-dark">Rok: {{ item.release_year }}</span>
-                        
-                        <!-- Gatunek muzyczny (jeśli istnieje) -->
-                        {% if item.genre %}
-                            <span class="badge bg-secondary">{{ item.genre }}</span>
-                        {% endif %}
-                    </p>
+<div class="container-fluid px-2 px-md-4 py-4 mb-5">
+    
+    <!-- SEKCJA KAFELKÓW ZE STATYSTYKAMI -->
+    <div class="row g-3 mb-4">
+        <!-- Kafelek 1: Wykonawcy -->
+        <div class="col-12 col-lg-6">
+            <div class="card bg-body shadow-sm border rounded-4 p-3 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small fw-bold text-muted text-uppercase" style="letter-spacing: 0.5px;">🎸 Najczęstsi wykonawcy</span>
+                    <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1 rounded-pill" style="font-size: 0.7rem;">Top 5</span>
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-1">
+                    {% for stat in artist_stats %}
+                        <div class="badge bg-body-secondary border text-body px-3 py-2 rounded-3 d-flex align-items-center gap-2 fw-normal text-start">
+                            <span>{{ stat.artist }}</span>
+                            <span class="badge bg-primary text-white rounded-pill px-2">{{ stat.count }}</span>
+                        </div>
+                    {% empty %}
+                        <span class="text-muted small fst-italic">Dodaj pierwsze płyty, by zobaczyć statystyki.</span>
+                    {% endfor %}
                 </div>
             </div>
         </div>
-    {% empty %}
-        <div class="col-12">
-            <div class="alert alert-info">
-                Brak płyt w bazie. Czas dodać pierwsze rockowe perełki z lat 80. i 90. przez panel administratora!
+
+        <!-- Kafelek 2: Gatunki -->
+        <div class="col-12 col-lg-6">
+            <div class="card bg-body shadow-sm border rounded-4 p-3 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small fw-bold text-muted text-uppercase" style="letter-spacing: 0.5px;">🎵 Gatunki muzyczne</span>
+                    <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1 rounded-pill" style="font-size: 0.7rem;">Top 5</span>
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-1">
+                    {% for stat in genre_stats %}
+                        <div class="badge bg-body-secondary border text-body px-3 py-2 rounded-3 d-flex align-items-center justify-content-between gap-3 fw-normal text-start w-100" style="max-width: none;">
+                            <span class="text-wrap">{{ stat.genre }}</span>
+                            <span class="badge bg-success text-white rounded-pill px-2 flex-shrink-0">{{ stat.count }}</span>
+                        </div>
+                    {% empty %}
+                        <span class="text-muted small fst-italic">Brak zdefiniowanych gatunków.</span>
+                    {% endfor %}
+                </div>
             </div>
         </div>
-    {% endfor %}
+    </div>
+
+    <!-- Górny panel akcji, wyszukiwarki i filtrów -->
+    <div class="bg-body px-3 py-3 px-md-4 rounded-4 shadow-sm border mb-4">
+        <form method="GET" action="" class="row g-3 align-items-center">
+            
+            <!-- Wyszukiwarka tekstowa -->
+            <div class="col-12 col-xl-5">
+                <div class="input-group input-group-sm bg-body-secondary rounded-pill border px-3 py-2 align-items-center">
+                    <span class="text-muted me-2">🔍</span>
+                    <input type="text" name="q" value="{{ request.GET.q|default:'' }}" class="form-control form-control-sm border-0 bg-transparent shadow-none text-body" placeholder="Szukaj wykonawcy, tytułu lub wytwórni...">
+                </div>
+            </div>
+
+            <!-- Filtr po gatunku -->
+            <div class="col-12 col-sm-6 col-xl-4">
+                <select name="genre" class="form-select form-select-sm bg-body-secondary rounded-pill border px-3 py-2 text-body shadow-none" onchange="this.form.submit()">
+                    <option value="">Wszystkie gatunki</option>
+                    {% for g in available_genres %}
+                        <option value="{{ g }}" {% if selected_genre == g %}selected{% endif %}>{{ g }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Zachowanie aktualnego sortowania -->
+            {% if request.GET.sort %}<input type="hidden" name="sort" value="{{ request.GET.sort }}">{% endif %}
+
+            <!-- Przyciski akcji w formularzu -->
+            <div class="col-12 col-xl-3 d-flex gap-2 justify-content-xl-end">
+                <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3 py-2 fw-semibold w-100 shadow-sm">Filtruj</button>
+                {% if request.GET.q or request.GET.genre or request.GET.sort %}
+                    <a href="{% url 'vinyl_list' %}" class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-2 text-decoration-none d-flex align-items-center justify-content-center" title="Resetuj filtry">🔄</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Pasek podsumowania i dodawania -->
+    <div class="d-flex justify-content-between align-items-center bg-body px-3 py-3 px-md-4 rounded-4 shadow-sm border mb-4">
+        <div class="badge bg-body border text-body px-3 py-2 rounded-pill fw-medium small d-flex align-items-center">
+            Znaleziono płyt: <strong class="text-primary fs-6 ms-2">{{ total_count|default:"0" }}</strong>
+        </div>
+        <div>
+            <!-- Przycisk dodawania (później podmienisz # na odpowiedni URL) -->
+            <a href="{% url 'vinyl_create' %}" class="btn btn-success btn-sm px-4 py-2 rounded-pill fw-semibold d-flex align-items-center justify-content-center gap-1 shadow-sm text-decoration-none">
+                + Dodaj winyl
+            </a>
+        </div>
+    </div>
+
+    <!-- Główna tabela winyli -->
+    <div class="card bg-body shadow-sm border rounded-4 overflow-hidden mb-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="ps-3 ps-md-4 py-3" style="width: 70px;">Okładka</th>
+                        
+                        <th class="py-3" style="min-width: 180px;">
+                            <a href="?sort={% if current_sort == 'artist' %}-artist{% else %}artist{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.genre %}&genre={{ request.GET.genre }}{% endif %}" class="text-white text-decoration-none d-flex align-items-center gap-1">
+                                Wykonawca
+                                <span style="font-size: 0.8rem;">
+                                    {% if current_sort == 'artist' %}▲{% elif current_sort == '-artist' %}▼{% else %}↕{% endif %}
+                                </span>
+                            </a>
+                        </th>
+
+                        <th class="py-3" style="min-width: 200px;">
+                            <a href="?sort={% if current_sort == 'title' %}-title{% else %}title{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.genre %}&genre={{ request.GET.genre }}{% endif %}" class="text-white text-decoration-none d-flex align-items-center gap-1">
+                                Tytuł albumu
+                                <span style="font-size: 0.8rem;">
+                                    {% if current_sort == 'title' %}▲{% elif current_sort == '-title' %}▼{% else %}↕{% endif %}
+                                </span>
+                            </a>
+                        </th>
+
+                        <th class="py-3 text-center">Gatunek</th>
+                        <th class="py-3 text-center" style="width: 80px;">Nośnik</th>
+
+                        <th class="py-3 text-center">
+                            <a href="?sort={% if current_sort == 'release_year' %}-release_year{% else %}release_year{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.genre %}&genre={{ request.GET.genre }}{% endif %}" class="text-white text-decoration-none d-inline-flex align-items-center gap-1 justify-content-center">
+                                Rok
+                                <span style="font-size: 0.8rem;">
+                                    {% if current_sort == 'release_year' %}▲{% elif current_sort == '-release_year' %}▼{% else %}↕{% endif %}
+                                </span>
+                            </a>
+                        </th>
+
+                        <th class="py-3 text-center">Stan</th>
+                        <th class="py-3 text-center">Cena</th>
+                        <th class="pe-3 pe-md-4 py-3 text-end" style="min-width: 160px;">Akcje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                        <tr>
+                            <!-- Miniatura -->
+                            <td class="ps-3 ps-md-4 py-2">
+                                <div style="width: 45px; height: 45px;">
+                                    {% if item.front_cover %}
+                                        <img src="{{ item.front_cover.url }}" alt="{{ item.title }}" class="w-100 h-100 object-fit-cover rounded-2 shadow-sm border" style="cursor: pointer;" onclick="openGalleryModal({{ item.pk }})">
+                                    {% elif item.back_cover %}
+                                        <img src="{{ item.back_cover.url }}" alt="Tył okładki" class="w-100 h-100 object-fit-cover rounded-2 shadow-sm border" style="cursor: pointer;" onclick="openGalleryModal({{ item.pk }})">
+                                    {% else %}
+                                        <div class="w-100 h-100 bg-body-secondary border border-secondary border-opacity-25 rounded-2 d-flex align-items-center justify-content-center shadow-sm text-muted" style="font-size: 0.6rem;">Brak</div>
+                                    {% endif %}
+                                </div>
+                            </td>
+
+                            <!-- Wykonawca -->
+                            <td class="fw-bold text-body">{{ item.artist }}</td>
+
+                            <!-- Tytuł -->
+                            <td>
+                                <span class="d-block">{{ item.title }}</span>
+                                {% if item.label %}
+                                    <span class="text-muted small d-block" style="font-size: 0.75rem;">🏷️ {{ item.label }}</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Gatunek -->
+                            <td class="text-center">
+                                <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1 rounded-pill fw-normal">
+                                    {{ item.genre|default:"—" }}
+                                </span>
+                            </td>
+                            
+                            <!-- Ilość Płyt (Nośnik) -->
+                            <td class="text-center">
+                                <span class="badge bg-dark bg-opacity-10 text-body border px-2 py-1 rounded-2" style="font-size: 0.8rem;">
+                                    {{ item.disc_count }}xLP
+                                </span>
+                            </td>
+
+                            <!-- Rok wydania -->
+                            <td class="text-center">
+                                <span class="font-monospace fw-medium text-body">{{ item.release_year|default:"—" }}</span>
+                            </td>
+
+                            <!-- Stan -->
+                            <td class="text-center">
+                                {% if 'NM' in item.condition or 'M' in item.condition or 'Ideal' in item.condition or 'Mint' in item.condition %}
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 rounded-pill">{{ item.condition }}</span>
+                                {% elif 'VG' in item.condition or 'G' in item.condition or 'Dobry' in item.condition %}
+                                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-1 rounded-pill">{{ item.condition }}</span>
+                                {% elif item.condition %}
+                                    <span class="badge bg-secondary bg-opacity-10 text-body border border-secondary border-opacity-25 px-2 py-1 rounded-pill">{{ item.condition }}</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Cena -->
+                            <td class="text-center">
+                                <span class="fw-medium text-success small">{{ item.price|default:"—" }}</span>
+                            </td>
+
+                            <!-- Akcje -->
+                            <td class="text-end pe-3 pe-md-4">
+                                <div class="d-flex justify-content-end gap-1">
+                                    {% if item.front_cover or item.back_cover %}
+                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-2 border px-2 py-1" onclick="openGalleryModal({{ item.pk }})" title="Przeglądaj wszystkie zdjęcia">👁️ Podgląd</button>
+                                    {% endif %}
+                                    <a href="{% url 'vinyl_edit' item.pk %}" class="btn btn-sm btn-outline-secondary rounded-2 border px-2 py-1" title="Edytuj">✏️ Edytuj</a>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Modal Gallery Data -->
+                        <div id="item-gallery-{{ item.pk }}" style="display:none;" 
+                             data-title="{{ item.artist|escapejs }} - {{ item.title|escapejs }}"
+                             data-images='[
+                                {% if item.front_cover %}"{{ item.front_cover.url }}"{% endif %}
+                                {% if item.back_cover %}{% if item.front_cover %},{% endif %}"{{ item.back_cover.url }}"{% endif %}
+                             ]'></div>
+                    {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center py-5">
+                                <p class="text-muted mb-1">Brak płyt w kolekcji.</p>
+                                <p class="small text-muted opacity-75">Dodaj swój pierwszy album, aby rozpocząć tworzenie katalogu!</p>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>
+
+<!-- MODAL KARUZELI -->
+<div class="modal fade" id="galleryModal" tabindex="-1" aria-labelledby="galleryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-body border rounded-4 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold text-body" id="galleryModalLabel">Podgląd okładki</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-4 position-relative">
+                <div class="d-flex justify-content-center align-items-center" style="min-height: 350px;">
+                    <img id="galleryModalImage" src="" alt="Zdjęcie płyty" class="img-fluid rounded-3 shadow-sm" style="max-height: 70vh; object-fit: contain;">
+                </div>
+                <button id="prevImgBtn" class="position-absolute top-50 start-0 translate-middle-y btn btn-dark bg-opacity-50 border-0 text-white rounded-end px-3 py-3 ms-2" onclick="changeImage(-1)" style="display:none;">❮</button>
+                <button id="nextImgBtn" class="position-absolute top-50 end-0 translate-middle-y btn btn-dark bg-opacity-50 border-0 text-white rounded-start px-3 py-3 me-2" onclick="changeImage(1)" style="display:none;">❯</button>
+            </div>
+            <div class="modal-footer border-top justify-content-center py-2">
+                <span id="galleryCounter" class="small text-muted fw-medium">Zdjęcie 1 z 1</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentGalleryImages = [];
+    let currentIndex = 0;
+
+    function openGalleryModal(itemId) {
+        const dataElement = document.getElementById('item-gallery-' + itemId);
+        if (!dataElement) return;
+
+        const titleText = dataElement.getAttribute('data-title');
+        try {
+            currentGalleryImages = JSON.parse(dataElement.getAttribute('data-images'));
+        } catch (e) {
+            currentGalleryImages = [];
+        }
+
+        currentIndex = 0;
+        document.getElementById('galleryModalLabel').textContent = titleText;
+        updateModalImage();
+
+        const prevBtn = document.getElementById('prevImgBtn');
+        const nextBtn = document.getElementById('nextImgBtn');
+        if (currentGalleryImages.length > 1) {
+            prevBtn.style.display = 'block';
+            nextBtn.style.display = 'block';
+        } else {
+            prevBtn.style.display = 'none';
+            nextBtn.style.display = 'none';
+        }
+
+        var myModal = new bootstrap.Modal(document.getElementById('galleryModal'));
+        myModal.show();
+    }
+
+    function changeImage(direction) {
+        currentIndex += direction;
+        if (currentIndex < 0) {
+            currentIndex = currentGalleryImages.length - 1;
+        } else if (currentIndex >= currentGalleryImages.length) {
+            currentIndex = 0;
+        }
+        updateModalImage();
+    }
+
+    function updateModalImage() {
+        if (currentGalleryImages.length > 0) {
+            document.getElementById('galleryModalImage').src = currentGalleryImages[currentIndex];
+            let label = currentIndex === 0 ? "Przód okładki" : "Tył okładki";
+            document.getElementById('galleryCounter').textContent = `${label} (${currentIndex + 1} z ${currentGalleryImages.length})`;
+        }
+    }
+</script>
 {% endblock %}

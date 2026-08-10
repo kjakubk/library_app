@@ -17,12 +17,24 @@ urlpatterns = [
     path('winyle/', views.vinyl_list, name='vinyl_list'),
     path('ksiazki/', views.book_list, name='book_list'),
     path('planszowki/', views.board_game_list, name='board_game_list'),
+    path('planszowki/dodaj/', views.board_game_create, name='board_game_create'),
+    path('planszowki/<int:pk>/edytuj/', views.board_game_edit, name='board_game_edit'),
+    path('planszowki/<int:pk>/usun/', views.board_game_delete, name='board_game_delete'),
+
+    
     path('gry-wideo/', views.video_game_list, name='video_game_list'),
+    path('gry-wideo/dodaj/', views.video_game_create, name='video_game_create'),
+    path('gry-wideo/<int:pk>/edytuj/', views.video_game_edit, name='video_game_edit'),
+    path('gry-wideo/<int:pk>/usun/', views.video_game_delete, name='video_game_delete'),
 
     # ==========================================
     # 3. FORMULARZE I AKCJE (INNE KOLEKCJE)
     # ==========================================
-    path('winyle/dodaj/', views.vinyl_create, name='vinyl_create'),
+    path('winyle/', views.vinyl_list, name='vinyl_list'),
+    path('winyle/dodaj/', views.vinyl_create, name='vinyl_create'),           # <--- DODAJ TO
+    path('winyle/<int:pk>/edytuj/', views.vinyl_edit, name='vinyl_edit'),     # <--- DODAJ TO
+    path('winyle/<int:pk>/usun/', views.vinyl_delete, name='vinyl_delete'),
+
 
     # ==========================================
     # 4. KSIĄŻKI (DODawanie, IMPORT, SZCZEGÓŁY, EDYCJA)
@@ -41,6 +53,7 @@ urlpatterns = [
     path('porcelana/dodaj/', views.porcelain_create, name='porcelain_create'),
     path('porcelana/<int:pk>/edytuj/', views.porcelain_edit, name='porcelain_edit'),
     path('porcelana/<int:pk>/usun/', views.porcelain_delete, name='porcelain_delete'),
+    
 
     # ==========================================
     # 5. ENDPOINTY API (ASYNCHRONICZNE POBIERANIE)

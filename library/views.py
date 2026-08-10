@@ -12,7 +12,7 @@ from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from itertools import groupby
 
-from .forms import BookForm, CSVImportForm, VinylRecordForm, PorcelainForm
+from .forms import BookForm, CSVImportForm, VinylRecordForm, PorcelainForm,BoardGameForm,VideoGameForm
 from .models import BoardGame, Book, Porcelain, VideoGame, VinylRecord, CATEGORY_CHOICES
 
 
@@ -172,24 +172,243 @@ def porcelain_delete(request, pk):
 
 
 @require_access_code
+
 def vinyl_list(request):
-    """Wyświetla listę płyt winylowych."""
+    query = request.GET.get('q', '')
+    sort_by = request.GET.get('sort', 'artist')
+    selected_genre = request.GET.get('genre', '')
+    
     items = VinylRecord.objects.all()
-    return render(request, 'library/vinyl_list.html', {'items': items})
+
+    # Wyszukiwanie tekstowe
+    if query:
+        items = items.filter(
+            Q(artist__icontains=query) |
+            Q(title__icontains=query) |
+            Q(label__icontains=query)
+        )
+
+    # Filtrowanie po gatunku
+    if selected_genre:
+        items = items.filter(genre=selected_genre)
+
+    # Sortowanie
+    sort_mapping = {
+        'artist': 'artist',
+        '-artist': '-artist',
+        'title': 'title',
+        '-title': '-title',
+        'release_year': 'release_year',
+        '-release_year': '-release_year',
+        'condition': 'condition',
+        '-condition': '-condition',
+    }
+    
+    if sort_by in sort_mapping:
+        items = items.order_by(sort_mapping[sort_by])
+
+    # Dynamiczne statystyki do bocznego paska/nagłówka
+    available_genres = VinylRecord.objects.exclude(genre__isnull=True).exclude(genre__exact='').values_list('genre', flat=True).distinct().order_by('genre')
+    artist_stats = VinylRecord.objects.values('artist').annotate(count=Count('id')).order_by('-count')[:5]
+    genre_stats = VinylRecord.objects.exclude(genre__isnull=True).exclude(genre__exact='').values('genre').annotate(count=Count('id')).order_by('-count')[:5]
+    total_count = items.count()
+
+    context = {
+        'items': items,
+        'artist_stats': artist_stats,
+        'genre_stats': genre_stats,
+        'total_count': total_count,
+        'current_sort': sort_by,
+        'available_genres': available_genres,
+        'selected_genre': selected_genre,
+    }
+    return render(request, 'library/vinyl_list.html', context)
+
+def vinyl_create(request):
+    if request.method == 'POST':
+        # request.FILES jest konieczne, żeby przesłać zdjęcia!
+        form = VinylRecordForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            return redirect('vinyl_list')
+    else:
+        form = VinylRecordForm()
+    
+    context = {'form': form, 'is_edit': False}
+    return render(request, 'library/vinyl_form.html', context)
+
+def vinyl_edit(request, pk):
+    item = get_object_or_404(VinylRecord, pk=pk)
+    if request.method == 'POST':
+        form = VinylRecordForm(request.POST, request.FILES, instance=item)
+        if form.is_valid():
+            form.save()
+            return redirect('vinyl_list')
+    else:
+        form = VinylRecordForm(instance=item)
+    
+    context = {'form': form, 'item': item, 'is_edit': True}
+    return render(request, 'library/vinyl_form.html', context)
+
+def vinyl_delete(request, pk):
+    item = get_object_or_404(VinylRecord, pk=pk)
+    # Zabezpieczamy usuwanie – usunie tylko wtedy, gdy ktoś kliknie przycisk z formularza (POST)
+    if request.method == 'POST':
+        item.delete()
+        return redirect('vinyl_list')
+    return redirect('vinyl_list')
 
 
 @require_access_code
 def video_game_list(request):
-    """Wyświetla listę gier wideo."""
+    query = request.GET.get('q', '')
+    sort_by = request.GET.get('sort', 'title')
+    selected_platform = request.GET.get('platform', '')
+    
     items = VideoGame.objects.all()
-    return render(request, 'library/video_game_list.html', {'items': items})
+
+    if query:
+        items = items.filter(
+            Q(title__icontains=query) |
+            Q(genre__icontains=query)
+        )
+
+    if selected_platform:
+        items = items.filter(platform=selected_platform)
+
+    sort_mapping = {
+        'title': 'title', '-title': '-title',
+        'platform': 'platform', '-platform': '-platform',
+        'release_year': 'release_year', '-release_year': '-release_year',
+        'condition': 'condition', '-condition': '-condition',
+    }
+    
+    if sort_by in sort_mapping:
+        items = items.order_by(sort_mapping[sort_by])
+
+    available_platforms = VideoGame.objects.exclude(platform__isnull=True).exclude(platform__exact='').values_list('platform', flat=True).distinct().order_by('platform')
+    platform_stats = VideoGame.objects.exclude(platform__isnull=True).exclude(platform__exact='').values('platform').annotate(count=Count('id')).order_by('-count')[:5]
+    genre_stats = VideoGame.objects.exclude(genre__isnull=True).exclude(genre__exact='').values('genre').annotate(count=Count('id')).order_by('-count')[:5]
+    total_count = items.count()
+
+    context = {
+        'items': items,
+        'platform_stats': platform_stats,
+        'genre_stats': genre_stats,
+        'total_count': total_count,
+        'current_sort': sort_by,
+        'available_platforms': available_platforms,
+        'selected_platform': selected_platform,
+    }
+    return render(request, 'library/video_game_list.html', context)
+
+def video_game_create(request):
+    if request.method == 'POST':
+        form = VideoGameForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            return redirect('video_game_list')
+    else:
+        form = VideoGameForm()
+    
+    context = {'form': form, 'is_edit': False}
+    return render(request, 'library/video_game_form.html', context)
+
+def video_game_edit(request, pk):
+    item = get_object_or_404(VideoGame, pk=pk)
+    if request.method == 'POST':
+        form = VideoGameForm(request.POST, request.FILES, instance=item)
+        if form.is_valid():
+            form.save()
+            return redirect('video_game_list')
+    else:
+        form = VideoGameForm(instance=item)
+    
+    context = {'form': form, 'item': item, 'is_edit': True}
+    return render(request, 'library/video_game_form.html', context)
+
+def video_game_delete(request, pk):
+    item = get_object_or_404(VideoGame, pk=pk)
+    if request.method == 'POST':
+        item.delete()
+        return redirect('video_game_list')
+    return redirect('video_game_list')
 
 
 @require_access_code
 def board_game_list(request):
-    """Wyświetla listę gier planszowych."""
+    query = request.GET.get('q', '')
+    sort_by = request.GET.get('sort', 'title')
+    selected_category = request.GET.get('category', '')
+    
     items = BoardGame.objects.all()
-    return render(request, 'library/board_game_list.html', {'items': items})
+
+    if query:
+        items = items.filter(
+            Q(title__icontains=query) |
+            Q(publisher__icontains=query)
+        )
+
+    if selected_category:
+        items = items.filter(category=selected_category)
+
+    sort_mapping = {
+        'title': 'title', '-title': '-title',
+        'publisher': 'publisher', '-publisher': '-publisher',
+        'release_year': 'release_year', '-release_year': '-release_year',
+        'condition': 'condition', '-condition': '-condition',
+    }
+    
+    if sort_by in sort_mapping:
+        items = items.order_by(sort_mapping[sort_by])
+
+    available_categories = BoardGame.objects.exclude(category__isnull=True).exclude(category__exact='').values_list('category', flat=True).distinct().order_by('category')
+    publisher_stats = BoardGame.objects.exclude(publisher__isnull=True).exclude(publisher__exact='').values('publisher').annotate(count=Count('id')).order_by('-count')[:5]
+    category_stats = BoardGame.objects.exclude(category__isnull=True).exclude(category__exact='').values('category').annotate(count=Count('id')).order_by('-count')[:5]
+    total_count = items.count()
+
+    context = {
+        'items': items,
+        'publisher_stats': publisher_stats,
+        'category_stats': category_stats,
+        'total_count': total_count,
+        'current_sort': sort_by,
+        'available_categories': available_categories,
+        'selected_category': selected_category,
+    }
+    return render(request, 'library/board_game_list.html', context)
+
+def board_game_create(request):
+    if request.method == 'POST':
+        form = BoardGameForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            return redirect('board_game_list')
+    else:
+        form = BoardGameForm()
+    
+    context = {'form': form, 'is_edit': False}
+    return render(request, 'library/board_game_form.html', context)
+
+def board_game_edit(request, pk):
+    item = get_object_or_404(BoardGame, pk=pk)
+    if request.method == 'POST':
+        form = BoardGameForm(request.POST, request.FILES, instance=item)
+        if form.is_valid():
+            form.save()
+            return redirect('board_game_list')
+    else:
+        form = BoardGameForm(instance=item)
+    
+    context = {'form': form, 'item': item, 'is_edit': True}
+    return render(request, 'library/board_game_form.html', context)
+
+def board_game_delete(request, pk):
+    item = get_object_or_404(BoardGame, pk=pk)
+    if request.method == 'POST':
+        item.delete()
+        return redirect('board_game_list')
+    return redirect('board_game_list')
 
 
 @require_access_code
@@ -741,3 +960,6 @@ def toggle_book_read(request, pk):
         except Book.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Książka nie istnieje'}, status=404)
     return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
+
+
+

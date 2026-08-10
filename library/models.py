@@ -36,6 +36,10 @@ CATEGORY_CHOICES = [
 
 from django.db import models
 
+# ==========================================
+# 0. Porcelana
+# ==========================================
+
 class Porcelain(models.Model):
     CONDITION_CHOICES = [
         ('Idealny', 'Idealny (Witrynowy)'),
@@ -146,17 +150,40 @@ class Porcelain(models.Model):
     def __str__(self):
         return f"{self.name} - {self.signature} ({self.style})"
 
+from django.db import models
+
+
+# ==========================================
+# 0. VINYLE
+# ==========================================
+
 class VinylRecord(models.Model):
-    """Model reprezentujący płyty winylowe."""
-    artist = models.CharField(max_length=200, help_text="np. Franek Kimono")
-    album_title = models.CharField(max_length=200)
-    release_year = models.IntegerField(help_text="np. 2021")
-    float = models.CharField(max_length=100, help_text="np. Battle Scared")
-    image = models.ImageField(upload_to='library_images/', blank=True, null=True)
+    # Podstawowe dane
+    artist = models.CharField(max_length=200, verbose_name="Wykonawca / Zespół")
+    title = models.CharField(max_length=200, verbose_name="Tytuł albumu")
+    label = models.CharField(max_length=200, blank=True, null=True, verbose_name="Wytwórnia płytowa")
+    
+    # Kategoryzacja i wydanie
+    genre = models.CharField(max_length=100, blank=True, null=True, verbose_name="Gatunek")
+    release_year = models.IntegerField(blank=True, null=True, verbose_name="Rok wydania")
+    disc_count = models.IntegerField(default=1, verbose_name="Ilość płyt w wydaniu") # <--- NOWE POLE
+    
+    # Stan i wartość
+    condition = models.CharField(max_length=50, blank=True, null=True, verbose_name="Stan (Płyta / Okładka)")
+    price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Cena / Wartość")
+    
+    # Zdjęcia
+    front_cover = models.ImageField(upload_to='vinyls/front/', blank=True, null=True, verbose_name="Przód okładki")
+    back_cover = models.ImageField(upload_to='vinyls/back/', blank=True, null=True, verbose_name="Tył okładki")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.artist} - {self.album_title}"
+        return f"{self.artist} - {self.title}"
 
+# ==========================================
+# 0. Książki
+# ==========================================
 
 class Book(models.Model):
     """Rozbudowany model książki zawierający pełne metadane, informacje o czytaniu i transakcjach."""
@@ -209,20 +236,47 @@ class Book(models.Model):
 
 
 class VideoGame(models.Model):
-    """Model reprezentujący gry wideo."""
-    title = models.CharField(max_length=250)
-    platform = models.CharField(max_length=250)
-    image = models.ImageField(upload_to='library_images/', blank=True, null=True)
+    # Podstawowe dane
+    title = models.CharField(max_length=200, verbose_name="Tytuł gry")
+    platform = models.CharField(max_length=100, verbose_name="Platforma (np. PC, PS5, Switch)")
+    genre = models.CharField(max_length=100, blank=True, null=True, verbose_name="Gatunek (np. RPG, Shooter)")
+    release_year = models.IntegerField(blank=True, null=True, verbose_name="Rok wydania")
+    
+    # Stan i wartość
+    condition = models.CharField(max_length=50, blank=True, null=True, verbose_name="Stan (Pudełko / Nośnik)")
+    price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Cena / Wartość")
+    
+    # Zdjęcia
+    cover_image = models.ImageField(upload_to='videogames/covers/', blank=True, null=True, verbose_name="Okładka gry")
+    media_image = models.ImageField(upload_to='videogames/media/', blank=True, null=True, verbose_name="Płyta / Kartridż")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.title} - {self.platform}"
+        return f"{self.title} ({self.platform})"
 
 
 class BoardGame(models.Model):
-    """Model reprezentujący gry planszowe."""
-    title = models.CharField(max_length=250)
-    is_expansion = models.CharField(max_length=100, blank=True, null=True)
-    image = models.ImageField(upload_to='library_images/', blank=True, null=True)
+    # Podstawowe dane
+    title = models.CharField(max_length=200, verbose_name="Tytuł gry")
+    publisher = models.CharField(max_length=200, blank=True, null=True, verbose_name="Wydawca")
+    category = models.CharField(max_length=100, blank=True, null=True, verbose_name="Kategoria (np. Strategiczna, Rodzinna)")
+    release_year = models.IntegerField(blank=True, null=True, verbose_name="Rok wydania")
+    
+    # Specyfika planszówek
+    min_players = models.IntegerField(default=1, verbose_name="Min. liczba graczy")
+    max_players = models.IntegerField(default=4, verbose_name="Max. liczba graczy")
+    playtime = models.CharField(max_length=50, blank=True, null=True, verbose_name="Czas gry (np. 60-90 min)")
+    
+    # Stan i wartość
+    condition = models.CharField(max_length=50, blank=True, null=True, verbose_name="Stan")
+    price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Cena / Wartość")
+    
+    # Zdjęcia
+    box_image = models.ImageField(upload_to='boardgames/box/', blank=True, null=True, verbose_name="Zdjęcie pudełka")
+    board_image = models.ImageField(upload_to='boardgames/board/', blank=True, null=True, verbose_name="Zdjęcie komponentów")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.title} - {self.is_expansion}"
+        return self.title
