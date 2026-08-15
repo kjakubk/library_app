@@ -7,34 +7,46 @@
 <style>
     /* Magia kaskadowej siatki (Masonry) w czystym CSS! */
     .masonry-grid {
-        column-count: 1;
-        column-gap: 1.5rem;
+        column-count: 2;
+        column-gap: 0.75rem;
     }
-    /* Dla telefonów 1 kolumna, dla tabletów 2, dla komputerów 3-4 */
-    @media (min-width: 576px) { .masonry-grid { column-count: 2; } }
-    @media (min-width: 992px) { .masonry-grid { column-count: 3; } }
-    @media (min-width: 1400px) { .masonry-grid { column-count: 4; } }
+    @media (max-width: 480px) {
+        .masonry-grid {
+            column-count: 1;
+            column-gap: 0.5rem;
+        }
+    }
+    @media (min-width: 768px) { .masonry-grid { column-count: 2; column-gap: 1rem; } }
+    @media (min-width: 992px) { .masonry-grid { column-count: 3; column-gap: 1.25rem; } }
+    @media (min-width: 1400px) { .masonry-grid { column-count: 4; column-gap: 1.5rem; } }
     
     .masonry-item {
         break-inside: avoid;
-        margin-bottom: 1.5rem;
+        margin-bottom: 0.75rem;
         position: relative;
         border-radius: 12px;
         overflow: hidden;
         cursor: zoom-in;
     }
     
+    @media (min-width: 768px) {
+        .masonry-item {
+            margin-bottom: 1.25rem;
+        }
+    }
+    
     /* Ciemny pasek, który pojawia się po najechaniu myszką */
     .masonry-overlay {
         position: absolute;
         bottom: 0; left: 0; right: 0;
-        background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-        padding: 20px 15px 15px 15px;
+        background: linear-gradient(to top, rgba(0,0,0,0.85), transparent);
+        padding: 15px 12px 10px 12px;
         color: white;
         opacity: 0;
         transition: opacity 0.3s ease;
     }
-    .masonry-item:hover .masonry-overlay {
+    .masonry-item:hover .masonry-overlay,
+    .masonry-item:active .masonry-overlay {
         opacity: 1;
     }
 
@@ -48,19 +60,19 @@
     }
 </style>
 
-<div class="container-fluid px-2 px-md-4 py-4 mb-5">
+<div class="container-fluid px-2 px-md-4 py-3 py-md-4 mb-5">
     
-    <!-- Filtry / Kategorie -->
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-        <div class="d-flex gap-2 overflow-auto py-1" style="white-space: nowrap; max-width: 70%;">
-            <a href="{% url 'portfolio_gallery' %}" class="btn rounded-pill {% if not selected_album %}btn-dark{% else %}btn-outline-secondary{% endif %}">Wszystkie</a>
+    <!-- Filtry / Kategorie (Płynny scroll na telefonie) -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center mb-3 mb-md-4 gap-3">
+        <div class="d-flex gap-2 overflow-auto py-1 flex-grow-1" style="white-space: nowrap; -webkit-overflow-scrolling: touch;">
+            <a href="{% url 'portfolio_gallery' %}" class="btn btn-sm rounded-pill px-3 {% if not selected_album %}btn-primary{% else %}btn-outline-secondary{% endif %}">Wszystkie</a>
             {% for album in albums %}
-                <a href="?album={{ album.id }}" class="btn rounded-pill {% if selected_album == album.id %}btn-dark{% else %}btn-outline-secondary{% endif %}">{{ album.name }}</a>
+                <a href="?album={{ album.id }}" class="btn btn-sm rounded-pill px-3 {% if selected_album == album.id %}btn-primary{% else %}btn-outline-secondary{% endif %}">{{ album.name }}</a>
             {% endfor %}
         </div>
-        <div class="d-flex gap-2">
-            <a href="{% url 'add_album' %}" class="btn btn-outline-primary rounded-pill shadow-sm">+ Nowy album</a>
-            <a href="{% url 'add_photo' %}" class="btn btn-primary rounded-pill shadow-sm">+ Dodaj zdjęcie</a>
+        <div class="d-flex gap-2 justify-content-end">
+            <a href="{% url 'add_album' %}" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm">+ Album</a>
+            <a href="{% url 'add_photo' %}" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">+ Zdjęcie</a>
         </div>
     </div>
 

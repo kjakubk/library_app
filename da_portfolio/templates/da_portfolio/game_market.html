@@ -27,63 +27,63 @@
         </div>
     </div>
 
-    <!-- 1. KARTY METRYK (KPI) -->
-    <div class="row g-3 mb-4">
+    <!-- 1. KARTY METRYK (KPI - 2x2 na Smartfonie) -->
+    <div class="row g-2 g-md-3 mb-3 mb-md-4">
         
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="card border-0 shadow-sm rounded-4 h-100 p-3" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
+        <div class="col-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-2.5 p-md-3" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
-                        <span class="text-muted small fw-semibold text-uppercase">Katalog Gier</span>
-                        <h3 class="fw-bold my-1 text-primary">{{ total_games }}</h3>
-                        <span class="small text-muted"><i class="bi bi-controller me-1"></i> Skatalogowane tytuły</span>
+                        <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.72rem;">Katalog Gier</span>
+                        <h4 class="fw-bold my-1 text-primary fs-4 fs-md-3">{{ total_games }}</h4>
+                        <span class="small text-muted d-none d-sm-inline"><i class="bi bi-controller me-1"></i> Tytuły</span>
                     </div>
-                    <div class="bg-primary bg-opacity-10 text-primary rounded-4 p-3 fs-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-3 rounded-md-4 p-2 p-md-3 fs-4 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
                         <i class="bi bi-controller"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="card border-0 shadow-sm rounded-4 h-100 p-3" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
+        <div class="col-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-2.5 p-md-3" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
-                        <span class="text-muted small fw-semibold text-uppercase">Spółki Giełdowe</span>
-                        <h3 class="fw-bold my-1 text-success">{{ total_publishers }}</h3>
-                        <span class="small text-muted"><i class="bi bi-buildings me-1"></i> Globalni wydawcy</span>
+                        <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.72rem;">Wydawcy</span>
+                        <h4 class="fw-bold my-1 text-success fs-4 fs-md-3">{{ total_publishers }}</h4>
+                        <span class="small text-muted d-none d-sm-inline"><i class="bi bi-buildings me-1"></i> Spółki</span>
                     </div>
-                    <div class="bg-success bg-opacity-10 text-success rounded-4 p-3 fs-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                    <div class="bg-success bg-opacity-10 text-success rounded-3 rounded-md-4 p-2 p-md-3 fs-4 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
                         <i class="bi bi-buildings"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="card border-0 shadow-sm rounded-4 h-100 p-3" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
+        <div class="col-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-2.5 p-md-3" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
-                        <span class="text-muted small fw-semibold text-uppercase">Rynki Finansowe</span>
-                        <h3 class="fw-bold my-1 text-info">{{ total_markets }}</h3>
-                        <span class="small text-muted"><i class="bi bi-globe me-1"></i> GPW, NYSE, Tokyo...</span>
+                        <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.72rem;">Rynki</span>
+                        <h4 class="fw-bold my-1 text-info fs-4 fs-md-3">{{ total_markets }}</h4>
+                        <span class="small text-muted d-none d-sm-inline"><i class="bi bi-globe me-1"></i> Giełdy</span>
                     </div>
-                    <div class="bg-info bg-opacity-10 text-info rounded-4 p-3 fs-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                    <div class="bg-info bg-opacity-10 text-info rounded-3 rounded-md-4 p-2 p-md-3 fs-4 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
                         <i class="bi bi-globe-americas"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="card border-0 shadow-sm rounded-4 h-100 p-3" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
+        <div class="col-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-2.5 p-md-3" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
-                        <span class="text-muted small fw-semibold text-uppercase">Średnia Ocena Gier</span>
-                        <h3 class="fw-bold my-1 text-warning">{{ avg_rating }} <span class="fs-6 fw-normal text-muted">/ 100</span></h3>
-                        <span class="small text-muted"><i class="bi bi-star-fill text-warning me-1"></i> Baza IGDB</span>
+                        <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.72rem;">Śr. Ocena</span>
+                        <h4 class="fw-bold my-1 text-warning fs-4 fs-md-3">{{ avg_rating }} <span class="fs-6 fw-normal text-muted">/ 100</span></h4>
+                        <span class="small text-muted d-none d-sm-inline"><i class="bi bi-star-fill text-warning me-1"></i> IGDB</span>
                     </div>
-                    <div class="bg-warning bg-opacity-10 text-warning rounded-4 p-3 fs-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                    <div class="bg-warning bg-opacity-10 text-warning rounded-3 rounded-md-4 p-2 p-md-3 fs-4 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
                         <i class="bi bi-star-fill"></i>
                     </div>
                 </div>
