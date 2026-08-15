@@ -5,10 +5,13 @@
 import os
 import sys
 
-# 1. Ścieżka do Twojego projektu (zmień 'twojuser' na swój login z PythonAnywhere)
+# 1. Ścieżka do Twojego projektu (zmień 'twojuser' na swój dokładny login z PythonAnywhere)
 path = '/home/twojuser/library_app'
 if path not in sys.path:
     sys.path.insert(0, path)
+
+# Ustawiamy katalog roboczy na folder projektu
+os.chdir(path)
 
 # 2. Ustawienie modułu ustawień Django
 os.environ['DJANGO_SETTINGS_MODULE'] = 'core.settings'
