@@ -2,9 +2,10 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.conf import settings
 from .models import Photo, Album, Experience
-from .forms import PhotoForm, AlbumForm, LoginForm
+from .forms import PhotoForm, AlbumForm, LoginForm, UserAdminCreateForm, UserAdminPasswordChangeForm
 
 
 def home_view(request):
@@ -126,3 +127,84 @@ def logout_view(request):
         logout(request)
         messages.info(request, 'Zostałeś pomyślnie wylogowany.')
     return redirect('login')
+
+
+# ==========================================
+# ZARZĄDZANIE UŻYTKOWNIKAMI Z POZIOMU PANELU
+# ==========================================
+
+@login_required
+def user_list_view(request):
+    """Lista wszystkich użytkowników w systemie z możliwością zarządzania."""
+    users = User.objects.all().order_by('-is_superuser', '-date_joined')
+    return render(request, 'portfolio/user_list.html', {'users_list': users})
+
+
+@login_required
+def user_create_view(request):
+    """Dodawanie nowego użytkownika z poziomu panelu po zalogowaniu."""
+    if request.method == 'POST':
+        form = UserAdminCreateForm(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            email = form.cleaned_data.get('email', '')
+            password = form.cleaned_data['password']
+            is_admin = form.cleaned_data.get('is_administrator', False)
+
+            # Tworzymy użytkownika
+            new_user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password
+            )
+            if is_admin:
+                new_user.is_staff = True
+                new_user.is_superuser = True
+            else:
+                new_user.is_staff = False
+                new_user.is_superuser = False
+            new_user.save()
+
+            messages.success(request, f'Pomyślnie utworzono konto dla użytkownika „{username}”. Może się już zalogować do portalu!')
+            return redirect('user_list')
+    else:
+        form = UserAdminCreateForm()
+
+    return render(request, 'portfolio/user_form.html', {'form': form})
+
+
+@login_required
+def user_delete_view(request, pk):
+    """Usuwanie użytkownika z poziomu panelu."""
+    user_to_delete = get_object_or_404(User, pk=pk)
+    
+    # Blokada usunięcia samego siebie
+    if user_to_delete.pk == request.user.pk:
+        messages.error(request, 'Nie możesz usunąć swojego własnego konta!')
+        return redirect('user_list')
+        
+    if request.method == 'POST':
+        username = user_to_delete.username
+        user_to_delete.delete()
+        messages.success(request, f'Użytkownik „{username}” został pomyślnie usunięty z systemu.')
+        return redirect('user_list')
+        
+    return redirect('user_list')
+
+
+@login_required
+def user_change_password_view(request, pk):
+    """Zmiana hasła dla wskazanego użytkownika z panelu."""
+    target_user = get_object_or_404(User, pk=pk)
+    if request.method == 'POST':
+        form = UserAdminPasswordChangeForm(request.POST)
+        if form.is_valid():
+            new_pass = form.cleaned_data['new_password']
+            target_user.set_password(new_pass)
+            target_user.save()
+            messages.success(request, f'Pomyślnie zmieniono hasło dla użytkownika „{target_user.username}”.')
+            return redirect('user_list')
+    else:
+        form = UserAdminPasswordChangeForm()
+
+    return render(request, 'portfolio/user_password_form.html', {'form': form, 'target_user': target_user})

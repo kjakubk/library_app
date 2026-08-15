@@ -1,0 +1,102 @@
+{% extends 'library/base.html' %}
+
+{% block title %}Dodaj Użytkownika - Data Hub{% endblock %}
+
+{% block content %}
+<div class="container py-4 mb-5" style="max-width: 650px;">
+
+    <!-- Karta formularza -->
+    <div class="bg-body p-4 p-md-5 rounded-4 shadow-sm border">
+        
+        <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom">
+            <div class="bg-primary text-white rounded-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 44px; height: 44px; font-size: 1.25rem;">
+                <i class="bi bi-person-plus-fill"></i>
+            </div>
+            <div>
+                <h4 class="fw-bold text-body mb-0">Dodaj Nowego Użytkownika</h4>
+                <div class="text-muted small">Utwórz konto z natychmiastowym dostępem do portalu</div>
+            </div>
+        </div>
+
+        <form method="POST" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger rounded-3 py-2 px-3 small mb-4">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <!-- Login -->
+            <div class="mb-3">
+                <label for="{{ form.username.id_for_label }}" class="form-label small fw-bold text-body">
+                    Nazwa użytkownika (Login) <span class="text-danger">*</span>
+                </label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                    <div class="text-danger small mt-1 fw-semibold">{{ form.username.errors|striptags }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Email -->
+            <div class="mb-3">
+                <label for="{{ form.email.id_for_label }}" class="form-label small fw-bold text-body">
+                    Adres e-mail <span class="text-muted fw-normal">(opcjonalnie)</span>
+                </label>
+                {{ form.email }}
+                {% if form.email.errors %}
+                    <div class="text-danger small mt-1 fw-semibold">{{ form.email.errors|striptags }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Hasło -->
+            <div class="mb-3">
+                <label for="{{ form.password.id_for_label }}" class="form-label small fw-bold text-body">
+                    Hasło <span class="text-danger">*</span>
+                </label>
+                {{ form.password }}
+                {% if form.password.errors %}
+                    <div class="text-danger small mt-1 fw-semibold">{{ form.password.errors|striptags }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Powtórz Hasło -->
+            <div class="mb-4">
+                <label for="{{ form.password_confirm.id_for_label }}" class="form-label small fw-bold text-body">
+                    Powtórz hasło <span class="text-danger">*</span>
+                </label>
+                {{ form.password_confirm }}
+                {% if form.password_confirm.errors %}
+                    <div class="text-danger small mt-1 fw-semibold">{{ form.password_confirm.errors|striptags }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Uprawnienia administratora -->
+            <div class="p-3 bg-body-secondary rounded-3 border mb-4">
+                <div class="form-check form-switch mb-0">
+                    {{ form.is_administrator }}
+                    <label class="form-check-label fw-bold small text-body ms-2" for="{{ form.is_administrator.id_for_label }}">
+                        Uprawnienia administratora (Superuser / Staff)
+                    </label>
+                </div>
+                <div class="small text-muted mt-1 ps-4" style="font-size: 0.78rem;">
+                    Administrator ma pełne uprawnienia do zarządzania bazą danych, dodawania/edycji kolekcji oraz tworzenia innych kont.
+                </div>
+            </div>
+
+            <!-- Przyciski akcji -->
+            <div class="d-flex justify-content-between align-items-center pt-3 border-top gap-2">
+                <a href="{% url 'user_list' %}" class="btn btn-outline-secondary btn-sm px-4 rounded-pill">
+                    Anuluj
+                </a>
+                <button type="submit" class="btn btn-primary btn-sm px-5 py-2 fw-bold rounded-pill shadow-sm">
+                    <i class="bi bi-check-lg me-1"></i> Utwórz konto
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+{% endblock %}

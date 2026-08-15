@@ -291,6 +291,14 @@
                     </a>
                 </li>
 
+                <!-- Użytkownicy / Dostęp -->
+                <li class="menu-item mb-1">
+                    <a href="{% url 'user_list' %}" class="sidebar-link {% if 'uzytkownicy' in request.path %}active{% endif %}">
+                        <i class="bi bi-people sidebar-icon text-success"></i>
+                        <span>Użytkownicy</span>
+                    </a>
+                </li>
+
                 <!-- Rozwijane menu: Kolekcje -->
                 <li class="menu-item mt-2">
                     <a href="#kolekcjeSubmenu" class="sidebar-link {% if 'kolekcje' in request.path %}active-parent{% endif %}" data-bs-toggle="collapse" aria-expanded="{% if 'kolekcje' in request.path %}true{% else %}false{% endif %}">
