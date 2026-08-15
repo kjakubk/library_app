@@ -1,28 +1,33 @@
 {% extends 'library/base.html' %}
 
 {% block title %}
-    {% if form.instance.pk %}Edytuj książkę{% else %}Dodaj książkę{% endif %} - Kolekcje
+    {% if form.instance.pk %}Edytuj książkę: {{ form.instance.title }}{% else %}Dodaj książkę do bazy{% endif %} - Kolekcje
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid px-2 px-md-4 py-4 mb-5">
+<div class="container-fluid px-2 px-md-4 py-3 mb-5">
     
     <!-- Górny panel akcji -->
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center bg-body px-3 py-3 px-md-4 rounded-4 shadow-sm border mb-4 gap-3">
-        <div class="d-flex align-items-center gap-2 justify-content-center justify-content-md-start">
-            <span class="fs-4">{% if form.instance.pk %}✏️{% else %}➕{% endif %}</span>
-            <h5 class="mb-0 fw-bold text-body text-center text-md-start">
-                {% if form.instance.pk %}
-                    Edycja: <span class="text-primary">{{ form.instance.title }}</span>
-                {% else %}
-                    Dodaj nową pozycję do bazy
-                {% endif %}
-            </h5>
+        <div class="d-flex align-items-center gap-3 justify-content-center justify-content-md-start">
+            <div class="bg-primary bg-opacity-10 text-primary rounded-3 p-2.5 fs-4 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                <i class="bi {% if form.instance.pk %}bi-pencil-square{% else %}bi-journal-plus{% endif %}"></i>
+            </div>
+            <div>
+                <h5 class="mb-0 fw-bold text-body">
+                    {% if form.instance.pk %}
+                        Edycja: <span class="text-primary">{{ form.instance.title }}</span>
+                    {% else %}
+                        Dodaj nową książkę do bazy
+                    {% endif %}
+                </h5>
+                <span class="small text-muted">Automatyczne pobieranie metadanych i okładek w jakości HD po kodzie ISBN</span>
+            </div>
         </div>
         
-        <div class="d-flex justify-content-center">
-            <a href="{% url 'book_list' %}" class="btn btn-outline-secondary btn-sm px-4 py-2 rounded-pill fw-medium d-flex align-items-center justify-content-center gap-2 shadow-sm text-decoration-none w-100 w-md-auto">
-                ✕ Anuluj
+        <div class="d-flex justify-content-center gap-2">
+            <a href="{% url 'book_list' %}" class="btn btn-outline-secondary btn-sm px-4 py-2 rounded-3 fw-medium d-flex align-items-center gap-2 shadow-none text-decoration-none">
+                <i class="bi bi-x-lg"></i> Anuluj
             </a>
         </div>
     </div>
@@ -30,16 +35,28 @@
     <!-- Karta z formularzem -->
     <div class="row justify-content-center">
         <div class="col-xl-9 col-lg-10">
-            <div class="card bg-body shadow-sm border rounded-4 overflow-hidden">
+            <div class="card bg-body shadow-sm border-0 rounded-4 overflow-hidden">
                 <div class="card-body p-3 p-md-5">
                     
                     <form method="POST" enctype="multipart/form-data" id="modernDjangoForm">
                         {% csrf_token %}
                         
-                        <!-- UKRYTE POLE DO POBRANIA OKŁADKI Z API (ZACHOWUJE WARTOŚĆ PO BŁĘDZIE FORMULARZA) -->
-                        <input type="hidden" name="cover_url" id="id_cover_url" value="{{ request.POST.cover_url|default:'' }}">
+                        <!-- Ukryte pole URL okładki -->
+                        <input type="hidden" name="cover_url" id="id_cover_url" value="{{ cover_url|default:'' }}">
 
-                        <!-- Komunikaty o błędach formularza -->
+                        <!-- Pasek stanu pobierania API -->
+                        <div id="apiStatusBanner" class="alert alert-info rounded-4 d-none mb-4 shadow-sm align-items-center gap-3">
+                            <div class="spinner-border spinner-border-sm text-primary flex-shrink-0" role="status"></div>
+                            <div class="small" id="apiStatusText">Przeszukiwanie baz Biblioteki Narodowej, Google Books i Open Library...</div>
+                        </div>
+
+                        <!-- Źródła danych badge -->
+                        <div id="apiSourcesBadge" class="d-none mb-3">
+                            <span class="small text-muted me-2">Pobrano z:</span>
+                            <span id="apiSourcesList"></span>
+                        </div>
+
+                        <!-- Błędy globalne formularza -->
                         {% if form.non_field_errors %}
                             <div class="alert alert-danger rounded-4 shadow-sm mb-4">
                                 {{ form.non_field_errors }}
@@ -51,7 +68,7 @@
                                 <div class="col-12 {% if field.name in 'title subtitle description authors categories image tags translators illustrators' %}col-md-12{% else %}col-md-6{% endif %} mb-2 position-relative">
                                     
                                     {% if field.field.widget.input_type == 'checkbox' %}
-                                        <div class="form-check form-switch bg-body-secondary p-3 rounded-3 border d-flex align-items-center mb-0 mt-3" style="min-height: 48px;">
+                                        <div class="form-check form-switch bg-body-tertiary p-3 rounded-3 border d-flex align-items-center mb-0 mt-3" style="min-height: 48px;">
                                             {{ field }}
                                             <label for="{{ field.id_for_label }}" class="form-check-label fw-bold text-body mb-0 ms-3" style="cursor: pointer;">
                                                 {{ field.label }}
@@ -62,15 +79,15 @@
                                             {{ field.label }} {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
                                         </label>
                                         
-                                        <!-- Magia: Wykrywamy pole ISBN i dodajemy obok przyciski Skanera i API -->
+                                        <!-- Pole ISBN z przyciskami Skanera i Pobierania -->
                                         {% if field.name == 'isbn' %}
                                             <div class="input-group">
                                                 {{ field }}
-                                                <button type="button" class="btn btn-primary shadow-none px-3 fw-medium d-flex align-items-center gap-2" id="fetchIsbnBtn" title="Pobierz dane po numerze ISBN">
-                                                    🌐 <span class="d-none d-sm-inline">Pobierz</span>
+                                                <button type="button" class="btn btn-primary shadow-none px-3.5 fw-semibold d-flex align-items-center gap-2" id="fetchIsbnBtn" title="Pobierz dane po numerze ISBN">
+                                                    <i class="bi bi-cloud-arrow-down-fill"></i> <span class="d-none d-sm-inline">Pobierz dane i okładkę</span>
                                                 </button>
                                                 <button type="button" class="btn btn-secondary shadow-none px-3 fw-medium d-flex align-items-center gap-2" id="scanIsbnBtn" title="Zeskanuj kod kreskowy aparatem">
-                                                    📷 <span class="d-none d-sm-inline">Skanuj</span>
+                                                    <i class="bi bi-camera-fill"></i> <span class="d-none d-sm-inline">Skanuj</span>
                                                 </button>
                                             </div>
                                         {% else %}
@@ -87,18 +104,51 @@
                                             {{ field.errors|striptags }}
                                         </div>
                                     {% endif %}
+
+                                    <!-- Dedykowany kontener podglądu okładki pod polem image -->
+                                    {% if field.name == 'image' %}
+                                        <div id="apiCoverPreviewContainer" class="mt-3 {% if not cover_url and not form.instance.image %}d-none{% endif %}">
+                                            <div class="p-3 bg-body-tertiary border rounded-4 shadow-sm d-flex flex-wrap align-items-center gap-3">
+                                                <img id="coverPreviewImg" src="{% if cover_url %}{{ cover_url }}{% elif form.instance.image %}{{ form.instance.image.url }}{% endif %}" alt="Podgląd okładki" class="rounded-3 shadow-sm border" style="height: 110px; width: 75px; object-fit: cover;">
+                                                <div class="flex-grow-1">
+                                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                                        <span class="badge bg-success bg-opacity-10 text-success fw-semibold"><i class="bi bi-image-fill me-1"></i> Okładka gotowa do zapisu</span>
+                                                    </div>
+                                                    <div class="small text-muted mb-2">Plik okładki zostanie automatycznie zapisany na serwerze po kliknięciu „Zapisz książkę”.</div>
+                                                    <div class="d-flex flex-wrap gap-2">
+                                                        <button type="button" class="btn btn-outline-danger btn-sm rounded-pill py-1 px-3" id="removeCoverBtn">
+                                                            <i class="bi bi-trash me-1"></i> Usuń tę okładkę
+                                                        </button>
+                                                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill py-1 px-3" id="customUrlBtn">
+                                                            <i class="bi bi-link-45deg me-1"></i> Wklej własny link do zdjęcia
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+
                                 </div>
                             {% endfor %}
                         </div>
 
                         <hr class="my-4 border-secondary border-opacity-25">
 
-                        <!-- Przyciski zapisu -->
-                        <div class="d-flex flex-column-reverse flex-sm-row justify-content-end gap-2 gap-sm-3 align-items-stretch align-items-sm-center">
-                            <a href="{% url 'book_list' %}" class="btn btn-light text-muted text-decoration-none small fw-medium py-2 rounded-pill w-100 w-sm-auto text-center border shadow-none">Wróć bez zapisu</a>
-                            <button type="submit" class="btn btn-success px-4 px-sm-5 py-2 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2 w-100 w-sm-auto">
-                                💾 Zapisz zmiany
-                            </button>
+                        <!-- Przyciski akcji -->
+                        <div class="d-flex flex-column-reverse flex-sm-row justify-content-between gap-2 gap-sm-3 align-items-stretch align-items-sm-center">
+                            <div>
+                                {% if book.pk %}
+                                    <button type="button" class="btn btn-outline-danger btn-sm py-2 px-4 rounded-3 d-flex align-items-center justify-content-center gap-2 shadow-none w-100 w-sm-auto" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                                        <i class="bi bi-trash"></i> Usuń książkę
+                                    </button>
+                                {% endif %}
+                            </div>
+                            <div class="d-flex flex-column flex-sm-row gap-2 gap-sm-3">
+                                <a href="{% if book.pk %}{% url 'book_detail' book.pk %}{% else %}{% url 'book_list' %}{% endif %}" class="btn btn-light text-muted text-decoration-none small fw-medium py-2 px-4 rounded-3 text-center border shadow-none">Wróć bez zapisu</a>
+                                <button type="submit" class="btn btn-primary px-4 px-sm-5 py-2.5 rounded-3 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2 w-100 w-sm-auto">
+                                    <i class="bi bi-floppy-fill me-1"></i> Zapisz książkę
+                                </button>
+                            </div>
                         </div>
 
                     </form>
@@ -110,13 +160,38 @@
 
 </div>
 
-<!-- Modal dla skanera -->
+{% if book.pk %}
+<!-- Modal usuwania książki -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg bg-body">
+            <div class="modal-header border-bottom border-secondary border-opacity-25">
+                <h5 class="modal-title fw-bold fs-6 text-danger" id="deleteModalLabel"><i class="bi bi-exclamation-triangle-fill me-2"></i>Potwierdzenie usunięcia</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+            </div>
+            <div class="modal-body py-4 px-4 text-center">
+                <p class="mb-1 text-body">Czy na pewno chcesz bezpowrotnie usunąć tę pozycję?</p>
+                <div class="fw-bold fs-5 text-danger font-monospace mt-2">„{{ book.title }}”</div>
+            </div>
+            <div class="modal-footer border-top border-secondary border-opacity-25 justify-content-center gap-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm px-4 rounded-pill" data-bs-dismiss="modal">Anuluj</button>
+                <form action="{% url 'book_delete' book.pk %}" method="POST" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-sm px-4 fw-bold rounded-pill shadow-sm">Tak, usuń trwale</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal dla skanera kodów kreskowych -->
 <div class="modal fade" id="scannerModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow-lg bg-body">
             <div class="modal-header border-bottom border-secondary border-opacity-25">
-                <h5 class="modal-title fw-bold fs-6">Skanuj kod ISBN z okładki</h5>
-                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title fw-bold fs-6"><i class="bi bi-upc-scan text-primary me-2"></i>Zeskanuj kod ISBN z okładki</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Zamknij"></button>
             </div>
             <div class="modal-body p-0">
                 <div id="reader" width="100%" class="rounded-bottom-4 overflow-hidden bg-dark"></div>
@@ -128,165 +203,191 @@
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        
-        // --- 1. Stylowanie formularza ---
-        const formElements = document.querySelectorAll('#modernDjangoForm input, #modernDjangoForm select, #modernDjangoForm textarea');
-        
-        formElements.forEach(function(el) {
-            if (el.type === 'hidden') return;
+document.addEventListener("DOMContentLoaded", function() {
+    
+    // --- 1. Stylowanie kontrolek formularza ---
+    const formElements = document.querySelectorAll('#modernDjangoForm input, #modernDjangoForm select, #modernDjangoForm textarea');
+    
+    formElements.forEach(function(el) {
+        if (el.type === 'hidden') return;
 
-            if (el.type === 'checkbox' || el.type === 'radio') {
-                el.classList.add('form-check-input', 'shadow-none', 'm-0');
-                el.style.cursor = 'pointer';
-                if(el.type === 'checkbox') {
-                    el.style.width = '2.5em';
-                    el.style.height = '1.25em';
-                }
-            } 
-            else if (el.tagName === 'SELECT') {
-                el.classList.add('form-select', 'bg-body', 'text-body', 'border-secondary', 'border-opacity-50', 'shadow-none', 'rounded-3', 'py-2');
-            } 
-            else {
-                if (el.parentElement.classList.contains('input-group')) {
-                    el.classList.add('form-control', 'bg-body', 'text-body', 'border-secondary', 'border-opacity-50', 'shadow-none', 'py-2');
-                } else {
-                    el.classList.add('form-control', 'bg-body', 'text-body', 'border-secondary', 'border-opacity-50', 'shadow-none', 'rounded-3', 'py-2');
-                }
-                
-                if (el.type === 'file') {
-                    el.classList.add('bg-body-secondary');
-                }
+        if (el.type === 'checkbox' || el.type === 'radio') {
+            el.classList.add('form-check-input', 'shadow-none', 'm-0');
+            el.style.cursor = 'pointer';
+            if(el.type === 'checkbox') {
+                el.style.width = '2.5em';
+                el.style.height = '1.25em';
             }
-        });
-
-        // --- 2. Obsługa API, podglądu okładki i skanera ---
-        const scanBtn = document.getElementById('scanIsbnBtn');
-        const fetchBtn = document.getElementById('fetchIsbnBtn');
-        const scannerModalEl = document.getElementById('scannerModal');
-        const isbnInput = document.getElementById('id_isbn'); 
-        const coverUrlInput = document.getElementById('id_cover_url');
-
-        let html5QrcodeScanner = null;
-
-        // Funkcja renderująca podgląd okładki
-        function renderCoverPreview(coverUrl) {
-            let fileInput = document.getElementById('id_image');
-            if (fileInput && coverUrl) {
-                let previewDiv = document.getElementById('apiCoverPreview');
-                if (!previewDiv) {
-                    previewDiv = document.createElement('div');
-                    previewDiv.id = 'apiCoverPreview';
-                    previewDiv.className = 'mt-3 d-flex align-items-center gap-3 p-3 bg-success bg-opacity-10 border border-success border-opacity-25 rounded-4 shadow-sm';
-                    fileInput.parentElement.appendChild(previewDiv);
-                }
-                previewDiv.innerHTML = `
-                    <img src="${coverUrl}" alt="Podgląd" class="rounded shadow-sm" style="height: 80px; width: 55px; object-fit: cover;">
-                    <div>
-                        <div class="fw-bold text-success mb-1">✓ Gotowe do pobrania okładki</div>
-                        <div class="small text-muted" style="line-height: 1.2;">Obraz z bazy zostanie automatycznie pobrany i zapisany podczas zapisywania formularza.</div>
-                    </div>
-                `;
-                fileInput.parentElement.classList.add('border-success', 'border-2');
-                fileInput.title = "Okładka zostanie pobrana automatycznie!";
+        } 
+        else if (el.tagName === 'SELECT') {
+            el.classList.add('form-select', 'bg-body', 'text-body', 'border-secondary', 'border-opacity-50', 'shadow-none', 'rounded-3', 'py-2');
+        } 
+        else {
+            if (el.parentElement.classList.contains('input-group')) {
+                el.classList.add('form-control', 'bg-body', 'text-body', 'border-secondary', 'border-opacity-50', 'shadow-none', 'py-2');
+            } else {
+                el.classList.add('form-control', 'bg-body', 'text-body', 'border-secondary', 'border-opacity-50', 'shadow-none', 'rounded-3', 'py-2');
             }
-        }
-
-        // PRZYWRACANIE PODGLĄDU PO BŁĘDZIE FORMULARZA
-        if (coverUrlInput && coverUrlInput.value) {
-            renderCoverPreview(coverUrlInput.value);
-        }
-
-        function fetchBookData(isbn) {
-            if (!isbn) return;
             
-            const originalText = fetchBtn.innerHTML;
-            fetchBtn.innerHTML = '⏳...';
-            fetchBtn.disabled = true;
-
-            fetch(`/kolekcje/api/ksiazka/${isbn}/`)
-                .then(response => {
-                    if (!response.ok) throw new Error('Nie znaleziono książki w zewnętrznej bazie.');
-                    return response.json();
-                })
-                .then(data => {
-                    // Wypełnianie tekstu
-                    if (data.title && document.getElementById('id_title')) document.getElementById('id_title').value = data.title;
-                    if (data.authors && document.getElementById('id_authors')) document.getElementById('id_authors').value = data.authors;
-                    if (data.publisher && document.getElementById('id_publisher')) document.getElementById('id_publisher').value = data.publisher;
-                    if (data.published_date && document.getElementById('id_published_at')) document.getElementById('id_published_at').value = data.published_date;
-                    if (data.page_count && document.getElementById('id_page_count')) document.getElementById('id_page_count').value = data.page_count;
-                    if (data.description && document.getElementById('id_description')) document.getElementById('id_description').value = data.description;
-                    if (data.categories && document.getElementById('id_categories')) document.getElementById('id_categories').value = data.categories;
-                    if (data.language && document.getElementById('id_language')) document.getElementById('id_language').value = data.language;
-
-                    // PRZECHWYCENIE OKŁADKI I WYŚWIETLENIE PODGLĄDU
-                    let coverUrl = data.cover_url || data.image_url || data.imageLinks?.thumbnail || null;
-                    if (coverUrl && coverUrlInput) {
-                        coverUrlInput.value = coverUrl;
-                        renderCoverPreview(coverUrl);
-                    }
-
-                    isbnInput.style.backgroundColor = 'var(--bs-success-bg-subtle)';
-                    setTimeout(() => { isbnInput.style.backgroundColor = ''; }, 1500);
-                })
-                .catch(error => {
-                    console.error(error);
-                    alert('Nie udało się pobrać danych dla tego ISBN. Wpisz poprawne dane ręcznie.');
-                })
-                .finally(() => {
-                    fetchBtn.innerHTML = originalText;
-                    fetchBtn.disabled = false;
-                });
-        }
-
-        if (fetchBtn && isbnInput) {
-            fetchBtn.addEventListener('click', function() {
-                const isbn = isbnInput.value.trim();
-                if (!isbn) {
-                    alert('Wpisz najpierw numer ISBN.');
-                    return;
-                }
-                fetchBookData(isbn);
-            });
-        }
-
-        if (scanBtn && scannerModalEl && isbnInput) {
-            const scannerModal = new bootstrap.Modal(scannerModalEl);
-
-            scanBtn.addEventListener('click', function() {
-                scannerModal.show();
-                
-                html5QrcodeScanner = new Html5QrcodeScanner(
-                    "reader", 
-                    { fps: 10, qrbox: {width: 250, height: 100} },
-                    false
-                );
-                
-                html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-            });
-
-            function onScanSuccess(decodedText, decodedResult) {
-                isbnInput.value = decodedText;
-                
-                if (html5QrcodeScanner) {
-                    html5QrcodeScanner.clear();
-                }
-                scannerModal.hide();
-
-                fetchBookData(decodedText);
+            if (el.type === 'file') {
+                el.classList.add('bg-body-secondary');
             }
-
-            function onScanFailure(error) {
-            }
-
-            scannerModalEl.addEventListener('hidden.bs.modal', function () {
-                if (html5QrcodeScanner) {
-                    html5QrcodeScanner.clear().catch(error => console.error("Blad skanera", error));
-                    html5QrcodeScanner = null;
-                }
-            });
         }
     });
+
+    // --- 2. Obsługa API, podglądu okładki i skanera ---
+    const scanBtn = document.getElementById('scanIsbnBtn');
+    const fetchBtn = document.getElementById('fetchIsbnBtn');
+    const scannerModalEl = document.getElementById('scannerModal');
+    const isbnInput = document.getElementById('id_isbn'); 
+    const coverUrlInput = document.getElementById('id_cover_url');
+    const coverPreviewContainer = document.getElementById('apiCoverPreviewContainer');
+    const coverPreviewImg = document.getElementById('coverPreviewImg');
+    const removeCoverBtn = document.getElementById('removeCoverBtn');
+    const customUrlBtn = document.getElementById('customUrlBtn');
+    const apiStatusBanner = document.getElementById('apiStatusBanner');
+    const apiStatusText = document.getElementById('apiStatusText');
+    const apiSourcesBadge = document.getElementById('apiSourcesBadge');
+    const apiSourcesList = document.getElementById('apiSourcesList');
+
+    let html5QrcodeScanner = null;
+
+    function showCoverPreview(url) {
+        if (url && coverPreviewImg && coverPreviewContainer) {
+            coverPreviewImg.src = url;
+            coverPreviewContainer.classList.remove('d-none');
+            if (coverUrlInput) coverUrlInput.value = url;
+        }
+    }
+
+    if (removeCoverBtn) {
+        removeCoverBtn.addEventListener('click', function() {
+            if (coverUrlInput) coverUrlInput.value = '';
+            if (coverPreviewContainer) coverPreviewContainer.classList.add('d-none');
+        });
+    }
+
+    if (customUrlBtn) {
+        customUrlBtn.addEventListener('click', function() {
+            const url = prompt('Wklej bezpośredni link URL do okładki (JPG/PNG):', coverUrlInput ? coverUrlInput.value : '');
+            if (url && url.trim().startsWith('http')) {
+                showCoverPreview(url.trim());
+            }
+        });
+    }
+
+    function fetchBookData(isbn) {
+        if (!isbn) return;
+        
+        const originalText = fetchBtn.innerHTML;
+        fetchBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Pobieranie...';
+        fetchBtn.disabled = true;
+
+        if (apiStatusBanner) {
+            apiStatusBanner.classList.remove('d-none');
+            apiStatusBanner.classList.add('d-flex');
+            apiStatusText.textContent = `Odpytywanie baz Biblioteki Narodowej, Google Books i Open Library dla ISBN: ${isbn}...`;
+        }
+
+        fetch(`/kolekcje/api/ksiazka/${encodeURIComponent(isbn)}/`)
+            .then(response => {
+                if (!response.ok) throw new Error('Nie znaleziono pozycji w bazach zewnętrznych.');
+                return response.json();
+            })
+            .then(data => {
+                // Wypełnianie pól formularza
+                if (data.title && document.getElementById('id_title')) document.getElementById('id_title').value = data.title;
+                if (data.subtitle && document.getElementById('id_subtitle')) document.getElementById('id_subtitle').value = data.subtitle;
+                if (data.authors && document.getElementById('id_authors')) document.getElementById('id_authors').value = data.authors;
+                if (data.publisher && document.getElementById('id_publisher')) document.getElementById('id_publisher').value = data.publisher;
+                if (data.published_at && document.getElementById('id_published_at')) document.getElementById('id_published_at').value = data.published_at;
+                if (data.page_count && document.getElementById('id_page_count')) document.getElementById('id_page_count').value = data.page_count;
+                if (data.description && document.getElementById('id_description')) document.getElementById('id_description').value = data.description;
+                if (data.categories && document.getElementById('id_categories')) document.getElementById('id_categories').value = data.categories;
+                if (data.language && document.getElementById('id_language')) document.getElementById('id_language').value = data.language;
+
+                // Źródła danych
+                if (data.sources_used && data.sources_used.length > 0 && apiSourcesBadge && apiSourcesList) {
+                    apiSourcesList.innerHTML = data.sources_used.map(s => `<span class="badge bg-primary bg-opacity-10 text-primary border me-1">${s}</span>`).join('');
+                    apiSourcesBadge.classList.remove('d-none');
+                }
+
+                // Obsługa okładki
+                if (data.cover_url) {
+                    showCoverPreview(data.cover_url);
+                }
+
+                if (apiStatusBanner) {
+                    apiStatusBanner.classList.remove('alert-info');
+                    apiStatusBanner.classList.add('alert-success');
+                    apiStatusBanner.innerHTML = `<i class="bi bi-check-circle-fill text-success fs-5"></i> <div>Pomyślnie pobrano dane książki! ${data.cover_url ? 'Okładka została znaleziona.' : 'Brak okładki w bazach.'}</div>`;
+                    setTimeout(() => { apiStatusBanner.classList.add('d-none'); }, 4000);
+                }
+
+                isbnInput.style.backgroundColor = 'var(--bs-success-bg-subtle)';
+                setTimeout(() => { isbnInput.style.backgroundColor = ''; }, 1500);
+            })
+            .catch(error => {
+                console.error(error);
+                if (apiStatusBanner) {
+                    apiStatusBanner.classList.remove('alert-info');
+                    apiStatusBanner.classList.add('alert-warning');
+                    apiStatusBanner.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i> <div>Nie znaleziono danych w bazach zewnętrznych dla podanego ISBN. Możesz uzupełnić dane ręcznie.</div>`;
+                }
+            })
+            .finally(() => {
+                fetchBtn.innerHTML = originalText;
+                fetchBtn.disabled = false;
+            });
+    }
+
+    if (fetchBtn && isbnInput) {
+        fetchBtn.addEventListener('click', function() {
+            const isbn = isbnInput.value.trim();
+            if (!isbn) {
+                alert('Wpisz najpierw numer ISBN.');
+                return;
+            }
+            fetchBookData(isbn);
+        });
+    }
+
+    // Obsługa skanera Html5Qrcode
+    if (scanBtn && scannerModalEl && isbnInput) {
+        const scannerModal = new bootstrap.Modal(scannerModalEl);
+
+        scanBtn.addEventListener('click', function() {
+            scannerModal.show();
+            
+            html5QrcodeScanner = new Html5QrcodeScanner(
+                "reader", 
+                { fps: 10, qrbox: {width: 260, height: 120} },
+                false
+            );
+            
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        });
+
+        function onScanSuccess(decodedText) {
+            isbnInput.value = decodedText;
+            
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.clear();
+            }
+            scannerModal.hide();
+            fetchBookData(decodedText);
+        }
+
+        function onScanFailure(error) {
+        }
+
+        scannerModalEl.addEventListener('hidden.bs.modal', function () {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.clear().catch(error => console.error("Blad skanera", error));
+                html5QrcodeScanner = null;
+            }
+        });
+    }
+});
 </script>
 {% endblock %}

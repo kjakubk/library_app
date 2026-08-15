@@ -1,40 +1,59 @@
 {% extends 'library/base.html' %}
 
-{% block title %}Jakub Kępczyński - Portfolio i Kolekcje{% endblock %}
+{% block title %}Jakub Kępczyński - Portfolio & Data Hub{% endblock %}
 
 {% block content %}
-<div class="px-4 py-5 my-5 text-center">
-    <h1 class="display-5 fw-bold text-dark">Witaj w moim świecie!</h1>
-    <div class="col-lg-6 mx-auto">
-        <p class="lead mb-4 mt-3">
-            Nazywam się Jakub. Na co dzień jako Data Analyst i Power BI Developer przekuwam surowe dane w czytelne dashboardy, wdrażam analitykę HR i automatyzuję procesy. 
+<div class="px-3 py-5 my-3 my-md-5 text-center">
+    <div class="d-inline-flex align-items-center gap-2 px-3 py-1.5 rounded-pill bg-primary bg-opacity-10 text-primary small fw-semibold mb-3">
+        <i class="bi bi-code-slash"></i> Data Analyst & Python Developer
+    </div>
+    <h1 class="display-5 fw-bold mb-3" style="color: var(--text-main);">Witaj w moim Data Hubie!</h1>
+    <div class="col-lg-7 mx-auto">
+        <p class="lead mb-4" style="color: var(--text-muted);">
+            Nazywam się <strong>Jakub Kępczyński</strong>. Na co dzień jako Data Analyst i Power BI Developer przekuwam surowe dane w czytelne dashboardy, wdrażam analitykę HR i automatyzuję procesy ETL. 
             <br><br>
-            Po godzinach projektuję tę aplikację, aby w końcu zapanować nad swoimi zbiorami – od bogatej kolekcji niemieckiej porcelany, przez winylowe klasyki rocka z lat 80. i 90., aż po pudełka z grami planszowymi takimi jak <em>The Witcher: Old World</em> ze wszystkimi swoimi dodatkami.
+            Po godzinach rozwijam tę aplikację – łącząc analitykę rynkową branży gamedev z prywatnym systemem inwentaryzacji zbiorów: od niemieckiej porcelany <em>China Blau</em>, przez klasyki winylowe rocka, aż po gry planszowe i wideo.
         </p>
-        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mt-4">
-            <a href="{% url 'cv_view' %}" class="btn btn-primary btn-lg px-4 gap-3">Zobacz moje CV</a>
-            <a href="{% url 'board_game_list' %}" class="btn btn-outline-secondary btn-lg px-4">Przeglądaj kolekcje</a>
+        <div class="d-flex flex-wrap gap-2 justify-content-center mt-4">
+            <a href="{% url 'cv_view' %}" class="btn btn-primary btn-lg px-4 rounded-3 shadow-sm">
+                <i class="bi bi-person-vcard me-2"></i> Zobacz moje CV
+            </a>
+            <a href="{% url 'da_portfolio:game_market' %}" class="btn btn-outline-primary btn-lg px-4 rounded-3">
+                <i class="bi bi-graph-up-arrow me-2"></i> Rynek Gamingowy
+            </a>
+            <a href="{% url 'board_game_list' %}" class="btn btn-outline-secondary btn-lg px-4 rounded-3">
+                <i class="bi bi-collection me-2"></i> Kolekcje
+            </a>
         </div>
     </div>
 </div>
 
-<div class="row text-center mt-5">
-    <div class="col-md-4 mb-3">
-        <div class="p-3 border bg-light rounded shadow-sm">
-            <h4 class="text-primary">⚙️ Python & Django</h4>
-            <p class="small text-muted">Aplikacja w pełni oparta na solidnym backendzie.</p>
+<div class="row g-3 text-center mt-4">
+    <div class="col-md-4">
+        <div class="p-4 border-0 rounded-4 shadow-sm h-100" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
+            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 48px; height: 48px;">
+                <i class="bi bi-cpu fs-4"></i>
+            </div>
+            <h5 class="fw-bold mb-2">Python & Django</h5>
+            <p class="small text-muted mb-0">Solidny backend, architektura relacyjna, integracje z zewnętrznymi API (IGDB, yfinance, Google Books, BN).</p>
         </div>
     </div>
-    <div class="col-md-4 mb-3">
-        <div class="p-3 border bg-light rounded shadow-sm">
-            <h4 class="text-success">🐘 PostgreSQL</h4>
-            <p class="small text-muted">Wydajna i bezpieczna relacyjna baza danych.</p>
+    <div class="col-md-4">
+        <div class="p-4 border-0 rounded-4 shadow-sm h-100" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
+            <div class="bg-success bg-opacity-10 text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 48px; height: 48px;">
+                <i class="bi bi-database-check fs-4"></i>
+            </div>
+            <h5 class="fw-bold mb-2">PostgreSQL & ETL</h5>
+            <p class="small text-muted mb-0">Wydajne modelowanie danych, transakcyjność, relacje wiele-do-wielu oraz wielowątkowe potoki zasilające.</p>
         </div>
     </div>
-    <div class="col-md-4 mb-3">
-        <div class="p-3 border bg-light rounded shadow-sm">
-            <h4 class="text-info">📊 Analityka</h4>
-            <p class="small text-muted">Zarządzanie danymi to moja specjalność.</p>
+    <div class="col-md-4">
+        <div class="p-4 border-0 rounded-4 shadow-sm h-100" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
+            <div class="bg-info bg-opacity-10 text-info rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 48px; height: 48px;">
+                <i class="bi bi-bar-chart-line fs-4"></i>
+            </div>
+            <h5 class="fw-bold mb-2">Data & BI Analytics</h5>
+            <p class="small text-muted mb-0">Karty wskaźników, interaktywne wykresy Chart.js, przygotowanie danych i geolokalizacji pod Power BI.</p>
         </div>
     </div>
 </div>

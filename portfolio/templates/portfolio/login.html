@@ -1,0 +1,67 @@
+{% extends 'library/base.html' %}
+
+{% block title %}Logowanie - Dostęp Autoryzowany{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center min-vh-75 mt-4 mb-5">
+    <div class="col-12 col-sm-10 col-md-8 col-lg-5 col-xl-4">
+        <div class="card shadow-sm border-0 rounded-4 p-3 p-sm-4" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
+            <div class="card-body">
+                
+                <div class="text-center mb-4">
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 58px; height: 58px;">
+                        <i class="bi bi-shield-lock-fill fs-2"></i>
+                    </div>
+                    <h3 class="fw-bold mb-1" style="color: var(--text-main);">Prywatny Dostęp</h3>
+                    <p class="text-muted small mb-0">Zaloguj się, aby uzyskać dostęp do portfolio i bazy danych</p>
+                </div>
+
+                <form method="POST" novalidate>
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger rounded-3 py-2 small mb-3">
+                            {% for error in form.non_field_errors %}
+                                <div><i class="bi bi-exclamation-circle-fill me-1"></i> {{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="{{ form.username.id_for_label }}" class="form-label small fw-semibold">Użytkownik / Login</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-transparent border-end-0 text-muted"><i class="bi bi-person"></i></span>
+                            {{ form.username }}
+                        </div>
+                        {% if form.username.errors %}
+                            <div class="text-danger small mt-1">{{ form.username.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="{{ form.password.id_for_label }}" class="form-label small fw-semibold">Hasło</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-transparent border-end-0 text-muted"><i class="bi bi-key"></i></span>
+                            {{ form.password }}
+                        </div>
+                        {% if form.password.errors %}
+                            <div class="text-danger small mt-1">{{ form.password.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg w-100 rounded-3 fw-semibold shadow-sm mb-3">
+                        <i class="bi bi-box-arrow-in-right me-2"></i> Zaloguj się
+                    </button>
+
+                    <div class="p-2.5 rounded-3 bg-secondary bg-opacity-10 text-center border">
+                        <small class="text-muted" style="font-size: 0.78rem;">
+                            <i class="bi bi-shield-check me-1 text-primary"></i> Serwis prywatny. Dostęp wyłącznie dla użytkowników z listy dozwolonych (whitelist).
+                        </small>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

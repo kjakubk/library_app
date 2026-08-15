@@ -2,73 +2,44 @@ import csv
 import json
 import ssl
 import io
+import re
 import urllib.request
-from functools import wraps
 
 from django.db.models import Q, Count
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.core.files.base import ContentFile
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from itertools import groupby
 
-from .forms import BookForm, CSVImportForm, VinylRecordForm, PorcelainForm,BoardGameForm,VideoGameForm
+from .forms import BookForm, CSVImportForm, VinylRecordForm, PorcelainForm, BoardGameForm, VideoGameForm
 from .models import BoardGame, Book, Porcelain, VideoGame, VinylRecord, CATEGORY_CHOICES
-
-
-
-
-
-# ==========================================
-# 1. AUTORYZACJA I SESJA
-# ==========================================
-
-def require_access_code(view_func):
-    """Dekorator sprawdzający, czy użytkownik wpisał poprawny kod dostępu do kolekcji."""
-    @wraps(view_func)
-    def _wrapped_view(request, *args, **kwargs):
-        if request.session.get('has_library_access'):
-            return view_func(request, *args, **kwargs)
-        else:
-            return redirect('library_access')
-    return _wrapped_view
-
-
-def library_access(request):
-    """Obsługuje ekran logowania do zabezpieczonej sekcji kolekcji."""
-    error_message = None
-    if request.method == 'POST':
-        code = request.POST.get('access_code')
-        if code == 'Dostep2137':
-            request.session['has_library_access'] = True
-            return redirect('porcelain_list') 
-        else:
-            error_message = 'Nieprawidłowy kod dostępu. Spróbuj ponownie.'
-
-    return render(request, 'library/access.html', {'error_message': error_message})
-
-
-def library_logout(request):
-    """Wylogowuje użytkownika, czyszcząc sesję dostępu."""
-    if 'has_library_access' in request.session:
-        del request.session['has_library_access']
-    return redirect('home')
+from .book_services import (
+    get_unified_book_data, 
+    download_and_save_book_cover, 
+    find_best_cover_for_book,
+    find_cover_in_google_books,
+    find_cover_in_openlibrary_cdn,
+    find_cover_in_openlibrary_search,
+    find_cover_in_wolne_lektury,
+    get_all_isbn_variants
+)
 
 
 # ==========================================
-# 2. WIDOKI LIST KOLEKCJI PORCELANA
+# 1. PORCELANA
 # ==========================================
 
-@require_access_code
+@login_required
 def porcelain_list(request):
-    query = request.GET.get('q', '')
+    """Lista elementów porcelany z wyszukiwarką, filtrami i sortowaniem."""
+    query = request.GET.get('q', '').strip()
     sort_by = request.GET.get('sort', 'name')
-    selected_style = request.GET.get('style', '')
-    selected_signature = request.GET.get('signature', '')
+    selected_style = request.GET.get('style', '').strip()
+    selected_signature = request.GET.get('signature', '').strip()
     
     items = Porcelain.objects.all()
 
-    # Wyszukiwanie tekstowe
     if query:
         items = items.filter(
             Q(name__icontains=query) |
@@ -76,15 +47,12 @@ def porcelain_list(request):
             Q(style__icontains=query)
         )
 
-    # Filtrowanie po stylu
     if selected_style:
         items = items.filter(style=selected_style)
 
-    # Filtrowanie po sygnaturze
     if selected_signature:
         items = items.filter(signature=selected_signature)
 
-    # Sortowanie
     sort_mapping = {
         'name': 'name',
         '-name': '-name',
@@ -97,13 +65,11 @@ def porcelain_list(request):
     if sort_by in sort_mapping:
         items = items.order_by(sort_mapping[sort_by])
 
-    # Pobieramy listy unikalnych stylów i sygnatur do rozwijanych list w filtrach
     available_styles = Porcelain.objects.exclude(style__isnull=True).exclude(style__exact='').values_list('style', flat=True).distinct().order_by('style')
     available_signatures = Porcelain.objects.exclude(signature__isnull=True).exclude(signature__exact='').values_list('signature', flat=True).distinct().order_by('signature')
 
-    # Statystyki
     name_stats = Porcelain.objects.values('name').annotate(count=Count('id')).order_by('-count')[:5]
-    signature_stats = Porcelain.objects.exclude(signature__isnull=True).exclude(signature__exact='').values('signature').annotate(count=Count('id')).order_by('-count')[:5]
+    signature_stats = Porcelain.objects.exclude(signature__isnull=True).exclude(signature__exact='').values_list('signature').annotate(count=Count('id')).order_by('-count')[:5]
     total_count = items.count()
 
     context = {
@@ -119,7 +85,10 @@ def porcelain_list(request):
     }
     return render(request, 'library/porcelain_list.html', context)
 
+
+@login_required
 def porcelain_create(request):
+    """Dodawanie nowego elementu porcelany."""
     if request.method == 'POST':
         form = PorcelainForm(request.POST, request.FILES)
         if form.is_valid():
@@ -131,10 +100,12 @@ def porcelain_create(request):
         
     return render(request, 'library/porcelain_form.html', {'form': form})
 
+
+@login_required
 def porcelain_edit(request, pk):
+    """Edycja elementu porcelany z opcją usuwania pojedynczych zdjęć."""
     item = get_object_or_404(Porcelain, pk=pk)
     
-    # Obsługa natychmiastowego usunięcia wybranego zdjęcia przez przycisk
     delete_img_field = request.GET.get('delete_img')
     if delete_img_field in ['signature_image', 'image_1', 'image_2', 'image_3']:
         image_field = getattr(item, delete_img_field, None)
@@ -149,38 +120,39 @@ def porcelain_edit(request, pk):
         form = PorcelainForm(request.POST, request.FILES, instance=item)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Zmiany zostały pomyślnie zapisane.')
+            messages.success(request, 'Zmiany w elemencie porcelany zostały pomyślnie zapisane.')
             return redirect('porcelain_list')
     else:
         form = PorcelainForm(instance=item)
     
-    return render(request, 'library/porcelain_form.html', {'form': form})
+    return render(request, 'library/porcelain_form.html', {'form': form, 'item': item})
 
+
+@login_required
 def porcelain_delete(request, pk):
+    """Usuwanie elementu porcelany."""
     item = get_object_or_404(Porcelain, pk=pk)
     if request.method == 'POST':
         item.delete()
-        messages.success(request, 'Element został pomyślnie usunięty z kolekcji.')
+        messages.success(request, 'Element porcelany został pomyślnie usunięty z kolekcji.')
         return redirect('porcelain_list')
     
     return render(request, 'library/porcelain_confirm_delete.html', {'item': item})
 
 
 # ==========================================
-# 2. WIDOKI LIST KOLEKCJI PORCELANA
+# 2. PŁYTY WINYLOWE
 # ==========================================
 
-
-@require_access_code
-
+@login_required
 def vinyl_list(request):
-    query = request.GET.get('q', '')
+    """Lista płyt winylowych z wyszukiwaniem i filtrowaniem po gatunkach."""
+    query = request.GET.get('q', '').strip()
     sort_by = request.GET.get('sort', 'artist')
-    selected_genre = request.GET.get('genre', '')
+    selected_genre = request.GET.get('genre', '').strip()
     
     items = VinylRecord.objects.all()
 
-    # Wyszukiwanie tekstowe
     if query:
         items = items.filter(
             Q(artist__icontains=query) |
@@ -188,11 +160,9 @@ def vinyl_list(request):
             Q(label__icontains=query)
         )
 
-    # Filtrowanie po gatunku
     if selected_genre:
         items = items.filter(genre=selected_genre)
 
-    # Sortowanie
     sort_mapping = {
         'artist': 'artist',
         '-artist': '-artist',
@@ -207,7 +177,6 @@ def vinyl_list(request):
     if sort_by in sort_mapping:
         items = items.order_by(sort_mapping[sort_by])
 
-    # Dynamiczne statystyki do bocznego paska/nagłówka
     available_genres = VinylRecord.objects.exclude(genre__isnull=True).exclude(genre__exact='').values_list('genre', flat=True).distinct().order_by('genre')
     artist_stats = VinylRecord.objects.values('artist').annotate(count=Count('id')).order_by('-count')[:5]
     genre_stats = VinylRecord.objects.exclude(genre__isnull=True).exclude(genre__exact='').values('genre').annotate(count=Count('id')).order_by('-count')[:5]
@@ -224,46 +193,59 @@ def vinyl_list(request):
     }
     return render(request, 'library/vinyl_list.html', context)
 
+
+@login_required
 def vinyl_create(request):
+    """Dodawanie nowej płyty winylowej."""
     if request.method == 'POST':
-        # request.FILES jest konieczne, żeby przesłać zdjęcia!
         form = VinylRecordForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
+            messages.success(request, 'Płyta winylowa została pomyślnie dodana!')
             return redirect('vinyl_list')
     else:
         form = VinylRecordForm()
     
-    context = {'form': form, 'is_edit': False}
-    return render(request, 'library/vinyl_form.html', context)
+    return render(request, 'library/vinyl_form.html', {'form': form, 'is_edit': False})
 
+
+@login_required
 def vinyl_edit(request, pk):
+    """Edycja płyty winylowej."""
     item = get_object_or_404(VinylRecord, pk=pk)
     if request.method == 'POST':
         form = VinylRecordForm(request.POST, request.FILES, instance=item)
         if form.is_valid():
             form.save()
+            messages.success(request, 'Zaktualizowano dane płyty winylowej.')
             return redirect('vinyl_list')
     else:
         form = VinylRecordForm(instance=item)
     
-    context = {'form': form, 'item': item, 'is_edit': True}
-    return render(request, 'library/vinyl_form.html', context)
+    return render(request, 'library/vinyl_form.html', {'form': form, 'item': item, 'is_edit': True})
 
+
+@login_required
 def vinyl_delete(request, pk):
+    """Usuwanie płyty winylowej."""
     item = get_object_or_404(VinylRecord, pk=pk)
-    # Zabezpieczamy usuwanie – usunie tylko wtedy, gdy ktoś kliknie przycisk z formularza (POST)
     if request.method == 'POST':
         item.delete()
+        messages.success(request, 'Płyta winylowa została usunięta.')
         return redirect('vinyl_list')
     return redirect('vinyl_list')
 
 
-@require_access_code
+# ==========================================
+# 3. GRY WIDEO
+# ==========================================
+
+@login_required
 def video_game_list(request):
-    query = request.GET.get('q', '')
+    """Lista gier wideo z filtrowaniem po platformie."""
+    query = request.GET.get('q', '').strip()
     sort_by = request.GET.get('sort', 'title')
-    selected_platform = request.GET.get('platform', '')
+    selected_platform = request.GET.get('platform', '').strip()
     
     items = VideoGame.objects.all()
 
@@ -302,44 +284,59 @@ def video_game_list(request):
     }
     return render(request, 'library/video_game_list.html', context)
 
+
+@login_required
 def video_game_create(request):
+    """Dodawanie nowej gry wideo."""
     if request.method == 'POST':
         form = VideoGameForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
+            messages.success(request, 'Gra wideo została dodana do kolekcji!')
             return redirect('video_game_list')
     else:
         form = VideoGameForm()
     
-    context = {'form': form, 'is_edit': False}
-    return render(request, 'library/video_game_form.html', context)
+    return render(request, 'library/video_game_form.html', {'form': form, 'is_edit': False})
 
+
+@login_required
 def video_game_edit(request, pk):
+    """Edycja gry wideo."""
     item = get_object_or_404(VideoGame, pk=pk)
     if request.method == 'POST':
         form = VideoGameForm(request.POST, request.FILES, instance=item)
         if form.is_valid():
             form.save()
+            messages.success(request, 'Zaktualizowano dane gry.')
             return redirect('video_game_list')
     else:
         form = VideoGameForm(instance=item)
     
-    context = {'form': form, 'item': item, 'is_edit': True}
-    return render(request, 'library/video_game_form.html', context)
+    return render(request, 'library/video_game_form.html', {'form': form, 'item': item, 'is_edit': True})
 
+
+@login_required
 def video_game_delete(request, pk):
+    """Usuwanie gry wideo."""
     item = get_object_or_404(VideoGame, pk=pk)
     if request.method == 'POST':
         item.delete()
+        messages.success(request, 'Gra została usunięta z kolekcji.')
         return redirect('video_game_list')
     return redirect('video_game_list')
 
 
-@require_access_code
+# ==========================================
+# 4. GRY PLANSZOWE
+# ==========================================
+
+@login_required
 def board_game_list(request):
-    query = request.GET.get('q', '')
+    """Lista gier planszowych z filtrowaniem po kategoriach."""
+    query = request.GET.get('q', '').strip()
     sort_by = request.GET.get('sort', 'title')
-    selected_category = request.GET.get('category', '')
+    selected_category = request.GET.get('category', '').strip()
     
     items = BoardGame.objects.all()
 
@@ -378,55 +375,60 @@ def board_game_list(request):
     }
     return render(request, 'library/board_game_list.html', context)
 
+
+@login_required
 def board_game_create(request):
+    """Dodawanie nowej gry planszowej."""
     if request.method == 'POST':
         form = BoardGameForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
+            messages.success(request, 'Gra planszowa została dodana do kolekcji!')
             return redirect('board_game_list')
     else:
         form = BoardGameForm()
     
-    context = {'form': form, 'is_edit': False}
-    return render(request, 'library/board_game_form.html', context)
+    return render(request, 'library/board_game_form.html', {'form': form, 'is_edit': False})
 
+
+@login_required
 def board_game_edit(request, pk):
+    """Edycja gry planszowej."""
     item = get_object_or_404(BoardGame, pk=pk)
     if request.method == 'POST':
         form = BoardGameForm(request.POST, request.FILES, instance=item)
         if form.is_valid():
             form.save()
+            messages.success(request, 'Zaktualizowano dane gry planszowej.')
             return redirect('board_game_list')
     else:
         form = BoardGameForm(instance=item)
     
-    context = {'form': form, 'item': item, 'is_edit': True}
-    return render(request, 'library/board_game_form.html', context)
+    return render(request, 'library/board_game_form.html', {'form': form, 'item': item, 'is_edit': True})
 
+
+@login_required
 def board_game_delete(request, pk):
+    """Usuwanie gry planszowej."""
     item = get_object_or_404(BoardGame, pk=pk)
     if request.method == 'POST':
         item.delete()
+        messages.success(request, 'Gra planszowa została usunięta.')
         return redirect('board_game_list')
     return redirect('board_game_list')
 
 
-@require_access_code
+# ==========================================
+# 5. KSIĄŻKI & SMART ENGINE
+# ==========================================
+
+@login_required
 def book_list(request):
-    """Widok listy książek z obsługą filtrowania, grupowania i stałą listą kategorii."""
-    
-    # Pobieramy wszystkie książki (lub Twoją dotychczasową logiku querysetu)
+    """Lista książek z grupowaniem alfabetycznym i stałą listą kategorii."""
     books = Book.objects.all().order_by('title')
-    
-    # Przygotowujemy stałą listę kategorii do wyboru z przekazanego tuples
     categories_list = [choice[0] for choice in CATEGORY_CHOICES]
-    
-    # Grupowanie książek (jeśli używasz grupowania alfabetycznego)
-    # Poniżej prosty przykład grupowania lub przekazania listy bezpośrednio do szablonu
     total_count = books.count()
     
-    # Przykładowe pogrupowanie alfabetyczne po pierwszej literze tytułu (jeśli tak miałeś wcześniej)
-    grouped_books = []
     alphabet_groups = {}
     for book in books:
         first_letter = book.title[0].upper() if book.title else '#'
@@ -434,79 +436,48 @@ def book_list(request):
             alphabet_groups[first_letter] = []
         alphabet_groups[first_letter].append(book)
     
-    for letter in sorted(alphabet_groups.keys()):
-        grouped_books.append((letter, alphabet_groups[letter]))
+    grouped_books = [(letter, alphabet_groups[letter]) for letter in sorted(alphabet_groups.keys())]
 
     context = {
         'grouped_books': grouped_books,
         'total_count': total_count,
-        'categories_list': categories_list,  # <--- Tutaj przekazujemy Twoją stałą listę kategorii!
+        'categories_list': categories_list,
     }
-    
     return render(request, 'library/book_list.html', context)
 
 
+@login_required
 def book_detail(request, pk):
-    """Wyświetla szczegółowe informacje o wybranej książce."""
+    """Szczegółowe informacje o książce."""
     book = get_object_or_404(Book, pk=pk)
     return render(request, 'library/book_detail.html', {'book': book})
 
 
-# ==========================================
-# 3. TWORZENIE I EDYCJA REKORDÓW
-# ==========================================
-
-@require_access_code
-def vinyl_create(request):
-    """Obsługuje dodawanie nowej płyty winylowej."""
-    if request.method == 'POST':
-        form = VinylRecordForm(request.POST, request.FILES)
-        if form.is_valid():
-            form.save()
-            return redirect('vinyl_list')
-    else:
-        form = VinylRecordForm()
-        
-    return render(request, 'library/vinyl_form.html', {'form': form})
-
-
-
-@require_access_code
+@login_required
 def book_create(request):
-    """Obsługuje dodawanie nowej książki (zapobiega duplikatom po ISBN, zwiększając liczbę kopii)."""
+    """Dodawanie nowej książki z inteligentnym pobieraniem okładki."""
     if request.method == 'POST':
         form = BookForm(request.POST, request.FILES)
-        image_url = request.POST.get('cover_url', '')
+        image_url = request.POST.get('cover_url', '').strip()
         
         if form.is_valid():
             isbn_val = form.cleaned_data.get('isbn')
             
-            # Sprawdzamy, czy książka z tym ISBN już istnieje w bazie
-            existing_book = None
-            if isbn_val:
-                existing_book = Book.objects.filter(isbn=isbn_val).first()
+            existing_book = Book.objects.filter(isbn=isbn_val).first() if isbn_val else None
                 
             if existing_book:
-                # Jeśli istnieje, zwiększamy liczbę kopii zamiast tworzyć duplikat
                 existing_book.number_of_copies = (existing_book.number_of_copies or 1) + 1
                 existing_book.save()
-                messages.success(request, f"Książka '{existing_book.title}' już była w bazie. Zwiększono liczbę kopii do {existing_book.number_of_copies}!")
+                messages.success(request, f"Książka '{existing_book.title}' już była w bazie. Zwiększono liczbę egzemplarzy do {existing_book.number_of_copies}!")
                 return redirect('book_list')
             else:
-                book = form.save(commit=False)
-                if image_url and not book.image:
-                    try:
-                        if image_url.startswith('http://'):
-                            image_url = image_url.replace('http://', 'https://', 1)
-                        ssl_context = ssl._create_unverified_context()
-                        req = urllib.request.Request(image_url, headers={'User-Agent': 'Mozilla/5.0'})
-                        with urllib.request.urlopen(req, context=ssl_context) as response:
-                            file_name = f"cover_{book.isbn or 'unknown'}.jpg"
-                            book.image.save(file_name, ContentFile(response.read()), save=False)
-                    except Exception as e:
-                        print(f"Błąd pobierania okładki: {e}")
+                book = form.save()
                 
-                book.save()
+                # Jeśli użytkownik nie wgrał ręcznie pliku, a mamy link do okładki -> pobierz ją
+                if image_url and not request.FILES.get('image'):
+                    download_and_save_book_cover(book, image_url)
+                
+                messages.success(request, f"Książka '{book.title}' została pomyślnie dodana!")
                 return redirect('book_list')
     else:
         form = BookForm()
@@ -515,409 +486,269 @@ def book_create(request):
     return render(request, 'library/book_form.html', {'form': form, 'cover_url': image_url})
 
 
-@require_access_code
+@login_required
 def book_edit(request, pk):
-    """Obsługuje edycję istniejącej książki."""
+    """Edycja książki z możliwością aktualizacji okładki po linku."""
     book = get_object_or_404(Book, pk=pk)
     if request.method == 'POST':
         form = BookForm(request.POST, request.FILES, instance=book)
-        image_url = request.POST.get('cover_url', '') # Przechowujemy link przy błędzie
+        image_url = request.POST.get('cover_url', '').strip()
         
         if form.is_valid():
-            book = form.save(commit=False)
+            book = form.save()
             
             if image_url and not request.FILES.get('image'):
-                try:
-                    if image_url.startswith('http://'):
-                        image_url = image_url.replace('http://', 'https://', 1)
-
-                    ssl_context = ssl._create_unverified_context()
-                    req = urllib.request.Request(image_url, headers={'User-Agent': 'Mozilla/5.0'})
-                    with urllib.request.urlopen(req, context=ssl_context) as response:
-                        file_name = f"cover_{book.isbn or 'unknown'}.jpg"
-                        book.image.save(file_name, ContentFile(response.read()), save=False)
-                except Exception as e:
-                    print(f"Błąd pobierania okładki przy edycji: {e}")
+                download_and_save_book_cover(book, image_url)
             
-            book.save()
+            messages.success(request, 'Zaktualizowano dane książki.')
             return redirect('book_detail', pk=book.pk)
     else:
         form = BookForm(instance=book)
         image_url = book.image.url if book.image else ''
     
-    return render(request, 'library/book_form.html', {'form': form, 'cover_url': image_url})
+    return render(request, 'library/book_form.html', {'form': form, 'cover_url': image_url, 'book': book})
 
 
-
-@require_access_code
-def book_edit(request, pk):
-    """Obsługuje edycję istniejącej książki."""
+@login_required
+def book_delete(request, pk):
+    """Usuwanie książki."""
     book = get_object_or_404(Book, pk=pk)
     if request.method == 'POST':
-        form = BookForm(request.POST, request.FILES, instance=book)
-        image_url = request.POST.get('cover_url', '') # Przechowujemy link przy błędzie
-        
-        if form.is_valid():
-            book = form.save(commit=False)
-            
-            if image_url and not request.FILES.get('image'):
-                try:
-                    if image_url.startswith('http://'):
-                        image_url = image_url.replace('http://', 'https://', 1)
-
-                    ssl_context = ssl._create_unverified_context()
-                    req = urllib.request.Request(image_url, headers={'User-Agent': 'Mozilla/5.0'})
-                    with urllib.request.urlopen(req, context=ssl_context) as response:
-                        file_name = f"cover_{book.isbn or 'unknown'}.jpg"
-                        book.image.save(file_name, ContentFile(response.read()), save=False)
-                except Exception as e:
-                    print(f"Błąd pobierania okładki przy edycji: {e}")
-            
-            book.save()
-            return redirect('book_detail', pk=book.pk)
-    else:
-        form = BookForm(instance=book)
-        image_url = book.image.url if book.image else ''
-    
-    return render(request, 'library/book_form.html', {'form': form, 'cover_url': image_url})
+        title = book.title
+        book.delete()
+        messages.success(request, f'Książka „{title}” została pomyślnie usunięta z bazy.')
+        return redirect('book_list')
+    return redirect('book_detail', pk=pk)
 
 
-@require_access_code
+@login_required
 def book_import_csv(request):
-    """Importuje książki z CSV i pobiera okładki z Open Library oraz Google Books."""
+    """
+    Zaawansowany import książek z pliku CSV:
+    - Automatycznie wykrywa separator (przecinek, średnik, tabulator).
+    - Obsługuje polskie i angielskie nagłówki w dowolnej wielkości liter.
+    - Jeśli podano tylko ISBN (lub brakuje autora/opisu), autouzupełnia brakujące dane z Biblioteki Narodowej / Google.
+    - Kaskadowo pobiera okładki w jakości HD i zapisuje je w bazie mediów.
+    """
     if request.method == 'POST':
         if 'csv_file' not in request.FILES:
-            messages.error(request, 'Nie wybrano pliku.')
+            messages.error(request, 'Nie wybrano pliku CSV.')
             return redirect('book_list')
             
         csv_file = request.FILES['csv_file']
         
         try:
-            data_set = csv_file.read().decode('UTF-8', errors='replace')
+            raw_bytes = csv_file.read()
+            data_set = raw_bytes.decode('UTF-8', errors='replace')
+            
+            # 1. Wykrywanie separatora
+            sample = data_set[:2048]
+            delimiter = ','
+            if ';' in sample and sample.count(';') > sample.count(','):
+                delimiter = ';'
+            elif '\t' in sample and sample.count('\t') > sample.count(','):
+                delimiter = '\t'
+
             io_string = io.StringIO(data_set)
-            reader = csv.DictReader(io_string)
+            reader = csv.reader(io_string, delimiter=delimiter)
             
+            rows = list(reader)
+            if not rows:
+                messages.warning(request, "Przesłany plik CSV jest pusty.")
+                return redirect('book_list')
+
+            # 2. Mapowanie nagłówków (case-insensitive & polish/english aliases)
+            headers = [h.strip().lower() for h in rows[0]]
+            
+            def get_col_index(*aliases):
+                for idx, h in enumerate(headers):
+                    if h in aliases or any(alias in h for alias in aliases):
+                        return idx
+                return None
+
+            col_title = get_col_index('title', 'tytuł', 'tytul', 'nazwa')
+            col_authors = get_col_index('authors', 'author', 'autor', 'autorzy', 'twórca', 'tworca')
+            col_isbn = get_col_index('isbn', 'kod', 'ean')
+            col_publisher = get_col_index('publisher', 'wydawca', 'wydawnictwo')
+            col_published_at = get_col_index('published at', 'published_at', 'published', 'rok', 'data wydania', 'rok wydania', 'data')
+            col_pages = get_col_index('page count', 'page_count', 'pages', 'strony', 'liczba stron')
+            col_categories = get_col_index('categories', 'category', 'kategorie', 'kategoria', 'gatunek')
+            col_language = get_col_index('language', 'język', 'jezyk', 'lang')
+            col_description = get_col_index('description', 'opis')
+            col_read = get_col_index('read', 'przeczytane', 'status', 'czytane')
+            col_subtitle = get_col_index('subtitle', 'podtytuł', 'podtytul')
+
             imported_count = 0
-            
-            for row in reader:
-                title = row.get('Title', '').strip()
-                if not title:
+            covers_count = 0
+
+            # 3. Przetwarzanie wierszy
+            for row in rows[1:]:
+                if not row or not any(row):
                     continue
-                
-                isbn_val = str(row.get('ISBN', '')).strip()
+
+                def get_val(col_idx):
+                    if col_idx is not None and col_idx < len(row):
+                        return row[col_idx].strip()
+                    return ''
+
+                title = get_val(col_title)
+                isbn_val = get_val(col_isbn)
                 if '.' in isbn_val:
                     isbn_val = isbn_val.split('.')[0]
+                isbn_val = re.sub(r'[^0-9X]', '', isbn_val.upper())
 
+                authors = get_val(col_authors)
+                subtitle = get_val(col_subtitle)
+                publisher = get_val(col_publisher)
+                published_at = get_val(col_published_at)[:10]
+                categories = get_val(col_categories)
+                language = get_val(col_language)
+                description = get_val(col_description)
+                
+                page_count_str = get_val(col_pages)
+                pages = int(float(page_count_str)) if page_count_str and page_count_str.replace('.', '', 1).isdigit() else None
+                
+                read_raw = get_val(col_read).lower()
+                read_status = read_raw in ['1', 'true', 'tak', 'yes', 'przeczytane']
+
+                # Pomiń duplikaty ISBN
                 if isbn_val and Book.objects.filter(isbn=isbn_val).exists():
                     continue
 
-                page_count_str = row.get('Page Count', '')
-                pages = int(float(page_count_str)) if page_count_str and str(page_count_str).replace('.','',1).isdigit() else None
-                read_status = str(row.get('Read', '0')).strip() == '1'
+                # 4. Jeśli brak tytułu lub danych, a mamy ISBN -> pobierz z API
+                api_cover_url = None
+                if isbn_val and (not title or not authors or not publisher or not description):
+                    api_data = get_unified_book_data(isbn_val)
+                    if api_data:
+                        if not title:
+                            title = api_data.get('title', '')
+                        if not authors:
+                            authors = api_data.get('authors', '')
+                        if not publisher:
+                            publisher = api_data.get('publisher', '')
+                        if not published_at:
+                            published_at = api_data.get('published_at', '')
+                        if not pages and api_data.get('page_count'):
+                            pages = int(api_data['page_count']) if str(api_data['page_count']).isdigit() else None
+                        if not categories:
+                            categories = api_data.get('categories', '')
+                        if not description:
+                            description = api_data.get('description', '')
+                        if not language:
+                            language = api_data.get('language', 'PL')
+                        api_cover_url = api_data.get('cover_url')
+
+                if not title and not isbn_val:
+                    continue
+
+                if not title and isbn_val:
+                    title = f"Książka ISBN: {isbn_val}"
 
                 book = Book.objects.create(
                     title=title,
-                    subtitle=row.get('Subtitle', '').strip() if row.get('Subtitle') else '',
-                    authors=row.get('Authors', '').strip() if row.get('Authors') else '',
-                    publisher=row.get('Publisher', '').strip() if row.get('Publisher') else '',
-                    published_at=str(row.get('Published At', ''))[:10],
+                    subtitle=subtitle,
+                    authors=authors,
+                    publisher=publisher,
+                    published_at=published_at,
                     page_count=pages,
-                    language=row.get('Language', '').strip() if row.get('Language') else '',
-                    categories=row.get('Categories', '').strip() if row.get('Categories') else '',
-                    description=row.get('Description', '').strip() if row.get('Description') else '',
+                    language=language or 'PL',
+                    categories=categories,
+                    description=description,
                     isbn=isbn_val if isbn_val else None,
                     number_of_copies=1,
                     read=read_status
                 )
                 imported_count += 1
-                
-                # --- POBIERANIE OKŁADKI (Open Library -> Fallback do Google Books) ---
-                if book.isbn:
-                    cover_downloaded = False
-                    ssl_context = ssl._create_unverified_context()
-                    
-                    # 1. Próba z Open Library
-                    try:
-                        api_url = f"https://openlibrary.org/isbn/{book.isbn}.json"
-                        req = urllib.request.Request(api_url, headers={'User-Agent': 'Mozilla/5.0'})
-                        with urllib.request.urlopen(req, context=ssl_context, timeout=3) as response:
-                            api_data = json.loads(response.read().decode('utf-8'))
-                            cover_id = api_data.get('covers')
-                            if cover_id:
-                                image_url = f"https://covers.openlibrary.org/b/id/{cover_id[0]}-L.jpg"
-                                img_req = urllib.request.Request(image_url, headers={'User-Agent': 'Mozilla/5.0'})
-                                with urllib.request.urlopen(img_req, context=ssl_context, timeout=3) as img_resp:
-                                    file_name = f"cover_{book.isbn}.jpg"
-                                    book.image.save(file_name, ContentFile(img_resp.read()), save=True)
-                                    cover_downloaded = True
-                    except Exception:
-                        pass
 
-                    # 2. Jeśli Open Library nie dała rady, próbujemy z Google Books API
-                    if not cover_downloaded:
-                        try:
-                            g_url = f"https://www.googleapis.com/books/v1/volumes?q=isbn:{book.isbn}"
-                            req = urllib.request.Request(g_url, headers={'User-Agent': 'Mozilla/5.0'})
-                            with urllib.request.urlopen(req, context=ssl_context, timeout=3) as response:
-                                g_data = json.loads(response.read().decode('utf-8'))
-                                items = g_data.get('items')
-                                if items:
-                                    volume_info = items[0].get('volumeInfo', {})
-                                    image_links = volume_info.get('imageLinks', {})
-                                    # Pobieramy największą dostępną okładkę i zmieniamy http na https
-                                    thumb_url = image_links.get('large') or image_links.get('medium') or image_links.get('thumbnail')
-                                    if thumb_url:
-                                        thumb_url = thumb_url.replace('http://', 'https://').replace('&edge=curl', '')
-                                        img_req = urllib.request.Request(thumb_url, headers={'User-Agent': 'Mozilla/5.0'})
-                                        with urllib.request.urlopen(img_req, context=ssl_context, timeout=3) as img_resp:
-                                            file_name = f"cover_{book.isbn}.jpg"
-                                            book.image.save(file_name, ContentFile(img_resp.read()), save=True)
-                        except Exception:
-                            pass
+                # 5. Kaskadowe poszukiwanie i zapis okładki
+                cover_url = api_cover_url or find_best_cover_for_book(
+                    isbn=book.isbn,
+                    title=book.title,
+                    authors=book.authors
+                )
+                if cover_url:
+                    saved = download_and_save_book_cover(book, cover_url)
+                    if saved:
+                        covers_count += 1
 
-            messages.success(request, f"Sukces! Zaimportowano {imported_count} książek.")
+            messages.success(request, f"Sukces! Zaimportowano {imported_count} pozycji (pomyślnie pobrano {covers_count} okładek).")
             return redirect('book_list')
             
         except Exception as e:
-            raise Exception(f"BŁĄD PODCZAS IMPORTU CSV: {e}")
+            messages.error(request, f"Błąd podczas importu CSV: {e}")
+            return redirect('book_list')
 
     return render(request, 'library/book_import.html')
 
 
-
-# ==========================================
-# 4. INTEGRACJA Z ZEWNĘTRZNYMI API (ISBN)
-# ==========================================
-
+@login_required
 def fetch_book_data(request, isbn):
-    """Przeszukuje zewnętrzne bazy (Google Books, Biblioteka Narodowa, Open Library) po kodzie ISBN."""
-    clean_isbn = isbn.replace('-', '').strip()
-    ssl_context = ssl._create_unverified_context()
-
-    # 1. Próba: Google Books (Ścisłe wyszukiwanie)
-    try:
-        url = f"https://www.googleapis.com/books/v1/volumes?q=isbn:{clean_isbn}"
-        with urllib.request.urlopen(url, context=ssl_context) as response:
-            data = json.loads(response.read().decode('utf-8'))
-            if data.get('totalItems', 0) > 0:
-                book = data['items'][0]['volumeInfo']
-                image_url = book.get('imageLinks', {}).get('thumbnail', '').replace('http://', 'https://')
-                
-                return JsonResponse({
-                    'source': 'Google',
-                    'title': book.get('title', ''),
-                    'subtitle': book.get('subtitle', ''),
-                    'author': ', '.join(book.get('authors', [])),
-                    'publisher': book.get('publisher', ''),
-                    'published_at': book.get('publishedDate', ''),
-                    'page_count': book.get('pageCount', ''),
-                    'language': book.get('language', '').upper(),
-                    'categories': ', '.join(book.get('categories', [])),
-                    'description': book.get('description', ''),
-                    'cover_url': image_url
-                })
-    except Exception as e:
-        print(f"Błąd Google Strict: {e}")
-
-    # 2. Próba: Google Books (Wyszukiwanie ogólne)
-    try:
-        url = f"https://www.googleapis.com/books/v1/volumes?q={clean_isbn}"
-        with urllib.request.urlopen(url, context=ssl_context) as response:
-            data = json.loads(response.read().decode('utf-8'))
-            if data.get('totalItems', 0) > 0:
-                book = data['items'][0]['volumeInfo']
-                image_url = book.get('imageLinks', {}).get('thumbnail', '').replace('http://', 'https://')
-                
-                return JsonResponse({
-                    'source': 'Google',
-                    'title': book.get('title', ''),
-                    'subtitle': book.get('subtitle', ''),
-                    'author': ', '.join(book.get('authors', [])),
-                    'publisher': book.get('publisher', ''),
-                    'published_at': book.get('publishedDate', ''),
-                    'page_count': book.get('pageCount', ''),
-                    'language': book.get('language', '').upper(),
-                    'categories': ', '.join(book.get('categories', [])),
-                    'description': book.get('description', ''),
-                    'cover_url': image_url
-                })
-    except Exception as e:
-        print(f"Błąd Google Broad: {e}")
-
-    # 3. Próba: Biblioteka Narodowa (Z MYŚLNIKAMI)
-    try:
-        url = f"https://data.bn.org.pl/api/bibs.json?isbnIssn={isbn}"
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, context=ssl_context) as response:
-            bn_data = json.loads(response.read().decode('utf-8'))
-            if bn_data.get('bibs'):
-                book_info = bn_data['bibs'][0]
-                return JsonResponse({
-                    'source': 'BN (z myślnikami)',
-                    'title': book_info.get('title', ''),
-                    'author': book_info.get('author', ''),
-                    'publisher': book_info.get('publisher', ''),
-                    'published_at': book_info.get('publicationYear', ''),
-                    'language': book_info.get('languageOfPublication', ''),
-                    'categories': book_info.get('genre', '')
-                })
-    except Exception as e:
-        print(f"Błąd BN (z myślnikami): {e}")
-
-    # 4. Próba: Biblioteka Narodowa (BEZ MYŚLNIKÓW)
-    try:
-        url = f"https://data.bn.org.pl/api/bibs.json?isbnIssn={clean_isbn}"
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, context=ssl_context) as response:
-            bn_data = json.loads(response.read().decode('utf-8'))
-            if bn_data.get('bibs'):
-                book_info = bn_data['bibs'][0]
-                return JsonResponse({
-                    'source': 'BN (bez myślników)',
-                    'title': book_info.get('title', ''),
-                    'author': book_info.get('author', ''),
-                    'publisher': book_info.get('publisher', ''),
-                    'published_at': book_info.get('publicationYear', ''),
-                    'language': book_info.get('languageOfPublication', ''),
-                    'categories': book_info.get('genre', '')
-                })
-    except Exception as e:
-        print(f"Błąd BN (bez myślników): {e}")
-
-    # 5. Próba: Open Library
-    try:
-        url = f"https://openlibrary.org/api/books?bibkeys=ISBN:{clean_isbn}&format=json&jscmd=data"
-        with urllib.request.urlopen(url, context=ssl_context) as response:
-            data = json.loads(response.read().decode('utf-8'))
-            key = f"ISBN:{clean_isbn}"
-            if key in data:
-                book = data[key]
-                authors = [a.get('name', '') for a in book.get('authors', [])]
-                publishers = [p.get('name', '') for p in book.get('publishers', [])]
-                subjects = [s.get('name', '') for s in book.get('subjects', [])]
-                
-                cover_data = book.get('cover', {})
-                cover_url = cover_data.get('large', cover_data.get('medium', ''))
-                
-                return JsonResponse({
-                    'source': 'Open Library',
-                    'title': book.get('title', ''),
-                    'subtitle': book.get('subtitle', ''),
-                    'author': ', '.join(authors),
-                    'publisher': ', '.join(publishers),
-                    'published_at': book.get('publish_date', ''),
-                    'page_count': book.get('number_of_pages', ''),
-                    'categories': ', '.join(subjects),
-                    'cover_url': cover_url
-                })
-    except Exception as e:
-        print(f"Błąd Open Library: {e}")
-
-    # Jeśli wszystkie bazy zawiodą
-    return JsonResponse({'error': 'Nie znaleziono książki.'}, status=404)
+    """Nowy, zunifikowany endpoint pobierania metadanych i okładek z wielu źródeł."""
+    data = get_unified_book_data(isbn)
+    if data and (data.get('title') or data.get('cover_url')):
+        return JsonResponse(data)
+    
+    return JsonResponse({'error': 'Nie znaleziono książki w bazach zewnętrznych.'}, status=404)
 
 
+@login_required
+def fix_missing_covers(request):
+    """
+    Automatycznie skanuje wszystkie książki w bazie bez okładki
+    i pobiera je kaskadowo z Open Library CDN, Open Library Search, Google Books Hi-Res oraz Wolnych Lektur.
+    """
+    books_without_covers = Book.objects.filter(Q(image='') | Q(image__isnull=True))
+    fixed_count = 0
+    
+    for book in books_without_covers:
+        cover_url = find_best_cover_for_book(
+            isbn=book.isbn, 
+            title=book.title, 
+            authors=book.authors
+        )
+        if cover_url:
+            saved = download_and_save_book_cover(book, cover_url)
+            if saved:
+                fixed_count += 1
 
-#PROGRES W CZYTANIU KSIAŻKI 
-@require_access_code
+    messages.success(request, f"Proces zakończony! Zaktualizowano okładki dla {fixed_count} książek.")
+    return redirect('book_list')
+
+
+@login_required
+def fix_all_covers(request):
+    """Alias do fix_missing_covers."""
+    return fix_missing_covers(request)
+
+
+@login_required
 def book_update_progress(request, pk):
-    """Szybko aktualizuje liczbę przeczytanych stron bezpośrednio z widoku szczegółów."""
+    """Aktualizacja liczby przeczytanych stron z poziomu karty szczegółów."""
     book = get_object_or_404(Book, pk=pk)
     if request.method == 'POST':
         pages_read_str = request.POST.get('pages_read')
         
-        # Poprawiona walidacja
         if pages_read_str and pages_read_str.isdigit():
             try:
                 pages_read = int(pages_read_str)
-                # Zabezpieczenie przed wpisaniem większej liczby stron niż książka posiada
                 if book.page_count and pages_read > book.page_count:
                     pages_read = book.page_count
                 if pages_read < 0:
                     pages_read = 0
                 
                 book.pages_read = pages_read
-                # Jeśli użytkownik przeczyta całość, automatycznie zaznaczamy flagę przeczytania
-                if book.page_count and pages_read >= book.page_count:
-                    book.read = True
-                else:
-                    book.read = False
-                    
+                book.read = bool(book.page_count and pages_read >= book.page_count)
                 book.save()
+                messages.success(request, 'Postęp czytania został zaktualizowany.')
             except ValueError:
                 pass
                 
     return redirect('book_detail', pk=book.pk)
 
-@require_access_code
-def fix_missing_covers(request):
-    """Przechodzi przez wszystkie książki bez okładki i próbuje je pobrać z internetu po ISBN."""
-    books_without_covers = Book.objects.filter(image='') | Book.objects.filter(image__isnull=True)
-    fixed_count = 0
-    
-    for book in books_without_covers:
-        if not book.isbn:
-            continue
-            
-        # Przykładowe zapytanie do Open Library lub Google Books po ISBN
-        api_url = f"https://openlibrary.org/isbn/{book.isbn.strip()}.json"
-        try:
-            ssl_context = ssl._create_unverified_context()
-            req = urllib.request.Request(api_url, headers={'User-Agent': 'Mozilla/5.0'})
-            
-            with urllib.request.urlopen(req, context=ssl_context) as response:
-                import json
-                data = json.loads(response.read().decode('utf-8'))
-                cover_id = data.get('covers')
-                if cover_id:
-                    image_url = f"https://covers.openlibrary.org/b/id/{cover_id[0]}-L.jpg"
-                    
-                    img_req = urllib.request.Request(image_url, headers={'User-Agent': 'Mozilla/5.0'})
-                    with urllib.request.urlopen(img_req, context=ssl_context) as img_resp:
-                        file_name = f"cover_{book.isbn}.jpg"
-                        book.image.save(file_name, ContentFile(img_resp.read()), save=True)
-                        fixed_count += 1
-        except Exception as e:
-            print(f"Nie udało się pobrać okładki dla {book.title}: {e}")
-            
-    return HttpResponse(f"Naprawiono okładki dla {fixed_count} książek!")
 
-def fix_all_covers(request):
-    """Przeszukuje wszystkie książki bez okładki i pobiera je z Google Books / Open Library."""
-    books_without_cover = Book.objects.filter(image='') | Book.objects.filter(image__isnull=True)
-    fixed = 0
-    ssl_context = ssl._create_unverified_context()
-
-    for book in books_without_cover:
-        if not book.isbn:
-            continue
-            
-        # Próba Google Books
-        try:
-            g_url = f"https://www.googleapis.com/books/v1/volumes?q=isbn:{book.isbn}"
-            req = urllib.request.Request(g_url, headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req, context=ssl_context, timeout=3) as response:
-                g_data = json.loads(response.read().decode('utf-8'))
-                items = g_data.get('items')
-                if items:
-                    image_links = items[0].get('volumeInfo', {}).get('imageLinks', {})
-                    thumb_url = image_links.get('large') or image_links.get('medium') or image_links.get('thumbnail')
-                    if thumb_url:
-                        thumb_url = thumb_url.replace('http://', 'https://').replace('&edge=curl', '')
-                        img_req = urllib.request.Request(thumb_url, headers={'User-Agent': 'Mozilla/5.0'})
-                        with urllib.request.urlopen(img_req, context=ssl_context, timeout=3) as img_resp:
-                            file_name = f"cover_{book.isbn}.jpg"
-                            book.image.save(file_name, ContentFile(img_resp.read()), save=True)
-                            fixed += 1
-                            continue
-        except Exception:
-            pass
-
-    return HttpResponse(f"Zaktualizowano okładki dla {fixed} książek! Możesz wrócić do listy.")
-
-@require_access_code
+@login_required
 def book_bulk_update(request):
-    """Masowo aktualizuje kategorię lub status dla zaznaczonych książek."""
+    """Masowa aktualizacja kategorii lub statusu przeczytania dla zaznaczonych książek."""
     if request.method == 'POST':
         selected_ids = request.POST.get('selected_books', '')
         new_category = request.POST.get('new_category', '').strip()
@@ -948,18 +779,15 @@ def book_bulk_update(request):
     return redirect('book_list')
 
 
-@require_access_code
+@login_required
 def toggle_book_read(request, pk):
-    """Szybka zmiana statusu przeczytania przez suwak (AJAX)."""
+    """Szybka zmiana statusu przeczytania przez AJAX."""
     if request.method == 'POST':
         try:
             book = Book.objects.get(pk=pk)
-            book.read = not book.read  # Odwracamy status
+            book.read = not book.read
             book.save()
             return JsonResponse({'success': True, 'is_read': book.read})
         except Book.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Książka nie istnieje'}, status=404)
     return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
-
-
-

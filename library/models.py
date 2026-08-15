@@ -2,7 +2,7 @@ from django.db import models
 
 
 # ==========================================
-# 0. LISTA KATEGORII
+# 0. LISTA KATEGORII KSIĄŻEK
 # ==========================================
 
 CATEGORY_CHOICES = [
@@ -33,11 +33,8 @@ CATEGORY_CHOICES = [
 ]
 
 
-
-from django.db import models
-
 # ==========================================
-# 0. Porcelana
+# 1. PORCELANA
 # ==========================================
 
 class Porcelain(models.Model):
@@ -139,144 +136,200 @@ class Porcelain(models.Model):
         verbose_name="Styl"
     )
     
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Data dodania")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Data modyfikacji")
 
     class Meta:
         verbose_name = "Element porcelany"
         verbose_name_plural = "Porcelana"
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['name']),
+            models.Index(fields=['signature']),
+            models.Index(fields=['style']),
+            models.Index(fields=['-created_at']),
+        ]
 
     def __str__(self):
-        return f"{self.name} - {self.signature} ({self.style})"
-
-from django.db import models
+        return f"{self.name} - {self.signature or 'Bez sygnatury'} ({self.style})"
 
 
 # ==========================================
-# 0. VINYLE
+# 2. PŁYTY WINYLOWE
 # ==========================================
 
 class VinylRecord(models.Model):
-    # Podstawowe dane
     artist = models.CharField(max_length=200, verbose_name="Wykonawca / Zespół")
     title = models.CharField(max_length=200, verbose_name="Tytuł albumu")
     label = models.CharField(max_length=200, blank=True, null=True, verbose_name="Wytwórnia płytowa")
     
-    # Kategoryzacja i wydanie
     genre = models.CharField(max_length=100, blank=True, null=True, verbose_name="Gatunek")
     release_year = models.IntegerField(blank=True, null=True, verbose_name="Rok wydania")
-    disc_count = models.IntegerField(default=1, verbose_name="Ilość płyt w wydaniu") # <--- NOWE POLE
+    disc_count = models.IntegerField(default=1, verbose_name="Ilość płyt w wydaniu")
     
-    # Stan i wartość
     condition = models.CharField(max_length=50, blank=True, null=True, verbose_name="Stan (Płyta / Okładka)")
     price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Cena / Wartość")
     
-    # Zdjęcia
     front_cover = models.ImageField(upload_to='vinyls/front/', blank=True, null=True, verbose_name="Przód okładki")
     back_cover = models.ImageField(upload_to='vinyls/back/', blank=True, null=True, verbose_name="Tył okładki")
     
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Data dodania")
+
+    class Meta:
+        verbose_name = "Płyta winylowa"
+        verbose_name_plural = "Płyty winylowe"
+        ordering = ['artist', 'title']
+        indexes = [
+            models.Index(fields=['artist']),
+            models.Index(fields=['title']),
+            models.Index(fields=['genre']),
+            models.Index(fields=['release_year']),
+            models.Index(fields=['-created_at']),
+        ]
 
     def __str__(self):
         return f"{self.artist} - {self.title}"
 
+
 # ==========================================
-# 0. Książki
+# 3. KSIĄŻKI
 # ==========================================
 
 class Book(models.Model):
-    """Rozbudowany model książki zawierający pełne metadane, informacje o czytaniu i transakcjach."""
+    """Model książki zawierający pełne metadane, statusy czytania i parametry egzemplarza."""
     
-    # 1. Identyfikatory i dane podstawowe z API
-    isbn = models.CharField(max_length=20, unique=True, blank=True, null=True, error_messages={'unique': 'Książka z takim numerem ISBN już istnieje w Twojej biblioteczce!'})
-    title = models.CharField(max_length=255, blank=True, null=True)
-    subtitle = models.CharField(max_length=255, blank=True, null=True)
-    authors = models.CharField(max_length=255, blank=True, null=True)
-    language = models.CharField(max_length=50, blank=True, null=True)
-    categories = models.CharField(max_length=255, blank=True, null=True)
-    publisher = models.CharField(max_length=255, blank=True, null=True)
-    page_count = models.IntegerField(blank=True, null=True)
-    published_at = models.CharField(max_length=50, blank=True, null=True)
-    description = models.TextField(blank=True, null=True)
-    image = models.ImageField(upload_to='library_images/', blank=True, null=True)
+    # 1. Identyfikatory i dane podstawowe
+    isbn = models.CharField(
+        max_length=20, 
+        unique=True, 
+        blank=True, 
+        null=True, 
+        verbose_name="ISBN / EAN",
+        error_messages={'unique': 'Książka z takim numerem ISBN już istnieje w Twojej biblioteczce!'}
+    )
+    title = models.CharField(max_length=255, blank=True, null=True, verbose_name="Tytuł")
+    subtitle = models.CharField(max_length=255, blank=True, null=True, verbose_name="Podtytuł")
+    authors = models.CharField(max_length=255, blank=True, null=True, verbose_name="Autorzy")
+    language = models.CharField(max_length=50, blank=True, null=True, default='PL', verbose_name="Język")
+    categories = models.CharField(max_length=255, blank=True, null=True, verbose_name="Kategorie / Gatunek")
+    publisher = models.CharField(max_length=255, blank=True, null=True, verbose_name="Wydawnictwo")
+    page_count = models.IntegerField(blank=True, null=True, verbose_name="Liczba stron")
+    published_at = models.CharField(max_length=50, blank=True, null=True, verbose_name="Data publikacji / Rok")
+    description = models.TextField(blank=True, null=True, verbose_name="Opis książki")
+    image = models.ImageField(upload_to='library_images/', blank=True, null=True, verbose_name="Okładka")
 
     # 2. Twórcy poboczni
-    illustrators = models.CharField(max_length=255, blank=True, null=True)
-    translators = models.CharField(max_length=255, blank=True, null=True)
-    editors = models.CharField(max_length=255, blank=True, null=True)
-    narrators = models.CharField(max_length=255, blank=True, null=True)
-    photographers = models.CharField(max_length=255, blank=True, null=True)
+    illustrators = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ilustratorzy")
+    translators = models.CharField(max_length=255, blank=True, null=True, verbose_name="Tłumacze")
+    editors = models.CharField(max_length=255, blank=True, null=True, verbose_name="Redaktorzy")
+    narrators = models.CharField(max_length=255, blank=True, null=True, verbose_name="Lektorzy")
+    photographers = models.CharField(max_length=255, blank=True, null=True, verbose_name="Fotografowie")
 
-    # 3. Szczegóły wydania
-    format = models.CharField(max_length=100, blank=True, null=True)
-    edition = models.CharField(max_length=100, blank=True, null=True)
-    series = models.CharField(max_length=255, blank=True, null=True)
-    volume = models.CharField(max_length=50, blank=True, null=True)
-    signed = models.BooleanField(default=False)
-    condition = models.CharField(max_length=100, blank=True, null=True)
-    number_of_copies = models.IntegerField(default=1, blank=True, null=True)
+    # 3. Szczegóły wydania i stan
+    format = models.CharField(max_length=100, blank=True, null=True, verbose_name="Format / Typ oprawy")
+    edition = models.CharField(max_length=100, blank=True, null=True, verbose_name="Wydanie")
+    series = models.CharField(max_length=255, blank=True, null=True, verbose_name="Seria wydawnicza")
+    volume = models.CharField(max_length=50, blank=True, null=True, verbose_name="Tom")
+    signed = models.BooleanField(default=False, verbose_name="Autograf / Dedykacja")
+    condition = models.CharField(max_length=100, blank=True, null=True, verbose_name="Stan zachowania")
+    number_of_copies = models.IntegerField(default=1, blank=True, null=True, verbose_name="Liczba egzemplarzy")
 
-    # 4. Status czytania, oceny i notatki
-    bookshelf = models.CharField(max_length=100, blank=True, null=True)
-    tags = models.CharField(max_length=255, blank=True, null=True)
-    wishlist = models.BooleanField(default=False)
-    started_reading_on = models.DateField(blank=True, null=True)
-    ended_reading_on = models.DateField(blank=True, null=True)
-    pages_read = models.IntegerField(blank=True, null=True)
-    read = models.BooleanField(default=False)
-    my_rating = models.IntegerField(blank=True, null=True)
+    # 4. Status czytania, półka i oceny
+    bookshelf = models.CharField(max_length=100, blank=True, null=True, verbose_name="Półka / Regał")
+    tags = models.CharField(max_length=255, blank=True, null=True, verbose_name="Tagi")
+    wishlist = models.BooleanField(default=False, verbose_name="Lista życzeń")
+    started_reading_on = models.DateField(blank=True, null=True, verbose_name="Rozpoczęto czytanie")
+    ended_reading_on = models.DateField(blank=True, null=True, verbose_name="Zakończono czytanie")
+    pages_read = models.IntegerField(blank=True, null=True, default=0, verbose_name="Przeczytane strony")
+    read = models.BooleanField(default=False, verbose_name="Przeczytana")
+    my_rating = models.IntegerField(blank=True, null=True, verbose_name="Moja ocena (1-5)")
 
+    # 5. Dane systemowe
+    date_added = models.DateTimeField(auto_now_add=True, verbose_name="Data dodania do biblioteki")
 
-    # 6. Dane systemowe
-    date_added = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        verbose_name = "Książka"
+        verbose_name_plural = "Książki"
+        ordering = ['title', 'authors']
+        indexes = [
+            models.Index(fields=['title']),
+            models.Index(fields=['isbn']),
+            models.Index(fields=['read']),
+            models.Index(fields=['wishlist']),
+            models.Index(fields=['categories']),
+            models.Index(fields=['bookshelf']),
+            models.Index(fields=['-date_added']),
+        ]
     
     def __str__(self):
-        return f"{self.title} - {self.authors}"
+        return f"{self.title or 'Bez tytułu'} - {self.authors or 'Nieznany autor'}"
 
+
+# ==========================================
+# 4. GRY WIDEO
+# ==========================================
 
 class VideoGame(models.Model):
-    # Podstawowe dane
     title = models.CharField(max_length=200, verbose_name="Tytuł gry")
     platform = models.CharField(max_length=100, verbose_name="Platforma (np. PC, PS5, Switch)")
     genre = models.CharField(max_length=100, blank=True, null=True, verbose_name="Gatunek (np. RPG, Shooter)")
     release_year = models.IntegerField(blank=True, null=True, verbose_name="Rok wydania")
     
-    # Stan i wartość
     condition = models.CharField(max_length=50, blank=True, null=True, verbose_name="Stan (Pudełko / Nośnik)")
     price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Cena / Wartość")
     
-    # Zdjęcia
     cover_image = models.ImageField(upload_to='videogames/covers/', blank=True, null=True, verbose_name="Okładka gry")
     media_image = models.ImageField(upload_to='videogames/media/', blank=True, null=True, verbose_name="Płyta / Kartridż")
     
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Data dodania")
+
+    class Meta:
+        verbose_name = "Gra wideo"
+        verbose_name_plural = "Gry wideo"
+        ordering = ['title']
+        indexes = [
+            models.Index(fields=['title']),
+            models.Index(fields=['platform']),
+            models.Index(fields=['genre']),
+            models.Index(fields=['-created_at']),
+        ]
 
     def __str__(self):
         return f"{self.title} ({self.platform})"
 
 
+# ==========================================
+# 5. GRY PLANSZOWE
+# ==========================================
+
 class BoardGame(models.Model):
-    # Podstawowe dane
     title = models.CharField(max_length=200, verbose_name="Tytuł gry")
     publisher = models.CharField(max_length=200, blank=True, null=True, verbose_name="Wydawca")
     category = models.CharField(max_length=100, blank=True, null=True, verbose_name="Kategoria (np. Strategiczna, Rodzinna)")
     release_year = models.IntegerField(blank=True, null=True, verbose_name="Rok wydania")
     
-    # Specyfika planszówek
     min_players = models.IntegerField(default=1, verbose_name="Min. liczba graczy")
     max_players = models.IntegerField(default=4, verbose_name="Max. liczba graczy")
     playtime = models.CharField(max_length=50, blank=True, null=True, verbose_name="Czas gry (np. 60-90 min)")
     
-    # Stan i wartość
     condition = models.CharField(max_length=50, blank=True, null=True, verbose_name="Stan")
     price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Cena / Wartość")
     
-    # Zdjęcia
     box_image = models.ImageField(upload_to='boardgames/box/', blank=True, null=True, verbose_name="Zdjęcie pudełka")
     board_image = models.ImageField(upload_to='boardgames/board/', blank=True, null=True, verbose_name="Zdjęcie komponentów")
     
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Data dodania")
+
+    class Meta:
+        verbose_name = "Gra planszowa"
+        verbose_name_plural = "Gry planszowe"
+        ordering = ['title']
+        indexes = [
+            models.Index(fields=['title']),
+            models.Index(fields=['publisher']),
+            models.Index(fields=['category']),
+            models.Index(fields=['-created_at']),
+        ]
 
     def __str__(self):
         return self.title

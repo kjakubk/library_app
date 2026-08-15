@@ -1,22 +1,30 @@
 {% extends 'library/base.html' %}
 
-{% block title %}Import CSV - Kolekcje{% endblock %}
+{% block title %}Import CSV & Pobieranie Okładek - Kolekcje{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-2 px-md-4 py-4 mb-5">
+<div class="container-fluid px-2 px-md-4 py-3 mb-5">
     
-    <!-- Górny panel akcji (Naprawiony pod Mobile) -->
+    <!-- Górny panel akcji -->
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center bg-body px-3 py-3 px-md-4 rounded-4 shadow-sm border mb-4 gap-3">
-        <div class="d-flex align-items-center gap-2 justify-content-center justify-content-md-start">
-            <span class="fs-4">📂</span>
-            <h5 class="mb-0 fw-bold text-body text-center text-md-start">
-                Import książek z pliku CSV
-            </h5>
+        <div class="d-flex align-items-center gap-3 justify-content-center justify-content-md-start">
+            <div class="bg-primary bg-opacity-10 text-primary rounded-3 p-2.5 fs-4 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                <i class="bi bi-file-earmark-spreadsheet-fill"></i>
+            </div>
+            <div>
+                <h5 class="mb-0 fw-bold text-body">
+                    Import książek z pliku CSV
+                </h5>
+                <span class="small text-muted">Automatyczne tworzenie rekordów oraz pobieranie okładek w jakości HD</span>
+            </div>
         </div>
         
-        <div class="d-flex justify-content-center">
-            <a href="{% url 'book_list' %}" class="btn btn-outline-secondary btn-sm px-4 py-2 rounded-pill fw-medium d-flex align-items-center justify-content-center gap-2 shadow-sm text-decoration-none w-100 w-md-auto">
-                ✕ Anuluj i wróć
+        <div class="d-flex justify-content-center gap-2">
+            <a href="{% url 'fix_missing_covers' %}" class="btn btn-outline-warning btn-sm px-3 py-2 rounded-3 fw-medium d-flex align-items-center gap-1 shadow-none text-decoration-none" title="Uruchom skanowanie i pobierz brakujące okładki dla istniejących książek">
+                <i class="bi bi-magic"></i> Pobierz brakujące okładki w bazie
+            </a>
+            <a href="{% url 'book_list' %}" class="btn btn-outline-secondary btn-sm px-3 py-2 rounded-3 fw-medium d-flex align-items-center gap-1 shadow-none text-decoration-none">
+                <i class="bi bi-arrow-left"></i> Wróć
             </a>
         </div>
     </div>
@@ -24,64 +32,64 @@
     <!-- Karta z formularzem importu -->
     <div class="row justify-content-center">
         <div class="col-xl-8 col-lg-10">
-            <div class="card bg-body shadow-sm border rounded-4 overflow-hidden">
+            <div class="card bg-body shadow-sm border-0 rounded-4 overflow-hidden">
                 <div class="card-body p-3 p-md-5">
                     
-                    <!-- Sekcja instrukcji -->
-                    <div class="alert bg-body-secondary border border-secondary border-opacity-25 rounded-4 mb-4 p-3 p-md-4">
+                    <!-- Sekcja automatycznego pobierania okładek -->
+                    <div class="p-3.5 bg-primary bg-opacity-10 border border-primary border-opacity-25 rounded-4 mb-4">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <i class="bi bi-stars text-primary fs-5"></i>
+                            <span class="fw-bold text-primary">Automatyczne pobieranie okładek włączone</span>
+                        </div>
+                        <p class="small text-body-secondary mb-0">
+                            Każda zaimportowana pozycja zostanie automatycznie przeszukana w bazach: <strong>Open Library CDN, Open Library Search (Tytuł + Autor), Google Books Hi-Res oraz Wolne Lektury</strong>. Znalezione okładki zostaną pobrane i zapisane na stałe w bazie mediów.
+                        </p>
+                    </div>
+
+                    <!-- Sekcja instrukcji formatu pliku -->
+                    <div class="alert bg-body-tertiary border rounded-4 mb-4 p-3 p-md-4">
                         <h6 class="fw-bold text-body mb-2 d-flex align-items-center gap-2">
-                            <span>ℹ️</span> Instrukcja importu
+                            <i class="bi bi-info-circle-fill text-muted"></i> Wymagany format pliku CSV
                         </h6>
                         <p class="small text-muted mb-3">
-                            Plik CSV powinien używać przecinków (lub średników) jako separatorów i zawierać nagłówki w pierwszym wierszu. Pamiętaj o zapisaniu pliku w kodowaniu <strong>UTF-8</strong>, aby polskie znaki wczytały się poprawnie.
+                            Plik CSV powinien używać przecinków jako separatorów oraz zawierać nagłówki kolumn w pierwszym wierszu (kodowanie UTF-8).
                         </p>
-                        <p class="small fw-semibold text-body mb-2">Rozpoznawane nagłówki kolumn:</p>
+                        <p class="small fw-semibold text-body mb-2">Rozpoznawane nagłówki:</p>
                         <div class="d-flex flex-wrap gap-2 mt-1 font-monospace" style="font-size: 0.75rem;">
-                            <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1">title</span>
-                            <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1">authors</span>
-                            <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1">isbn</span>
-                            <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1">publisher</span>
-                            <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1">published_at</span>
-                            <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1">page_count</span>
-                            <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1">categories</span>
-                            <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1">language</span>
-                            <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1">description</span>
+                            <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1">Title</span>
+                            <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1">Authors</span>
+                            <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1">ISBN</span>
+                            <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1">Publisher</span>
+                            <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1">Published At</span>
+                            <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1">Page Count</span>
+                            <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1">Categories</span>
+                            <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1">Language</span>
+                            <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1">Description</span>
                         </div>
                     </div>
 
-                    <form method="POST" enctype="multipart/form-data">
+                    <form method="POST" enctype="multipart/form-data" id="importCsvForm">
                         {% csrf_token %}
-
-                        <!-- Komunikaty o błędach -->
-                        {% if messages %}
-                            <div class="mb-4">
-                                {% for message in messages %}
-                                    <div class="alert alert-{{ message.tags }} rounded-3 small fw-medium py-2 px-3 border">
-                                        {{ message }}
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
 
                         <div class="mb-4">
                             <label for="csv_file" class="form-label small fw-bold text-muted text-uppercase mb-2" style="letter-spacing: 0.5px;">
-                                Wybierz plik z dysku <span class="text-danger">*</span>
+                                Wybierz plik CSV z dysku <span class="text-danger">*</span>
                             </label>
                             
-                            <input type="file" name="csv_file" id="csv_file" class="form-control bg-body text-body border-secondary border-opacity-50 shadow-none rounded-3 py-2" accept=".csv" required>
+                            <input type="file" name="csv_file" id="csv_file" class="form-control bg-body text-body border-secondary border-opacity-50 shadow-none rounded-3 py-2.5" accept=".csv" required>
                             
                             <div class="form-text small text-muted mt-2 opacity-75">
-                                Maksymalny zalecany rozmiar pliku to kilka megabajtów. Proces wczytywania większej bazy może chwilę potrwać.
+                                Import dużego pliku może zająć kilkanaście sekund z uwagi na pobieranie i zapisywanie okładek.
                             </div>
                         </div>
 
                         <hr class="my-4 border-secondary border-opacity-25">
 
-                        <!-- Przyciski akcji (dostosowane do telefonu) -->
+                        <!-- Przyciski akcji -->
                         <div class="d-flex flex-column-reverse flex-sm-row justify-content-end gap-2 gap-sm-3 align-items-stretch align-items-sm-center">
-                            <a href="{% url 'book_list' %}" class="btn btn-light text-muted text-decoration-none small fw-medium py-2 rounded-pill w-100 w-sm-auto text-center border shadow-none">Wróć bez importu</a>
-                            <button type="submit" class="btn btn-primary px-4 px-sm-5 py-2 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2 w-100 w-sm-auto">
-                                🚀 Rozpocznij import
+                            <a href="{% url 'book_list' %}" class="btn btn-light text-muted text-decoration-none small fw-medium py-2.5 px-4 rounded-3 text-center border shadow-none">Wróć</a>
+                            <button type="submit" id="submitImportBtn" class="btn btn-primary px-4 px-sm-5 py-2.5 rounded-3 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2 w-100 w-sm-auto">
+                                <i class="bi bi-cloud-arrow-up-fill"></i> Rozpocznij import i pobieranie
                             </button>
                         </div>
 
@@ -93,4 +101,17 @@
     </div>
 
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const form = document.getElementById('importCsvForm');
+    const submitBtn = document.getElementById('submitImportBtn');
+    if(form && submitBtn) {
+        form.addEventListener('submit', function() {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Importowanie i pobieranie okładek...';
+        });
+    }
+});
+</script>
 {% endblock %}
