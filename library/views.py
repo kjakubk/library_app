@@ -66,36 +66,38 @@ def porcelain_list(request):
     if sort_by in sort_mapping:
         items = items.order_by(sort_mapping[sort_by])
 
-    all_items = Porcelain.objects.all()
-    total_collection_count = all_items.count()
-    
-    available_styles = Porcelain.objects.exclude(style__isnull=True).exclude(style__exact='').values_list('style', flat=True).distinct().order_by('style')
-    available_signatures = Porcelain.objects.exclude(signature__isnull=True).exclude(signature__exact='').values_list('signature', flat=True).distinct().order_by('signature')
+    # Optymalizacja: jedno zapytanie agregujące zamiast wielu `.count()`
+    aggregates = Porcelain.objects.aggregate(
+        total_collection_count=Count('id'),
+        items_with_sig_photos=Count('id', filter=~Q(signature_image__isnull=True) & ~Q(signature_image__exact='')),
+        cups_count=Count('id', filter=Q(name__icontains='filiżan') | Q(name__icontains='kubek')),
+        saucers_count=Count('id', filter=Q(name__icontains='spodek') | Q(name__icontains='podstawek')),
+        plates_count=Count('id', filter=Q(name__icontains='talerz'))
+    )
 
-    total_signatures_count = available_signatures.count()
-    total_styles_count = available_styles.count()
-    items_with_sig_photos = all_items.exclude(signature_image__isnull=True).exclude(signature_image__exact='').count()
+    total_collection_count = aggregates['total_collection_count']
+    items_with_sig_photos = aggregates['items_with_sig_photos']
+    cups_count = aggregates['cups_count']
+    saucers_count = aggregates['saucers_count']
+    plates_count = aggregates['plates_count']
+
+    available_styles = list(Porcelain.objects.exclude(style__isnull=True).exclude(style__exact='').values_list('style', flat=True).distinct().order_by('style'))
+    available_signatures = list(Porcelain.objects.exclude(signature__isnull=True).exclude(signature__exact='').values_list('signature', flat=True).distinct().order_by('signature'))
+
+    total_signatures_count = len(available_signatures)
+    total_styles_count = len(available_styles)
+    
     photo_coverage_pct = round((items_with_sig_photos / total_collection_count) * 100, 1) if total_collection_count else 0
 
     raw_name_stats = Porcelain.objects.values('name').annotate(count=Count('id')).order_by('-count')[:6]
-    name_stats = []
-    for s in raw_name_stats:
-        pct = round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0
-        name_stats.append({'name': s['name'], 'count': s['count'], 'pct': pct})
+    name_stats = [{'name': s['name'], 'count': s['count'], 'pct': round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0} for s in raw_name_stats]
 
     raw_sig_stats = Porcelain.objects.exclude(signature__isnull=True).exclude(signature__exact='').values('signature').annotate(count=Count('id')).order_by('-count')[:6]
-    signature_stats = []
-    for s in raw_sig_stats:
-        pct = round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0
-        signature_stats.append({'signature': s['signature'], 'count': s['count'], 'pct': pct})
+    signature_stats = [{'signature': s['signature'], 'count': s['count'], 'pct': round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0} for s in raw_sig_stats]
 
     top_signature = signature_stats[0]['signature'] if signature_stats else '—'
-    top_style = available_styles[0] if available_styles.exists() else '—'
+    top_style = available_styles[0] if available_styles else '—'
 
-    # Statystyki skompletowania serwisów
-    cups_count = all_items.filter(Q(name__icontains='filiżan') | Q(name__icontains='kubek')).count()
-    saucers_count = all_items.filter(Q(name__icontains='spodek') | Q(name__icontains='podstawek')).count()
-    plates_count = all_items.filter(name__icontains='talerz').count()
     sets_count = min(cups_count, saucers_count)
 
     condition_stats = Porcelain.objects.exclude(condition__isnull=True).exclude(condition__exact='').values('condition').annotate(count=Count('id')).order_by('-count')
@@ -688,25 +690,29 @@ def book_list(request):
         books = books.filter(read=False)
 
     categories_list = [choice[0] for choice in CATEGORY_CHOICES]
-    total_collection_count = all_books.count()
-    total_authors_count = all_books.exclude(authors__isnull=True).exclude(authors__exact='').values_list('authors', flat=True).distinct().count()
-    total_categories_count = all_books.exclude(categories__isnull=True).exclude(categories__exact='').values_list('categories', flat=True).distinct().count()
-    read_books_count = all_books.filter(read=True).count()
+    
+    # Optymalizacja zapytań o KPI
+    aggregates = Book.objects.aggregate(
+        total_collection=Count('id'),
+        read_books=Count('id', filter=Q(read=True)),
+        with_covers=Count('id', filter=~Q(image__isnull=True) & ~Q(image__exact=''))
+    )
+    
+    total_collection_count = aggregates['total_collection']
+    read_books_count = aggregates['read_books']
+    items_with_covers = aggregates['with_covers']
+
+    total_authors_count = all_books.exclude(authors__isnull=True).exclude(authors__exact='').values('authors').distinct().count()
+    total_categories_count = all_books.exclude(categories__isnull=True).exclude(categories__exact='').values('categories').distinct().count()
+
     read_pct = round((read_books_count / total_collection_count) * 100, 1) if total_collection_count else 0
-    items_with_covers = all_books.exclude(image__isnull=True).exclude(image__exact='').count()
     photo_coverage_pct = round((items_with_covers / total_collection_count) * 100, 1) if total_collection_count else 0
 
     raw_cat_stats = all_books.exclude(categories__isnull=True).exclude(categories__exact='').values('categories').annotate(count=Count('id')).order_by('-count')[:6]
-    category_stats = []
-    for s in raw_cat_stats:
-        pct = round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0
-        category_stats.append({'category': s['categories'], 'count': s['count'], 'pct': pct})
+    category_stats = [{'category': s['categories'], 'count': s['count'], 'pct': round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0} for s in raw_cat_stats]
 
     raw_author_stats = all_books.exclude(authors__isnull=True).exclude(authors__exact='').values('authors').annotate(count=Count('id')).order_by('-count')[:6]
-    author_stats = []
-    for s in raw_author_stats:
-        pct = round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0
-        author_stats.append({'author': s['authors'], 'count': s['count'], 'pct': pct})
+    author_stats = [{'author': s['authors'], 'count': s['count'], 'pct': round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0} for s in raw_author_stats]
 
     top_category = category_stats[0]['category'] if category_stats else '—'
     top_author = author_stats[0]['author'] if author_stats else '—'
@@ -821,11 +827,8 @@ def book_delete(request, pk):
 @login_required
 def book_import_csv(request):
     """
-    Zaawansowany import książek z pliku CSV:
-    - Automatycznie wykrywa separator (przecinek, średnik, tabulator).
-    - Obsługuje polskie i angielskie nagłówki w dowolnej wielkości liter.
-    - Jeśli podano tylko ISBN (lub brakuje autora/opisu), autouzupełnia brakujące dane z Biblioteki Narodowej / Google.
-    - Kaskadowo pobiera okładki w jakości HD i zapisuje je w bazie mediów.
+    Import książek z pliku CSV.
+    Logika wydzielona do library/import_services.py.
     """
     if request.method == 'POST':
         if 'csv_file' not in request.FILES:
@@ -834,146 +837,18 @@ def book_import_csv(request):
             
         csv_file = request.FILES['csv_file']
         
-        try:
-            raw_bytes = csv_file.read()
-            data_set = raw_bytes.decode('UTF-8', errors='replace')
-            
-            # 1. Wykrywanie separatora
-            sample = data_set[:2048]
-            delimiter = ','
-            if ';' in sample and sample.count(';') > sample.count(','):
-                delimiter = ';'
-            elif '\t' in sample and sample.count('\t') > sample.count(','):
-                delimiter = '\t'
-
-            io_string = io.StringIO(data_set)
-            reader = csv.reader(io_string, delimiter=delimiter)
-            
-            rows = list(reader)
-            if not rows:
-                messages.warning(request, "Przesłany plik CSV jest pusty.")
-                return redirect('book_list')
-
-            # 2. Mapowanie nagłówków (case-insensitive & polish/english aliases)
-            headers = [h.strip().lower() for h in rows[0]]
-            
-            def get_col_index(*aliases):
-                for idx, h in enumerate(headers):
-                    if h in aliases or any(alias in h for alias in aliases):
-                        return idx
-                return None
-
-            col_title = get_col_index('title', 'tytuł', 'tytul', 'nazwa')
-            col_authors = get_col_index('authors', 'author', 'autor', 'autorzy', 'twórca', 'tworca')
-            col_isbn = get_col_index('isbn', 'kod', 'ean')
-            col_publisher = get_col_index('publisher', 'wydawca', 'wydawnictwo')
-            col_published_at = get_col_index('published at', 'published_at', 'published', 'rok', 'data wydania', 'rok wydania', 'data')
-            col_pages = get_col_index('page count', 'page_count', 'pages', 'strony', 'liczba stron')
-            col_categories = get_col_index('categories', 'category', 'kategorie', 'kategoria', 'gatunek')
-            col_language = get_col_index('language', 'język', 'jezyk', 'lang')
-            col_description = get_col_index('description', 'opis')
-            col_read = get_col_index('read', 'przeczytane', 'status', 'czytane')
-            col_subtitle = get_col_index('subtitle', 'podtytuł', 'podtytul')
-
-            imported_count = 0
-            covers_count = 0
-
-            # 3. Przetwarzanie wierszy
-            for row in rows[1:]:
-                if not row or not any(row):
-                    continue
-
-                def get_val(col_idx):
-                    if col_idx is not None and col_idx < len(row):
-                        return row[col_idx].strip()
-                    return ''
-
-                title = get_val(col_title)
-                isbn_val = get_val(col_isbn)
-                if '.' in isbn_val:
-                    isbn_val = isbn_val.split('.')[0]
-                isbn_val = re.sub(r'[^0-9X]', '', isbn_val.upper())
-
-                authors = get_val(col_authors)
-                subtitle = get_val(col_subtitle)
-                publisher = get_val(col_publisher)
-                published_at = get_val(col_published_at)[:10]
-                categories = get_val(col_categories)
-                language = get_val(col_language)
-                description = get_val(col_description)
-                
-                page_count_str = get_val(col_pages)
-                pages = int(float(page_count_str)) if page_count_str and page_count_str.replace('.', '', 1).isdigit() else None
-                
-                read_raw = get_val(col_read).lower()
-                read_status = read_raw in ['1', 'true', 'tak', 'yes', 'przeczytane']
-
-                # Pomiń duplikaty ISBN
-                if isbn_val and Book.objects.filter(isbn=isbn_val).exists():
-                    continue
-
-                # 4. Jeśli brak tytułu lub danych, a mamy ISBN -> pobierz z API
-                api_cover_url = None
-                if isbn_val and (not title or not authors or not publisher or not description):
-                    api_data = get_unified_book_data(isbn_val)
-                    if api_data:
-                        if not title:
-                            title = api_data.get('title', '')
-                        if not authors:
-                            authors = api_data.get('authors', '')
-                        if not publisher:
-                            publisher = api_data.get('publisher', '')
-                        if not published_at:
-                            published_at = api_data.get('published_at', '')
-                        if not pages and api_data.get('page_count'):
-                            pages = int(api_data['page_count']) if str(api_data['page_count']).isdigit() else None
-                        if not categories:
-                            categories = api_data.get('categories', '')
-                        if not description:
-                            description = api_data.get('description', '')
-                        if not language:
-                            language = api_data.get('language', 'PL')
-                        api_cover_url = api_data.get('cover_url')
-
-                if not title and not isbn_val:
-                    continue
-
-                if not title and isbn_val:
-                    title = f"Książka ISBN: {isbn_val}"
-
-                book = Book.objects.create(
-                    title=title,
-                    subtitle=subtitle,
-                    authors=authors,
-                    publisher=publisher,
-                    published_at=published_at,
-                    page_count=pages,
-                    language=language or 'PL',
-                    categories=categories,
-                    description=description,
-                    isbn=isbn_val if isbn_val else None,
-                    number_of_copies=1,
-                    read=read_status
-                )
-                imported_count += 1
-
-                # 5. Kaskadowe poszukiwanie i zapis okładki
-                cover_url = api_cover_url or find_best_cover_for_book(
-                    isbn=book.isbn,
-                    title=book.title,
-                    authors=book.authors
-                )
-                if cover_url:
-                    saved = download_and_save_book_cover(book, cover_url)
-                    if saved:
-                        covers_count += 1
-
+        from .import_services import process_csv_import
+        imported_count, covers_count, error = process_csv_import(csv_file)
+        
+        if error:
+            if "pusty" in error:
+                messages.warning(request, error)
+            else:
+                messages.error(request, f"Błąd podczas importu CSV: {error}")
+        else:
             messages.success(request, f"Sukces! Zaimportowano {imported_count} pozycji (pomyślnie pobrano {covers_count} okładek).")
-            return redirect('book_list')
             
-        except Exception as e:
-            messages.error(request, f"Błąd podczas importu CSV: {e}")
-            return redirect('book_list')
+        return redirect('book_list')
 
     return render(request, 'library/book_import.html')
 
