@@ -75,9 +75,29 @@ def porcelain_list(request):
     total_signatures_count = available_signatures.count()
     total_styles_count = available_styles.count()
     items_with_sig_photos = all_items.exclude(signature_image__isnull=True).exclude(signature_image__exact='').count()
+    photo_coverage_pct = round((items_with_sig_photos / total_collection_count) * 100, 1) if total_collection_count else 0
 
-    name_stats = Porcelain.objects.values('name').annotate(count=Count('id')).order_by('-count')[:6]
-    signature_stats = Porcelain.objects.exclude(signature__isnull=True).exclude(signature__exact='').values('signature').annotate(count=Count('id')).order_by('-count')[:6]
+    raw_name_stats = Porcelain.objects.values('name').annotate(count=Count('id')).order_by('-count')[:6]
+    name_stats = []
+    for s in raw_name_stats:
+        pct = round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0
+        name_stats.append({'name': s['name'], 'count': s['count'], 'pct': pct})
+
+    raw_sig_stats = Porcelain.objects.exclude(signature__isnull=True).exclude(signature__exact='').values('signature').annotate(count=Count('id')).order_by('-count')[:6]
+    signature_stats = []
+    for s in raw_sig_stats:
+        pct = round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0
+        signature_stats.append({'signature': s['signature'], 'count': s['count'], 'pct': pct})
+
+    top_signature = signature_stats[0]['signature'] if signature_stats else '—'
+    top_style = available_styles[0] if available_styles.exists() else '—'
+
+    # Statystyki skompletowania serwisów
+    cups_count = all_items.filter(Q(name__icontains='filiżan') | Q(name__icontains='kubek')).count()
+    saucers_count = all_items.filter(Q(name__icontains='spodek') | Q(name__icontains='podstawek')).count()
+    plates_count = all_items.filter(name__icontains='talerz').count()
+    sets_count = min(cups_count, saucers_count)
+
     condition_stats = Porcelain.objects.exclude(condition__isnull=True).exclude(condition__exact='').values('condition').annotate(count=Count('id')).order_by('-count')
     
     total_count = items.count()
@@ -91,6 +111,13 @@ def porcelain_list(request):
         'total_signatures_count': total_signatures_count,
         'total_styles_count': total_styles_count,
         'items_with_sig_photos': items_with_sig_photos,
+        'photo_coverage_pct': photo_coverage_pct,
+        'top_signature': top_signature,
+        'top_style': top_style,
+        'cups_count': cups_count,
+        'saucers_count': saucers_count,
+        'plates_count': plates_count,
+        'sets_count': sets_count,
         'total_count': total_count,
         'current_sort': sort_by,
         'available_styles': available_styles,
