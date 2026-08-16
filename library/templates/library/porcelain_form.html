@@ -36,12 +36,13 @@
                     <form method="POST" enctype="multipart/form-data" id="modernDjangoForm">
                         {% csrf_token %}
 
-                        {% if is_copied %}
+                        {% if is_copied and template_item %}
+                            <input type="hidden" name="copy_from" value="{{ template_item.pk }}">
                             <div class="alert alert-primary rounded-4 shadow-sm py-2.5 px-3 mb-4 d-flex align-items-center gap-3 border-0 bg-primary bg-opacity-10 text-primary">
                                 <span class="fs-4">📋</span>
                                 <div>
-                                    <div class="fw-bold small">Wstępnie wypełniono danymi z poprzedniego elementu!</div>
-                                    <div class="small opacity-75" style="font-size: 0.78rem;">Zmień nazwę lub zdjęcia i zapisz kolejny element z tej samej serii.</div>
+                                    <div class="fw-bold small">Wstępnie wypełniono danymi i zdjęciami ze wzorca: „{{ template_item.name }}”!</div>
+                                    <div class="small opacity-75" style="font-size: 0.78rem;">Zmień nazwę lub wgraj nowe zdjęcia, albo po prostu zapisz kolejną sztukę.</div>
                                 </div>
                             </div>
                         {% endif %}
@@ -158,9 +159,14 @@
                                                     </a>
                                                 </div>
                                             </div>
+                                        {% elif template_item and template_item.signature_image %}
+                                            <div class="mb-3 p-2.5 bg-body rounded-3 border text-center">
+                                                <div class="small fw-semibold text-primary mb-1">📋 Zdjęcie ze wzorca (zostanie zachowane):</div>
+                                                <img src="{{ template_item.signature_image.url }}" alt="Sygnatura wzorzec" class="rounded shadow-sm object-fit-cover" style="width: 80px; height: 80px;">
+                                            </div>
                                         {% endif %}
 
-                                        <div class="small text-muted mb-1">Wgraj lub zrób nowe zdjęcie:</div>
+                                        <div class="small text-muted mb-1">{% if template_item and template_item.signature_image %}Zmień na inne zdjęcie (opcjonalnie):{% else %}Wgraj lub zrób nowe zdjęcie:{% endif %}</div>
                                         <input type="file" name="signature_image" accept="image/*" capture="environment" class="form-control bg-body text-body border-secondary border-opacity-50 shadow-none rounded-3 py-2">
                                         <div class="form-text small text-muted mt-2">Zdjęcie spodu z widoczną sygnaturą wytwórni.</div>
                                     </div>
@@ -187,6 +193,13 @@
                                                     </a>
                                                 </div>
                                             </div>
+                                        {% elif template_item and template_item.image_1 %}
+                                            <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom bg-light p-2 rounded-3">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <img src="{{ template_item.image_1.url }}" alt="Główne wzorzec" class="rounded shadow-sm object-fit-cover" style="width: 45px; height: 45px;">
+                                                    <span class="small text-primary fw-semibold" style="font-size: 0.75rem;">📋 Zdjęcie ze wzorca</span>
+                                                </div>
+                                            </div>
                                         {% endif %}
                                         <input type="file" name="image_1" accept="image/*" capture="environment" class="form-control bg-body text-body border-secondary border-opacity-50 shadow-none rounded-3 py-2">
                                         {% if form.image_1.errors %}<div class="text-danger small mt-1 fw-bold">{{ form.image_1.errors|striptags }}</div>{% endif %}
@@ -207,6 +220,13 @@
                                                     </a>
                                                 </div>
                                             </div>
+                                        {% elif template_item and template_item.image_2 %}
+                                            <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom bg-light p-2 rounded-3">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <img src="{{ template_item.image_2.url }}" alt="Dodatkowe 1 wzorzec" class="rounded shadow-sm object-fit-cover" style="width: 45px; height: 45px;">
+                                                    <span class="small text-primary fw-semibold" style="font-size: 0.75rem;">📋 Zdjęcie ze wzorca</span>
+                                                </div>
+                                            </div>
                                         {% endif %}
                                         <input type="file" name="image_2" accept="image/*" capture="environment" class="form-control bg-body text-body border-secondary border-opacity-50 shadow-none rounded-3 py-2">
                                         {% if form.image_2.errors %}<div class="text-danger small mt-1 fw-bold">{{ form.image_2.errors|striptags }}</div>{% endif %}
@@ -225,6 +245,13 @@
                                                     <a href="?delete_img=image_3" class="btn btn-danger text-white btn-sm rounded-pill px-2 py-1 text-decoration-none shadow-sm" style="font-size: 0.75rem;">
                                                         🗑️ Usuń
                                                     </a>
+                                                </div>
+                                            </div>
+                                        {% elif template_item and template_item.image_3 %}
+                                            <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom bg-light p-2 rounded-3">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <img src="{{ template_item.image_3.url }}" alt="Dodatkowe 2 wzorzec" class="rounded shadow-sm object-fit-cover" style="width: 45px; height: 45px;">
+                                                    <span class="small text-primary fw-semibold" style="font-size: 0.75rem;">📋 Zdjęcie ze wzorca</span>
                                                 </div>
                                             </div>
                                         {% endif %}

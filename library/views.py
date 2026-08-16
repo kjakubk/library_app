@@ -89,27 +89,33 @@ def porcelain_list(request):
 
 @login_required
 def porcelain_create(request):
-    """Dodawanie nowego elementu porcelany (z opcją szybkiego kopiowania z innego elementu)."""
-    copy_from_id = request.GET.get('copy_from')
-    initial_data = {}
+    """Dodawanie nowego elementu porcelany (z opcją szybkiego kopiowania ze wzorca)."""
+    copy_from_id = request.GET.get('copy_from') or request.POST.get('copy_from')
+    template_item = None
 
-    if copy_from_id and request.method == 'GET':
+    if copy_from_id:
         try:
             template_item = Porcelain.objects.get(pk=copy_from_id)
-            initial_data = {
-                'name': template_item.name,
-                'style': template_item.style,
-                'year_of_origin': template_item.year_of_origin,
-                'condition': template_item.condition,
-                'price': template_item.price,
-            }
         except Porcelain.DoesNotExist:
             pass
 
     if request.method == 'POST':
         form = PorcelainForm(request.POST, request.FILES)
         if form.is_valid():
-            saved_item = form.save()
+            saved_item = form.save(commit=False)
+
+            # Jeśli kopiowano ze wzorca i użytkownik nie wgrał nowych plików, przenosimy zdjęcia ze wzorca
+            if template_item:
+                if not saved_item.signature_image and template_item.signature_image:
+                    saved_item.signature_image = template_item.signature_image
+                if not saved_item.image_1 and template_item.image_1:
+                    saved_item.image_1 = template_item.image_1
+                if not saved_item.image_2 and template_item.image_2:
+                    saved_item.image_2 = template_item.image_2
+                if not saved_item.image_3 and template_item.image_3:
+                    saved_item.image_3 = template_item.image_3
+
+            saved_item.save()
             action = request.POST.get('action', '')
 
             if action == 'save_and_clone':
@@ -119,21 +125,28 @@ def porcelain_create(request):
                 messages.success(request, 'Pomyślnie dodano nowy element porcelany!')
                 return redirect('porcelain_list')
     else:
-        if copy_from_id and initial_data:
-            template_item = Porcelain.objects.get(pk=copy_from_id)
+        if template_item:
+            initial_data = {
+                'name': template_item.name,
+                'style': template_item.style,
+                'year_of_origin': template_item.year_of_origin,
+                'condition': template_item.condition,
+                'price': template_item.price,
+            }
             form = PorcelainForm(initial=initial_data, instance=Porcelain(signature=template_item.signature))
         else:
             form = PorcelainForm()
         
     return render(request, 'library/porcelain_form.html', {
         'form': form, 
-        'is_copied': bool(copy_from_id)
+        'is_copied': bool(template_item),
+        'template_item': template_item
     })
 
 
 @login_required
 def porcelain_duplicate(request, pk):
-    """Szybkie powielenie (klonowanie) istniejącego elementu porcelany N razy."""
+    """Szybkie powielenie (klonowanie) istniejącego elementu porcelany N razy ze wszystkimi zdjęciami i bez numerowania."""
     item = get_object_or_404(Porcelain, pk=pk)
 
     if request.method == 'POST':
@@ -143,24 +156,25 @@ def porcelain_duplicate(request, pk):
             copies = 1
 
         copies = max(1, min(copies, 50)) # Limit od 1 do 50 kopii naraz
-        add_numbering = request.POST.get('add_numbering') == 'on'
 
-        for i in range(1, copies + 1):
-            new_name = f"{item.name} #{i}" if (copies > 1 and add_numbering) else item.name
+        for _ in range(copies):
             Porcelain.objects.create(
-                name=new_name,
+                name=item.name, # Dokładnie ta sama nazwa bez dodatkowego numerowania
                 style=item.style,
                 signature=item.signature,
                 year_of_origin=item.year_of_origin,
                 condition=item.condition,
                 price=item.price,
-                signature_image=item.signature_image
+                signature_image=item.signature_image,
+                image_1=item.image_1,
+                image_2=item.image_2,
+                image_3=item.image_3
             )
 
         if copies == 1:
-            messages.success(request, f'Pomyślnie skopiowano element „{item.name}”.')
+            messages.success(request, f'Pomyślnie skopiowano element „{item.name}” (wraz ze wszystkimi zdjęciami).')
         else:
-            messages.success(request, f'Pomyślnie utworzono {copies} kopii elementu „{item.name}”!')
+            messages.success(request, f'Pomyślnie utworzono {copies} identycznych sztuk elementu „{item.name}” (wraz ze wszystkimi zdjęciami)!')
 
         return redirect('porcelain_list')
 
