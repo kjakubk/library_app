@@ -78,11 +78,11 @@ class Porcelain(models.Model):
     )
     signature = models.CharField(
         max_length=250, 
-        choices=SIGNATURE_CHOICES,
         default='',
         verbose_name="Sygnatura (Marka)", 
         blank=True, 
-        null=True
+        null=True,
+        help_text="Wybierz z listy podpowiedzi lub wpisz nową nazwę"
     )
     year_of_origin = models.CharField(
         max_length=100, 

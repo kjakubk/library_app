@@ -45,6 +45,17 @@ class CSVImportForm(forms.Form):
 
 
 class PorcelainForm(forms.ModelForm):
+    signature = forms.CharField(
+        required=False,
+        label="Sygnatura (Marka)",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'list': 'signature_datalist',
+            'placeholder': 'Wybierz z listy lub wpisz nową sygnaturę...',
+            'autocomplete': 'off'
+        })
+    )
+
     class Meta:
         model = Porcelain
         fields = [
@@ -60,11 +71,25 @@ class PorcelainForm(forms.ModelForm):
             'image_3'
         ]
         widgets = {
-            'name': forms.TextInput(attrs={'placeholder': 'Np. Dzbanek do kawy'}),
-            'style': forms.TextInput(attrs={'placeholder': 'Wpisz styl lub wzór'}),
-            'year_of_origin': forms.TextInput(attrs={'placeholder': 'Np. 1920-1930'}),
-            'price': forms.TextInput(attrs={'placeholder': 'Cena zakupu lub szacowana wartość'}),
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Np. Dzbanek do kawy'}),
+            'style': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Wpisz styl lub wzór (np. China Blau)'}),
+            'year_of_origin': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Np. 1920-1930 lub 1945'}),
+            'condition': forms.Select(attrs={'class': 'form-select'}),
+            'price': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Cena zakupu lub szacowana wartość'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Zbieramy wszystkie domyślne sygnatury oraz te już zapisane w bazie
+        db_sigs = list(
+            Porcelain.objects.exclude(signature__isnull=True)
+            .exclude(signature__exact='')
+            .values_list('signature', flat=True)
+            .distinct()
+        )
+        default_sigs = [val for val, label in Porcelain.SIGNATURE_CHOICES if val.strip()]
+        # Łączymy unikalne w kolejności alfabetycznej
+        self.available_signatures = sorted(list(set(default_sigs + db_sigs)), key=lambda s: s.lower())
 
 class BoardGameForm(forms.ModelForm):
     class Meta:

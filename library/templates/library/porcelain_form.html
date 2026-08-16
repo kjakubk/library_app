@@ -68,6 +68,14 @@
                                     {{ form.signature.label }}
                                 </label>
                                 {{ form.signature }}
+                                <datalist id="signature_datalist">
+                                    {% for sig in form.available_signatures %}
+                                        <option value="{{ sig }}"></option>
+                                    {% endfor %}
+                                </datalist>
+                                <div class="form-text small text-muted" style="font-size: 0.76rem;">
+                                    💡 Wybierz z listy podpowiedzi lub wpisz dowolną nową nazwę sygnatury.
+                                </div>
                                 {% if form.signature.errors %}<div class="text-danger small mt-1 fw-bold">{{ form.signature.errors|striptags }}</div>{% endif %}
                             </div>
 
