@@ -274,12 +274,13 @@ def porcelain_delete(request, pk):
 
 @login_required
 def vinyl_list(request):
-    """Lista płyt winylowych z wyszukiwaniem i filtrowaniem po gatunkach."""
+    """Lista płyt winylowych z wyszukiwaniem, filtrowaniem i bogatymi statystykami."""
     query = request.GET.get('q', '').strip()
     sort_by = request.GET.get('sort', 'artist')
     selected_genre = request.GET.get('genre', '').strip()
     
-    items = VinylRecord.objects.all()
+    all_items = VinylRecord.objects.all()
+    items = all_items
 
     if query:
         items = items.filter(
@@ -305,15 +306,46 @@ def vinyl_list(request):
     if sort_by in sort_mapping:
         items = items.order_by(sort_mapping[sort_by])
 
+    total_collection_count = all_items.count()
     available_genres = VinylRecord.objects.exclude(genre__isnull=True).exclude(genre__exact='').values_list('genre', flat=True).distinct().order_by('genre')
-    artist_stats = VinylRecord.objects.values('artist').annotate(count=Count('id')).order_by('-count')[:5]
-    genre_stats = VinylRecord.objects.exclude(genre__isnull=True).exclude(genre__exact='').values('genre').annotate(count=Count('id')).order_by('-count')[:5]
+    available_artists = VinylRecord.objects.exclude(artist__isnull=True).exclude(artist__exact='').values_list('artist', flat=True).distinct().order_by('artist')
+
+    total_genres_count = available_genres.count()
+    total_artists_count = available_artists.count()
+    items_with_covers = all_items.filter(
+        (Q(front_cover__isnull=False) & ~Q(front_cover='')) |
+        (Q(back_cover__isnull=False) & ~Q(back_cover=''))
+    ).count()
+    photo_coverage_pct = round((items_with_covers / total_collection_count) * 100, 1) if total_collection_count else 0
+
+    raw_genre_stats = VinylRecord.objects.exclude(genre__isnull=True).exclude(genre__exact='').values('genre').annotate(count=Count('id')).order_by('-count')[:6]
+    genre_stats = []
+    for s in raw_genre_stats:
+        pct = round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0
+        genre_stats.append({'genre': s['genre'], 'count': s['count'], 'pct': pct})
+
+    raw_artist_stats = VinylRecord.objects.exclude(artist__isnull=True).exclude(artist__exact='').values('artist').annotate(count=Count('id')).order_by('-count')[:6]
+    artist_stats = []
+    for s in raw_artist_stats:
+        pct = round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0
+        artist_stats.append({'artist': s['artist'], 'count': s['count'], 'pct': pct})
+
+    top_genre = genre_stats[0]['genre'] if genre_stats else '—'
+    top_artist = artist_stats[0]['artist'] if artist_stats else '—'
+
     total_count = items.count()
 
     context = {
         'items': items,
         'artist_stats': artist_stats,
         'genre_stats': genre_stats,
+        'total_collection_count': total_collection_count,
+        'total_artists_count': total_artists_count,
+        'total_genres_count': total_genres_count,
+        'items_with_covers': items_with_covers,
+        'photo_coverage_pct': photo_coverage_pct,
+        'top_artist': top_artist,
+        'top_genre': top_genre,
         'total_count': total_count,
         'current_sort': sort_by,
         'available_genres': available_genres,
@@ -370,21 +402,28 @@ def vinyl_delete(request, pk):
 
 @login_required
 def video_game_list(request):
-    """Lista gier wideo z filtrowaniem po platformie."""
+    """Lista gier wideo z filtrowaniem i bogatymi statystykami."""
     query = request.GET.get('q', '').strip()
     sort_by = request.GET.get('sort', 'title')
     selected_platform = request.GET.get('platform', '').strip()
+    selected_genre = request.GET.get('genre', '').strip()
     
-    items = VideoGame.objects.all()
+    all_items = VideoGame.objects.all()
+    items = all_items
 
     if query:
         items = items.filter(
             Q(title__icontains=query) |
+            Q(developer__icontains=query) |
+            Q(publisher__icontains=query) |
             Q(genre__icontains=query)
         )
 
     if selected_platform:
         items = items.filter(platform=selected_platform)
+
+    if selected_genre:
+        items = items.filter(genre=selected_genre)
 
     sort_mapping = {
         'title': 'title', '-title': '-title',
@@ -396,19 +435,52 @@ def video_game_list(request):
     if sort_by in sort_mapping:
         items = items.order_by(sort_mapping[sort_by])
 
+    total_collection_count = all_items.count()
     available_platforms = VideoGame.objects.exclude(platform__isnull=True).exclude(platform__exact='').values_list('platform', flat=True).distinct().order_by('platform')
-    platform_stats = VideoGame.objects.exclude(platform__isnull=True).exclude(platform__exact='').values('platform').annotate(count=Count('id')).order_by('-count')[:5]
-    genre_stats = VideoGame.objects.exclude(genre__isnull=True).exclude(genre__exact='').values('genre').annotate(count=Count('id')).order_by('-count')[:5]
+    available_genres = VideoGame.objects.exclude(genre__isnull=True).exclude(genre__exact='').values_list('genre', flat=True).distinct().order_by('genre')
+
+    total_platforms_count = available_platforms.count()
+    total_genres_count = available_genres.count()
+    items_with_covers = all_items.filter(
+        (Q(cover_image__isnull=False) & ~Q(cover_image='')) |
+        (Q(media_image__isnull=False) & ~Q(media_image=''))
+    ).count()
+    photo_coverage_pct = round((items_with_covers / total_collection_count) * 100, 1) if total_collection_count else 0
+
+    raw_platform_stats = VideoGame.objects.exclude(platform__isnull=True).exclude(platform__exact='').values('platform').annotate(count=Count('id')).order_by('-count')[:6]
+    platform_stats = []
+    for s in raw_platform_stats:
+        pct = round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0
+        platform_stats.append({'platform': s['platform'], 'count': s['count'], 'pct': pct})
+
+    raw_genre_stats = VideoGame.objects.exclude(genre__isnull=True).exclude(genre__exact='').values('genre').annotate(count=Count('id')).order_by('-count')[:6]
+    genre_stats = []
+    for s in raw_genre_stats:
+        pct = round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0
+        genre_stats.append({'genre': s['genre'], 'count': s['count'], 'pct': pct})
+
+    top_platform = platform_stats[0]['platform'] if platform_stats else '—'
+    top_genre = genre_stats[0]['genre'] if genre_stats else '—'
+
     total_count = items.count()
 
     context = {
         'items': items,
         'platform_stats': platform_stats,
         'genre_stats': genre_stats,
+        'total_collection_count': total_collection_count,
+        'total_platforms_count': total_platforms_count,
+        'total_genres_count': total_genres_count,
+        'items_with_covers': items_with_covers,
+        'photo_coverage_pct': photo_coverage_pct,
+        'top_platform': top_platform,
+        'top_genre': top_genre,
         'total_count': total_count,
         'current_sort': sort_by,
         'available_platforms': available_platforms,
+        'available_genres': available_genres,
         'selected_platform': selected_platform,
+        'selected_genre': selected_genre,
     }
     return render(request, 'library/video_game_list.html', context)
 
@@ -461,21 +533,27 @@ def video_game_delete(request, pk):
 
 @login_required
 def board_game_list(request):
-    """Lista gier planszowych z filtrowaniem po kategoriach."""
+    """Lista gier planszowych z filtrowaniem i bogatymi statystykami."""
     query = request.GET.get('q', '').strip()
     sort_by = request.GET.get('sort', 'title')
     selected_category = request.GET.get('category', '').strip()
+    selected_publisher = request.GET.get('publisher', '').strip()
     
-    items = BoardGame.objects.all()
+    all_items = BoardGame.objects.all()
+    items = all_items
 
     if query:
         items = items.filter(
             Q(title__icontains=query) |
-            Q(publisher__icontains=query)
+            Q(publisher__icontains=query) |
+            Q(category__icontains=query)
         )
 
     if selected_category:
         items = items.filter(category=selected_category)
+
+    if selected_publisher:
+        items = items.filter(publisher=selected_publisher)
 
     sort_mapping = {
         'title': 'title', '-title': '-title',
@@ -487,19 +565,52 @@ def board_game_list(request):
     if sort_by in sort_mapping:
         items = items.order_by(sort_mapping[sort_by])
 
+    total_collection_count = all_items.count()
     available_categories = BoardGame.objects.exclude(category__isnull=True).exclude(category__exact='').values_list('category', flat=True).distinct().order_by('category')
-    publisher_stats = BoardGame.objects.exclude(publisher__isnull=True).exclude(publisher__exact='').values('publisher').annotate(count=Count('id')).order_by('-count')[:5]
-    category_stats = BoardGame.objects.exclude(category__isnull=True).exclude(category__exact='').values('category').annotate(count=Count('id')).order_by('-count')[:5]
+    available_publishers = BoardGame.objects.exclude(publisher__isnull=True).exclude(publisher__exact='').values_list('publisher', flat=True).distinct().order_by('publisher')
+
+    total_categories_count = available_categories.count()
+    total_publishers_count = available_publishers.count()
+    items_with_covers = all_items.filter(
+        (Q(box_image__isnull=False) & ~Q(box_image='')) |
+        (Q(board_image__isnull=False) & ~Q(board_image=''))
+    ).count()
+    photo_coverage_pct = round((items_with_covers / total_collection_count) * 100, 1) if total_collection_count else 0
+
+    raw_category_stats = BoardGame.objects.exclude(category__isnull=True).exclude(category__exact='').values('category').annotate(count=Count('id')).order_by('-count')[:6]
+    category_stats = []
+    for s in raw_category_stats:
+        pct = round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0
+        category_stats.append({'category': s['category'], 'count': s['count'], 'pct': pct})
+
+    raw_pub_stats = BoardGame.objects.exclude(publisher__isnull=True).exclude(publisher__exact='').values('publisher').annotate(count=Count('id')).order_by('-count')[:6]
+    publisher_stats = []
+    for s in raw_pub_stats:
+        pct = round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0
+        publisher_stats.append({'publisher': s['publisher'], 'count': s['count'], 'pct': pct})
+
+    top_category = category_stats[0]['category'] if category_stats else '—'
+    top_publisher = publisher_stats[0]['publisher'] if publisher_stats else '—'
+
     total_count = items.count()
 
     context = {
         'items': items,
-        'publisher_stats': publisher_stats,
         'category_stats': category_stats,
+        'publisher_stats': publisher_stats,
+        'total_collection_count': total_collection_count,
+        'total_categories_count': total_categories_count,
+        'total_publishers_count': total_publishers_count,
+        'items_with_covers': items_with_covers,
+        'photo_coverage_pct': photo_coverage_pct,
+        'top_category': top_category,
+        'top_publisher': top_publisher,
         'total_count': total_count,
         'current_sort': sort_by,
         'available_categories': available_categories,
+        'available_publishers': available_publishers,
         'selected_category': selected_category,
+        'selected_publisher': selected_publisher,
     }
     return render(request, 'library/board_game_list.html', context)
 
@@ -552,9 +663,53 @@ def board_game_delete(request, pk):
 
 @login_required
 def book_list(request):
-    """Lista książek z grupowaniem alfabetycznym i stałą listą kategorii."""
-    books = Book.objects.all().order_by('title')
+    """Lista książek z grupowaniem alfabetycznym, wyszukiwaniem i zaawansowanymi statystykami."""
+    query = request.GET.get('q', '').strip()
+    selected_category = request.GET.get('category', '').strip()
+    selected_status = request.GET.get('status', '').strip()
+    
+    all_books = Book.objects.all()
+    books = all_books.order_by('title')
+    
+    if query:
+        books = books.filter(
+            Q(title__icontains=query) |
+            Q(authors__icontains=query) |
+            Q(publisher__icontains=query) |
+            Q(isbn__icontains=query)
+        )
+        
+    if selected_category:
+        books = books.filter(categories=selected_category)
+        
+    if selected_status == 'read':
+        books = books.filter(read=True)
+    elif selected_status == 'unread':
+        books = books.filter(read=False)
+
     categories_list = [choice[0] for choice in CATEGORY_CHOICES]
+    total_collection_count = all_books.count()
+    total_authors_count = all_books.exclude(authors__isnull=True).exclude(authors__exact='').values_list('authors', flat=True).distinct().count()
+    total_categories_count = all_books.exclude(categories__isnull=True).exclude(categories__exact='').values_list('categories', flat=True).distinct().count()
+    read_books_count = all_books.filter(read=True).count()
+    read_pct = round((read_books_count / total_collection_count) * 100, 1) if total_collection_count else 0
+    items_with_covers = all_books.exclude(image__isnull=True).exclude(image__exact='').count()
+    photo_coverage_pct = round((items_with_covers / total_collection_count) * 100, 1) if total_collection_count else 0
+
+    raw_cat_stats = all_books.exclude(categories__isnull=True).exclude(categories__exact='').values('categories').annotate(count=Count('id')).order_by('-count')[:6]
+    category_stats = []
+    for s in raw_cat_stats:
+        pct = round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0
+        category_stats.append({'category': s['categories'], 'count': s['count'], 'pct': pct})
+
+    raw_author_stats = all_books.exclude(authors__isnull=True).exclude(authors__exact='').values('authors').annotate(count=Count('id')).order_by('-count')[:6]
+    author_stats = []
+    for s in raw_author_stats:
+        pct = round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0
+        author_stats.append({'author': s['authors'], 'count': s['count'], 'pct': pct})
+
+    top_category = category_stats[0]['category'] if category_stats else '—'
+    top_author = author_stats[0]['author'] if author_stats else '—'
     total_count = books.count()
     
     alphabet_groups = {}
@@ -568,8 +723,22 @@ def book_list(request):
 
     context = {
         'grouped_books': grouped_books,
+        'books': books,
         'total_count': total_count,
+        'total_collection_count': total_collection_count,
+        'total_authors_count': total_authors_count,
+        'total_categories_count': total_categories_count,
+        'read_books_count': read_books_count,
+        'read_pct': read_pct,
+        'items_with_covers': items_with_covers,
+        'photo_coverage_pct': photo_coverage_pct,
+        'category_stats': category_stats,
+        'author_stats': author_stats,
+        'top_category': top_category,
+        'top_author': top_author,
         'categories_list': categories_list,
+        'selected_category': selected_category,
+        'selected_status': selected_status,
     }
     return render(request, 'library/book_list.html', context)
 

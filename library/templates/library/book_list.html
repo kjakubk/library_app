@@ -4,36 +4,240 @@
 {% block title %}Książki - Kolekcje{% endblock %}
 
 {% block content %}
+<style>
+    .transition-hover {
+        transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, background-color 0.18s ease;
+    }
+    .transition-hover:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+        background-color: var(--bs-tertiary-bg) !important;
+    }
+    .stat-progress-item {
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        border: 1px solid transparent;
+    }
+    .stat-progress-item:hover {
+        background-color: var(--bs-tertiary-bg) !important;
+        border-color: var(--bs-border-color) !important;
+        transform: translateX(4px);
+    }
+    .dot-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        flex-shrink: 0;
+    }
+    .item-thumb-container {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .item-thumb-container:hover {
+        transform: scale(1.06);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15) !important;
+    }
+    .item-thumb-img {
+        transition: transform 0.3s ease;
+    }
+    .item-thumb-container:hover .item-thumb-img {
+        transform: scale(1.08);
+    }
+</style>
 <div class="container-fluid px-2 px-md-4 py-4 mb-5">
     
-    <!-- Górny panel akcji i wyszukiwarki (Naprawiony pod Mobile) -->
+    <!-- SEKCJA 1: GÓRNE KARTY KPI -->
+    <div class="row g-2 g-md-3 mb-3">
+        <!-- KPI 1: Łącznie książek -->
+        <div class="col-6 col-lg-3">
+            <div class="card bg-body shadow-sm border rounded-4 p-3 h-100 position-relative overflow-hidden">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small fw-bold text-muted text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">Księgozbiór</span>
+                    <span class="p-2 bg-primary bg-opacity-10 text-primary rounded-3 fs-6">📚</span>
+                </div>
+                <div class="fs-3 fw-bold text-body mb-0">{{ total_collection_count|default:"0" }} <span class="fs-6 fw-normal text-muted">tomów</span></div>
+                <div class="small text-muted mt-1" style="font-size: 0.76rem;">
+                    Widoczne: <strong class="text-primary" id="kpiVisibleCount">{{ total_count|default:total_collection_count }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI 2: Autorzy -->
+        <div class="col-6 col-lg-3">
+            <div class="card bg-body shadow-sm border rounded-4 p-3 h-100 position-relative overflow-hidden">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small fw-bold text-muted text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">Pisarze & Twórcy</span>
+                    <span class="p-2 bg-success bg-opacity-10 text-success rounded-3 fs-6">✍️</span>
+                </div>
+                <div class="fs-3 fw-bold text-success mb-0">{{ total_authors_count|default:"0" }} <span class="fs-6 fw-normal text-muted">autorów</span></div>
+                <div class="small text-muted text-truncate mt-1" style="font-size: 0.76rem;" title="Lider: {{ top_author }}">
+                    Lider: <strong>{{ top_author|truncatechars:20 }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI 3: Kategorie -->
+        <div class="col-6 col-lg-3">
+            <div class="card bg-body shadow-sm border rounded-4 p-3 h-100 position-relative overflow-hidden">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small fw-bold text-muted text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">Działy & Gatunki</span>
+                    <span class="p-2 bg-warning bg-opacity-10 text-warning rounded-3 fs-6">🏷️</span>
+                </div>
+                <div class="fs-3 fw-bold text-warning mb-0">{{ total_categories_count|default:"0" }} <span class="fs-6 fw-normal text-muted">działów</span></div>
+                <div class="small text-muted text-truncate mt-1" style="font-size: 0.76rem;" title="Dominujący: {{ top_category }}">
+                    Główny: <strong>{{ top_category|truncatechars:20 }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI 4: Przeczytane / Postęp -->
+        <div class="col-6 col-lg-3">
+            <div class="card bg-body shadow-sm border rounded-4 p-3 h-100 position-relative overflow-hidden">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small fw-bold text-muted text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">Przeczytane</span>
+                    <span class="p-2 bg-info bg-opacity-10 text-info rounded-3 fs-6">📖</span>
+                </div>
+                <div class="fs-3 fw-bold text-info mb-0">{{ read_pct|default:"0" }}%</div>
+                <div class="small text-muted mt-1" style="font-size: 0.76rem;">
+                    {{ read_books_count }} z {{ total_collection_count }} przeczytanych
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEKCJA 2: ZBALANSOWANE PASKI ROZKŁADU (KATEGORIE vs AUTORZY) -->
+    <div class="row g-3 mb-3">
+        <!-- Panel Lewy: Kategorie (Top 6) -->
+        <div class="col-12 col-lg-6">
+            <div class="card bg-body shadow-sm border rounded-4 p-3 p-md-4 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fs-5">🏷️</span>
+                        <span class="fw-bold text-body small text-uppercase" style="letter-spacing: 0.5px;">Główne Kategorie</span>
+                    </div>
+                    <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1 rounded-pill" style="font-size: 0.7rem;">Top 6</span>
+                </div>
+                
+                <div class="d-flex flex-column gap-2">
+                    {% for stat in category_stats %}
+                        <div class="stat-progress-item text-decoration-none d-block p-2 rounded-3 cursor-pointer quick-genre-trigger" data-genre="{{ stat.category }}" style="cursor: pointer;" title="Filtruj: {{ stat.category }}">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-medium text-body small d-flex align-items-center gap-2">
+                                    <span class="dot-indicator bg-primary"></span>
+                                    <span>{{ stat.category }}</span>
+                                </span>
+                                <span class="badge bg-body-secondary text-body border fw-bold small">
+                                    {{ stat.count }} szt. <span class="text-muted fw-normal ms-1">({{ stat.pct }}%)</span>
+                                </span>
+                            </div>
+                            <div class="progress rounded-pill overflow-hidden" style="height: 6px; background-color: var(--bs-tertiary-bg);">
+                                <div class="progress-bar bg-primary bg-gradient rounded-pill" role="progressbar" style="width: {{ stat.pct }}%;" aria-valuenow="{{ stat.pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <span class="text-muted small fst-italic py-3 text-center">Brak zdefiniowanych kategorii.</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel Prawy: Autorzy (Top 6) -->
+        <div class="col-12 col-lg-6">
+            <div class="card bg-body shadow-sm border rounded-4 p-3 p-md-4 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fs-5">✍️</span>
+                        <span class="fw-bold text-body small text-uppercase" style="letter-spacing: 0.5px;">Czołowi Autorzy</span>
+                    </div>
+                    <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1 rounded-pill" style="font-size: 0.7rem;">Top 6</span>
+                </div>
+                
+                <div class="d-flex flex-column gap-2">
+                    {% for stat in author_stats %}
+                        <div class="stat-progress-item text-decoration-none d-block p-2 rounded-3 cursor-pointer quick-author-trigger" data-author="{{ stat.author }}" style="cursor: pointer;" title="Szukaj autora: {{ stat.author }}">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-medium text-body small text-truncate d-flex align-items-center gap-2" style="max-width: 65%;">
+                                    <span class="dot-indicator bg-success"></span>
+                                    <span class="text-truncate">{{ stat.author }}</span>
+                                </span>
+                                <span class="badge bg-body-secondary text-body border fw-bold small flex-shrink-0">
+                                    {{ stat.count }} szt. <span class="text-muted fw-normal ms-1">({{ stat.pct }}%)</span>
+                                </span>
+                            </div>
+                            <div class="progress rounded-pill overflow-hidden" style="height: 6px; background-color: var(--bs-tertiary-bg);">
+                                <div class="progress-bar bg-success bg-gradient rounded-pill" role="progressbar" style="width: {{ stat.pct }}%;" aria-valuenow="{{ stat.pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <span class="text-muted small fst-italic py-3 text-center">Brak autorów w bazie.</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEKCJA 3: PODSUMOWANIE KOLEKCJI -->
+    <div class="card bg-body shadow-sm border rounded-4 p-3 mb-4">
+        <div class="row align-items-center g-3">
+            <div class="col-12 col-md-6 d-flex align-items-center gap-3">
+                <div class="p-2.5 bg-primary bg-opacity-10 text-primary rounded-circle fs-5 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;">
+                    📚
+                </div>
+                <div>
+                    <div class="fw-bold small text-body">Księgozbiór & Biblioteka Osobista</div>
+                    <div class="text-muted small" style="font-size: 0.8rem;">
+                        W domowej bibliotece skatalogowano <strong>{{ total_collection_count }} książek</strong> autorstwa <strong>{{ total_authors_count }} różnych pisarzy</strong>.
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 d-flex flex-wrap align-items-center justify-content-md-end gap-2">
+                <span class="badge bg-body-secondary border text-body px-3 py-2 rounded-pill small fw-medium">
+                    ✍️ Top autor: <strong class="text-primary">{{ top_author|truncatechars:20 }}</strong>
+                </span>
+                <span class="badge bg-body-secondary border text-body px-3 py-2 rounded-pill small fw-medium">
+                    🏷️ Dział: <strong class="text-info">{{ top_category }}</strong>
+                </span>
+                <span class="badge bg-success bg-opacity-10 border border-success border-opacity-25 text-success px-3 py-2 rounded-pill small fw-medium">
+                    📖 Przeczytane: <strong>{{ read_pct }}%</strong>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Górny panel akcji i wyszukiwarki -->
     <div class="d-flex flex-column flex-xl-row justify-content-between align-items-stretch align-items-xl-center bg-body px-3 py-3 px-md-4 rounded-4 shadow-sm border mb-4 gap-3">
         
         <!-- Wyszukiwarka i przycisk filtrów -->
         <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 flex-grow-1">
             <div class="input-group input-group-sm bg-body-secondary rounded-pill border px-3 py-2 align-items-center flex-grow-1" style="max-width: 100%;">
                 <span class="text-muted me-2">🔍</span>
-                <input type="text" id="searchInput" class="form-control form-control-sm border-0 bg-transparent shadow-none text-body" placeholder="Szukaj po tytule, autorze lub wydawnictwie...">
+                <input type="text" id="searchInput" class="form-control form-control-sm border-0 bg-transparent shadow-none text-body" placeholder="Szukaj po tytule, autorze, wydawnictwie lub ISBN...">
             </div>
             <button class="btn btn-outline-info btn-sm rounded-pill px-4 py-2 fw-medium d-flex justify-content-center align-items-center gap-1" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse" aria-expanded="false" aria-controls="filtersCollapse">
                 ⚙️ Filtry
             </button>
         </div>
         
-        <!-- Prawy panel (Licznik i akcje) -->
-        <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 justify-content-xl-end">
-            <div class="badge bg-body border text-body px-3 py-2 rounded-pill fw-medium small d-flex justify-content-center align-items-center">
-                Wszystkich: <strong class="text-primary fs-6 ms-2" id="totalCountBadge">{{ total_count }}</strong>
+        <!-- Prawy panel (Licznik, Przełącznik i akcje) -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between justify-content-xl-end gap-2">
+            <!-- Przełącznik: Tabela / Kafelki -->
+            <div class="btn-group btn-group-sm bg-body-secondary p-1 rounded-pill border" role="group" aria-label="Wybór widoku">
+                <button type="button" class="btn btn-sm rounded-pill px-3 py-1 fw-medium active btn-primary text-white" id="viewModeTableBtn" onclick="switchViewMode('table')">
+                    📑 Tabela
+                </button>
+                <button type="button" class="btn btn-sm rounded-pill px-3 py-1 fw-medium text-body" id="viewModeGridBtn" onclick="switchViewMode('grid')">
+                    🖼️ Kafelki
+                </button>
             </div>
+
             <div class="d-flex flex-wrap gap-2">
-                <a href="{% url 'fix_missing_covers' %}" class="btn btn-outline-warning btn-sm px-3 py-2 rounded-pill fw-medium d-flex justify-content-center align-items-center gap-1 text-decoration-none" title="Przeszukaj bazę i pobierz brakujące okładki z wielu źródeł">
-                    🪄 Pobierz okładki
+                <a href="{% url 'fix_missing_covers' %}" class="btn btn-outline-warning btn-sm px-3 py-2 rounded-pill fw-medium d-flex align-items-center gap-1 text-decoration-none" title="Pobierz brakujące okładki">
+                    🪄 Okładki
                 </a>
-                <a href="{% url 'book_import_csv' %}" class="btn btn-outline-secondary btn-sm px-3 py-2 rounded-pill fw-medium d-flex justify-content-center align-items-center gap-1 text-decoration-none">
+                <a href="{% url 'book_import_csv' %}" class="btn btn-outline-secondary btn-sm px-3 py-2 rounded-pill fw-medium d-flex align-items-center gap-1 text-decoration-none">
                     📁 Import CSV
                 </a>
-                <a href="{% url 'book_create' %}" class="btn btn-primary btn-sm px-4 py-2 rounded-pill fw-semibold d-flex justify-content-center align-items-center gap-1 shadow-sm text-decoration-none">
-                    + Dodaj
+                <a href="{% url 'book_create' %}" class="btn btn-success btn-sm px-3.5 py-2 rounded-pill fw-semibold d-flex align-items-center gap-1 shadow-sm text-decoration-none">
+                    <i class="bi bi-plus-lg"></i> Dodaj
                 </a>
             </div>
         </div>
@@ -55,38 +259,39 @@
             <div class="d-flex flex-wrap gap-2" id="genreFiltersContainer">
                 <button type="button" class="btn btn-sm btn-secondary active genre-filter-btn rounded-pill px-3" data-genre="ALL">Wszystkie gatunki</button>
                 <button type="button" class="btn btn-sm btn-outline-warning genre-filter-btn text-body rounded-pill px-3" data-genre="NONE">⚠️ Brak kategorii</button>
-                <!-- Tutaj skrypt dynamicznie doładuje resztę przycisków -->
+                <!-- Dynamicznie załadowane przyciski -->
             </div>
         </div>
     </div>
 
-    <!-- Formularz masowych akcji i Tabela -->
+    <!-- Formularz masowych akcji, Tabela i Siatka -->
     <form id="bulkActionForm" method="POST" action="{% url 'book_bulk_update' %}">
         {% csrf_token %}
         <input type="hidden" name="selected_books" id="selectedBooksInput">
         <input type="hidden" name="action_type" id="actionTypeInput" value="category">
 
-        <div class="card bg-body shadow-sm border rounded-4 overflow-hidden mb-3">
+        <!-- WIDOK 1: NOWOCZESNA TABELA KSIĄŻEK -->
+        <div id="bookTableView" class="card bg-body shadow-sm border rounded-4 overflow-hidden mb-4">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0" id="booksTable">
-                    <thead class="table-dark">
-                        <tr>
-                            <th style="width: 40px;" class="ps-3 ps-md-4 py-3">
+                    <thead class="bg-body-secondary border-bottom">
+                        <tr class="small text-muted text-uppercase" style="letter-spacing: 0.5px; font-size: 0.74rem;">
+                            <th style="width: 44px;" class="ps-3 ps-md-4 py-3">
                                 <input type="checkbox" id="selectAllCheckbox" class="form-check-input shadow-none cursor-pointer" title="Zaznacz widoczne">
                             </th>
-                            <th style="width: 70px;" class="py-3">Okładka</th>
-                            <th class="py-3" style="min-width: 200px;">Tytuł i Autor</th>
-                            <th class="py-3">Gatunki</th>
-                            <th class="py-3">Wydawnictwo</th>
-                            <th class="py-3 text-center" style="width: 140px;">Przeczytana</th>
+                            <th style="width: 76px;" class="py-3">Okładka</th>
+                            <th class="py-3" style="min-width: 220px;">Tytuł i Autor</th>
+                            <th class="py-3" style="min-width: 140px;">Kategorie</th>
+                            <th class="py-3" style="min-width: 140px;">Wydawnictwo</th>
+                            <th class="py-3 text-center" style="width: 130px;">Przeczytana</th>
                             <th class="py-3 text-center" style="width: 80px;">Kopie</th>
-                            <th class="py-3 text-end pe-3 pe-md-4" style="min-width: 100px;">Akcje</th>
+                            <th class="py-3 text-end pe-3 pe-md-4" style="min-width: 120px;">Akcje</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for letter, books_in_group in grouped_books %}
                             {% for book in books_in_group %}
-                                <tr class="book-row" 
+                                <tr class="book-row align-middle" 
                                     data-id="{{ book.pk }}"
                                     data-title="{{ book.title|lower }}" 
                                     data-author="{{ book.authors|lower }}" 
@@ -95,15 +300,15 @@
                                     data-is-read="{% if book.read %}true{% else %}false{% endif %}">
                                     
                                     <!-- Checkbox -->
-                                    <td class="ps-3 ps-md-4 py-2">
+                                    <td class="ps-3 ps-md-4 py-2.5">
                                         <input type="checkbox" class="form-check-input book-checkbox shadow-none cursor-pointer" value="{{ book.pk }}">
                                     </td>
 
-                                    <!-- Miniatura -->
-                                    <td class="py-2">
-                                        <a href="{% url 'book_detail' book.pk %}" class="d-block text-decoration-none" style="width: 40px; height: 55px;">
+                                    <!-- Miniatura okładki -->
+                                    <td class="py-2.5">
+                                        <a href="{% url 'book_detail' book.pk %}" class="d-block position-relative rounded-3 overflow-hidden shadow-sm border item-thumb-container" style="width: 46px; height: 60px;">
                                             {% if book.image %}
-                                                <img src="{{ book.image.url }}" alt="{{ book.title }}" class="w-100 h-100 object-fit-cover rounded shadow-sm">
+                                                <img src="{{ book.image.url }}" alt="{{ book.title }}" class="w-100 h-100 object-fit-cover item-thumb-img">
                                             {% else %}
                                                 <div class="w-100 h-100 bg-body-secondary border border-secondary border-opacity-25 rounded d-flex align-items-center justify-content-center shadow-sm overflow-hidden p-1" title="Brak okładki">
                                                     <img src="/media/library_images/cat_placeholder.png" alt="Brak okładki" class="w-100 h-100 object-fit-contain opacity-75">
@@ -114,22 +319,30 @@
 
                                     <!-- Tytuł i autor -->
                                     <td>
-                                        <a href="{% url 'book_detail' book.pk %}" class="text-decoration-none text-body fw-bold text-truncate d-block" style="max-width: 250px;" title="{{ book.title }}">
+                                        <a href="{% url 'book_detail' book.pk %}" class="text-decoration-none text-body fw-bold fs-6 text-truncate d-block" style="max-width: 320px;" title="{{ book.title }}">
                                             {{ book.title }}
                                         </a>
-                                        <small class="text-muted text-truncate d-block" style="max-width: 250px;">{{ book.authors|default:"Nieznany autor" }}</small>
+                                        <small class="text-muted text-truncate d-block mt-0.5" style="max-width: 320px; font-size: 0.76rem;">
+                                            ✍️ {{ book.authors|default:"Nieznany autor" }}
+                                        </small>
                                     </td>
 
                                     <!-- Kategorie -->
                                     <td>
-                                        <span class="badge bg-secondary bg-opacity-10 text-body border text-truncate d-inline-block rounded-pill px-2 py-1 fw-normal" style="max-width: 150px;">
-                                            {{ book.categories|default:"Brak" }}
-                                        </span>
+                                        {% if book.categories %}
+                                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 text-truncate d-inline-block rounded-pill px-2.5 py-1 small fw-medium" style="max-width: 180px;">
+                                                {{ book.categories }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary bg-opacity-10 text-muted border text-truncate d-inline-block rounded-pill px-2 py-0.5 small" style="font-size: 0.72rem;">
+                                                Brak kategorii
+                                            </span>
+                                        {% endif %}
                                     </td>
 
                                     <!-- Wydawnictwo -->
                                     <td>
-                                        <span class="text-muted small text-truncate d-block" style="max-width: 150px;" title="{{ book.publisher|default:'' }}">
+                                        <span class="text-muted small text-truncate d-block" style="max-width: 180px;" title="{{ book.publisher|default:'' }}">
                                             {{ book.publisher|default:"—" }}
                                         </span>
                                     </td>
@@ -141,21 +354,21 @@
                                                    data-book-id="{{ book.pk }}" 
                                                    id="switch_{{ book.pk }}" 
                                                    {% if book.read %}checked{% endif %}
-                                                   style="cursor: pointer; width: 2.5em; height: 1.25em; margin-left: 0;">
+                                                   style="cursor: pointer; width: 2.4em; height: 1.2em; margin-left: 0;">
                                             <label class="form-check-label visually-hidden" for="switch_{{ book.pk }}">Status przeczytania</label>
                                         </div>
                                     </td>
 
                                     <!-- Kopie -->
                                     <td class="text-center">
-                                        <span class="badge bg-body-secondary text-body border px-2 py-1 rounded-pill">{{ book.number_of_copies|default:1 }}</span>
+                                        <span class="badge bg-body-secondary text-body border px-2 py-1 rounded-3 font-monospace small">{{ book.number_of_copies|default:1 }}</span>
                                     </td>
 
                                     <!-- Akcje -->
                                     <td class="text-end pe-3 pe-md-4">
-                                        <div class="d-flex gap-1 justify-content-end">
-                                            <a href="{% url 'book_edit' book.pk %}" class="btn btn-sm btn-outline-secondary rounded-2 border px-2 py-1" title="Edytuj">✏️</a>
-                                            <a href="{% url 'book_detail' book.pk %}" class="btn btn-sm btn-outline-info rounded-2 border px-2 py-1" title="Szczegóły">👁️</a>
+                                        <div class="d-inline-flex gap-1 justify-content-end">
+                                            <a href="{% url 'book_edit' book.pk %}" class="btn btn-sm btn-outline-secondary rounded-pill border px-2.5 py-1" title="Edytuj">✏️</a>
+                                            <a href="{% url 'book_detail' book.pk %}" class="btn btn-sm btn-outline-info rounded-pill border px-2.5 py-1" title="Szczegóły">👁️</a>
                                         </div>
                                     </td>
                                 </tr>
@@ -163,13 +376,86 @@
                         {% empty %}
                             <tr>
                                 <td colspan="8" class="text-center py-5 text-muted">
-                                    Brak książek spełniających kryteria wyszukiwania.
+                                    <div class="py-4">
+                                        <span class="fs-1 d-block mb-2">📚</span>
+                                        <p class="text-muted fw-medium mb-1">Brak książek w bibliotece.</p>
+                                    </div>
                                 </td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+        </div>
+
+        <!-- WIDOK 2: NOWOCZESNY KATALOG KAFELKOWY (GRID CARDS) -->
+        <div id="bookGridView" class="row row-cols-2 row-cols-sm-2 row-cols-md-3 row-cols-xl-4 g-3 mb-4" style="display: none;">
+            {% for letter, books_in_group in grouped_books %}
+                {% for book in books_in_group %}
+                    <div class="col book-grid-card" 
+                         data-id="{{ book.pk }}"
+                         data-title="{{ book.title|lower }}" 
+                         data-author="{{ book.authors|lower }}" 
+                         data-publisher="{{ book.publisher|default:''|lower }}"
+                         data-categories="{{ book.categories|default:''|lower }}"
+                         data-is-read="{% if book.read %}true{% else %}false{% endif %}">
+                        <div class="card bg-body shadow-sm border rounded-4 h-100 overflow-hidden transition-hover">
+                            <!-- Okładka (Format książkowy 2:3) -->
+                            <a href="{% url 'book_detail' book.pk %}" class="position-relative bg-body-secondary overflow-hidden d-block text-decoration-none" style="aspect-ratio: 2/3;">
+                                {% if book.image %}
+                                    <img src="{{ book.image.url }}" alt="{{ book.title }}" class="w-100 h-100 object-fit-cover item-thumb-img">
+                                {% else %}
+                                    <div class="w-100 h-100 d-flex flex-column align-items-center justify-content-center text-muted p-3 text-center">
+                                        <img src="/media/library_images/cat_placeholder.png" alt="Brak okładki" class="img-fluid opacity-50 mb-2" style="max-height: 80px;">
+                                        <span class="small fw-medium">Brak okładki</span>
+                                    </div>
+                                {% endif %}
+
+                                <!-- Badge kategorii -->
+                                {% if book.categories %}
+                                    <span class="position-absolute top-0 start-0 m-2 badge bg-dark bg-opacity-75 text-white shadow-sm px-2.5 py-1 rounded-pill small" style="font-size: 0.72rem;">
+                                        {{ book.categories|truncatechars:18 }}
+                                    </span>
+                                {% endif %}
+
+                                <!-- Badge przeczytana -->
+                                {% if book.read %}
+                                    <span class="position-absolute top-0 end-0 m-2 badge bg-success shadow-sm px-2 py-1 rounded-pill small">
+                                        ✓ Przeczytana
+                                    </span>
+                                {% endif %}
+                            </a>
+
+                            <!-- Treść karty -->
+                            <div class="card-body p-3 d-flex flex-column justify-content-between">
+                                <div>
+                                    <h6 class="fw-bold text-body mb-1 text-truncate" title="{{ book.title }}">
+                                        <a href="{% url 'book_detail' book.pk %}" class="text-decoration-none text-body">{{ book.title }}</a>
+                                    </h6>
+                                    <div class="small fw-semibold text-primary text-truncate mb-2" title="{{ book.authors }}">
+                                        ✍️ {{ book.authors|default:"Nieznany autor" }}
+                                    </div>
+
+                                    <div class="d-flex align-items-center justify-content-between mb-3 text-muted small" style="font-size: 0.75rem;">
+                                        <span class="text-truncate">{{ book.publisher|default:"Wyd. niezależne"|truncatechars:15 }}</span>
+                                        <span class="badge bg-body-secondary text-body border px-2 py-0.5 rounded-pill">{{ book.number_of_copies|default:1 }} egz.</span>
+                                    </div>
+                                </div>
+
+                                <!-- Przyciski akcji -->
+                                <div class="d-flex gap-1 pt-2 border-top">
+                                    <a href="{% url 'book_detail' book.pk %}" class="btn btn-outline-info btn-sm rounded-pill flex-fill py-1 small">
+                                        👁️ Szczegóły
+                                    </a>
+                                    <a href="{% url 'book_edit' book.pk %}" class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-1" title="Edytuj">
+                                        ✏️
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endfor %}
         </div>
 
         <!-- Pływający panel masowych akcji (Floating Pill) -->
@@ -205,11 +491,43 @@
 
 </div>
 
-<!-- Skrypty (Pozostają bez zmian) -->
+<!-- Skrypty wyszukiwania, filtrów i przełączania widoków -->
 <script>
+    function switchViewMode(mode) {
+        const tableView = document.getElementById('bookTableView');
+        const gridView = document.getElementById('bookGridView');
+        const tableBtn = document.getElementById('viewModeTableBtn');
+        const gridBtn = document.getElementById('viewModeGridBtn');
+
+        if (!tableView || !gridView || !tableBtn || !gridBtn) return;
+
+        if (mode === 'grid') {
+            tableView.style.display = 'none';
+            gridView.style.display = 'flex';
+            tableBtn.classList.remove('active', 'btn-primary', 'text-white');
+            tableBtn.classList.add('text-body');
+            gridBtn.classList.add('active', 'btn-primary', 'text-white');
+            gridBtn.classList.remove('text-body');
+            try { localStorage.setItem('book_view_mode', 'grid'); } catch(e) {}
+        } else {
+            tableView.style.display = 'block';
+            gridView.style.display = 'none';
+            tableBtn.classList.add('active', 'btn-primary', 'text-white');
+            tableBtn.classList.remove('text-body');
+            gridBtn.classList.remove('active', 'btn-primary', 'text-white');
+            gridBtn.classList.add('text-body');
+            try { localStorage.setItem('book_view_mode', 'table'); } catch(e) {}
+        }
+    }
+
     document.addEventListener("DOMContentLoaded", function() {
+        let savedMode = 'table';
+        try { savedMode = localStorage.getItem('book_view_mode') || 'table'; } catch(e) {}
+        switchViewMode(savedMode);
+
         const searchInput = document.getElementById('searchInput');
         const bookRows = document.querySelectorAll('.book-row');
+        const bookGridCards = document.querySelectorAll('.book-grid-card');
         const genreContainer = document.getElementById('genreFiltersContainer');
         const statusBtns = document.querySelectorAll('.status-filter-btn');
         const selectAllCheckbox = document.getElementById('selectAllCheckbox');
@@ -263,7 +581,10 @@
                 .then(data => {
                     if (data.success) {
                         row.setAttribute('data-is-read', data.is_read ? 'true' : 'false');
-                        filterTable();
+                        // Synchronizuj kartę kafelkową
+                        const gridCard = document.querySelector(`.book-grid-card[data-id="${bookId}"]`);
+                        if (gridCard) gridCard.setAttribute('data-is-read', data.is_read ? 'true' : 'false');
+                        filterItems();
                     } else {
                         alert('Wystąpił błąd podczas zmiany statusu.');
                         this.checked = !isChecked; 
@@ -273,6 +594,29 @@
                     console.error('Error:', error);
                     this.checked = !isChecked;
                 });
+            });
+        });
+
+        // Kliknięcie w szybkie paski statystyk
+        document.querySelectorAll('.quick-genre-trigger').forEach(trigger => {
+            trigger.addEventListener('click', function() {
+                let genre = this.getAttribute('data-genre');
+                if (genre) {
+                    searchInput.value = genre;
+                    searchQuery = genre.toLowerCase().trim();
+                    filterItems();
+                }
+            });
+        });
+
+        document.querySelectorAll('.quick-author-trigger').forEach(trigger => {
+            trigger.addEventListener('click', function() {
+                let author = this.getAttribute('data-author');
+                if (author) {
+                    searchInput.value = author;
+                    searchQuery = author.toLowerCase().trim();
+                    filterItems();
+                }
             });
         });
 
@@ -297,7 +641,7 @@
                     this.classList.remove('btn-outline-secondary');
                     this.classList.add('active', 'btn-secondary');
                 }
-                filterTable();
+                filterItems();
             });
         });
 
@@ -311,45 +655,58 @@
                 this.classList.remove('btn-outline-secondary');
                 this.classList.add('active', 'btn-secondary');
                 activeStatus = this.getAttribute('data-status');
-                filterTable();
+                filterItems();
             });
         });
 
         // Wyszukiwanie
         searchInput.addEventListener('input', function() {
             searchQuery = this.value.toLowerCase().trim();
-            filterTable();
+            filterItems();
         });
 
-        function filterTable() {
+        function checkItemMatch(el) {
+            let title = el.getAttribute('data-title') || '';
+            let author = el.getAttribute('data-author') || '';
+            let publisher = el.getAttribute('data-publisher') || '';
+            let categories = (el.getAttribute('data-categories') || '').trim();
+            let isRead = el.getAttribute('data-is-read') === 'true';
+
+            let matchesSearch = (searchQuery === '' || title.includes(searchQuery) || author.includes(searchQuery) || publisher.includes(searchQuery));
+            
+            let matchesGenre = true;
+            if (activeGenre === 'NONE') {
+                matchesGenre = (categories === '' || categories === 'brak');
+            } else if (activeGenre !== 'ALL') {
+                matchesGenre = categories.includes(activeGenre.toLowerCase());
+            }
+
+            let matchesStatus = (activeStatus === 'ALL') || (activeStatus === 'read' && isRead) || (activeStatus === 'unread' && !isRead);
+
+            return matchesSearch && matchesGenre && matchesStatus;
+        }
+
+        function filterItems() {
             let visibleTotal = 0;
             bookRows.forEach(row => {
-                let title = row.getAttribute('data-title');
-                let author = row.getAttribute('data-author');
-                let publisher = row.getAttribute('data-publisher');
-                let categories = row.getAttribute('data-categories').trim();
-                let isRead = row.getAttribute('data-is-read') === 'true';
-
-                let matchesSearch = (searchQuery === '' || title.includes(searchQuery) || author.includes(searchQuery) || publisher.includes(searchQuery));
-                
-                let matchesGenre = true;
-                if (activeGenre === 'NONE') {
-                    matchesGenre = (categories === '' || categories === 'brak');
-                } else if (activeGenre !== 'ALL') {
-                    matchesGenre = categories.includes(activeGenre.toLowerCase());
-                }
-
-                let matchesStatus = (activeStatus === 'ALL') || (activeStatus === 'read' && isRead) || (activeStatus === 'unread' && !isRead);
-
-                if (matchesSearch && matchesGenre && matchesStatus) {
+                let matches = checkItemMatch(row);
+                if (matches) {
                     row.style.display = '';
                     visibleTotal++;
                 } else {
                     row.style.display = 'none';
-                    row.querySelector('.book-checkbox').checked = false;
+                    let cb = row.querySelector('.book-checkbox');
+                    if (cb) cb.checked = false;
                 }
             });
-            document.getElementById('totalCountBadge').textContent = visibleTotal;
+
+            bookGridCards.forEach(card => {
+                let matches = checkItemMatch(card);
+                card.style.display = matches ? '' : 'none';
+            });
+
+            const kpiVisible = document.getElementById('kpiVisibleCount');
+            if (kpiVisible) kpiVisible.textContent = visibleTotal;
             updateBulkBar();
         }
 
@@ -358,7 +715,7 @@
             let checkedCount = 0;
             bookCheckboxes.forEach(cb => {
                 let row = cb.closest('.book-row');
-                if (cb.checked && row.style.display !== 'none') {
+                if (cb.checked && row && row.style.display !== 'none') {
                     checkedCount++;
                 }
             });
@@ -373,7 +730,7 @@
         selectAllCheckbox.addEventListener('change', function() {
             bookCheckboxes.forEach(cb => {
                 let row = cb.closest('.book-row');
-                if (row.style.display !== 'none') {
+                if (row && row.style.display !== 'none') {
                     cb.checked = selectAllCheckbox.checked;
                 }
             });
@@ -419,7 +776,7 @@
             let ids = [];
             bookCheckboxes.forEach(cb => {
                 let row = cb.closest('.book-row');
-                if (cb.checked && row.style.display !== 'none') {
+                if (cb.checked && row && row.style.display !== 'none') {
                     ids.push(cb.value);
                 }
             });
