@@ -397,6 +397,16 @@
                     </a>
                 </li>
 
+                {% if user.is_superuser or user.is_staff %}
+                    <!-- Kopia Zapasowa (Eksport ZIP) -->
+                    <li class="menu-item mb-1">
+                        <a href="{% url 'download_backup_zip' %}" class="sidebar-link text-decoration-none" title="Pobierz archiwum ZIP z bazą i wszystkimi zdjęciami">
+                            <i class="bi bi-cloud-arrow-down sidebar-icon text-info"></i>
+                            <span>Kopia zapasowa</span>
+                        </a>
+                    </li>
+                {% endif %}
+
                 <!-- Rozwijane menu: Kolekcje -->
                 <li class="menu-item mt-2">
                     <a href="#kolekcjeSubmenu" class="sidebar-link {% if 'kolekcje' in request.path %}active-parent{% endif %}" data-bs-toggle="collapse" aria-expanded="{% if 'kolekcje' in request.path %}true{% else %}false{% endif %}">

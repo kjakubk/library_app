@@ -1,9 +1,16 @@
+import os
+import io
+import zipfile
+from datetime import datetime
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.conf import settings
+from django.core.management import call_command
+from django.http import HttpResponse
 from .models import Photo, Album, Experience
 from .forms import PhotoForm, AlbumForm, LoginForm, UserAdminCreateForm, UserAdminPasswordChangeForm
 
@@ -208,3 +215,63 @@ def user_change_password_view(request, pk):
         form = UserAdminPasswordChangeForm()
 
     return render(request, 'portfolio/user_password_form.html', {'form': form, 'target_user': target_user})
+
+
+@login_required
+def download_backup_zip(request):
+    """Generuje i pobiera pełne archiwum ZIP zawierające bazę danych SQLite, zrzut JSON oraz folder ze zdjęciami (media/)."""
+    if not request.user.is_superuser and not request.user.is_staff:
+        messages.error(request, 'Tylko administrator może pobrać kopię zapasową bazy danych!')
+        return redirect('home')
+
+    zip_buffer = io.BytesIO()
+    now_str = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        # 1. Plik bazy SQLite
+        sqlite_path = settings.BASE_DIR / 'db.sqlite3'
+        if os.path.exists(sqlite_path):
+            zip_file.write(sqlite_path, arcname='db.sqlite3')
+
+        # 2. Zrzut JSON modeli kolekcji i użytkowników (uniwersalny do Postgresa, SQLite, MySQL)
+        try:
+            json_dump_buffer = io.StringIO()
+            call_command(
+                'dumpdata',
+                'library', 'portfolio', 'auth.User',
+                '--natural-foreign',
+                '--natural-primary',
+                stdout=json_dump_buffer
+            )
+            zip_file.writestr('database_dump.json', json_dump_buffer.getvalue().encode('utf-8'))
+        except Exception as e:
+            zip_file.writestr('dump_error.txt', f'Błąd podczas generowania dumpdata: {e}')
+
+        # 3. Cały katalog media/ (wszystkie zdjęcia)
+        media_root = settings.MEDIA_ROOT
+        if os.path.exists(media_root):
+            for root, dirs, files in os.walk(media_root):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    arc_name = os.path.relpath(file_path, settings.BASE_DIR)
+                    zip_file.write(file_path, arcname=arc_name)
+
+        # 4. Plik informacyjny manifest
+        manifest_content = f"""KOPIA ZAPASOWA APLIKACJI KOLEKCJI
+Data utworzenia: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Wygenerowano przez: {request.user.username}
+
+Zawartość archiwum:
+1. db.sqlite3 - bezpośredni plik bazy danych SQLite
+2. database_dump.json - uniwersalny zrzut wszystkich tabel i relacji
+3. media/ - wszystkie wgrane zdjęcia porcelany, książek, okładek, galerii
+
+Jak przywrócić w razie potrzeby:
+- Wypakuj plik db.sqlite3 oraz katalog media/ do głównego folderu aplikacji na nowym serwerze.
+"""
+        zip_file.writestr('MANIFEST_BACKUP.txt', manifest_content.encode('utf-8'))
+
+    zip_buffer.seek(0)
+    response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
+    response['Content-Disposition'] = f'attachment; filename="kolekcja_backup_{now_str}.zip"'
+    return response

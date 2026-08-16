@@ -13,7 +13,10 @@
             </h4>
             <div class="text-muted small mt-1">Użytkownicy z dostępem do kolekcji, dashboardu analizy danych oraz galerii</div>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'download_backup_zip' %}" class="btn btn-outline-success btn-sm px-3 py-2 rounded-pill fw-semibold shadow-sm d-flex align-items-center justify-content-center gap-2 text-decoration-none" title="Pobiera pełne archiwum ZIP ze wszystkimi zdjęciami i bazą SQLite">
+                <i class="bi bi-cloud-arrow-down-fill"></i> 📦 Pobierz Kopię Zapasową (ZIP)
+            </a>
             <a href="{% url 'user_create' %}" class="btn btn-primary btn-sm px-4 py-2 rounded-pill fw-semibold shadow-sm d-flex align-items-center justify-content-center gap-2 text-decoration-none">
                 <i class="bi bi-person-plus-fill"></i> Dodaj nowego użytkownika
             </a>

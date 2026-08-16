@@ -18,6 +18,7 @@ urlpatterns = [
     path('uzytkownicy/dodaj/', portfolio_views.user_create_view, name='user_create'),
     path('uzytkownicy/<int:pk>/usun/', portfolio_views.user_delete_view, name='user_delete'),
     path('uzytkownicy/<int:pk>/haslo/', portfolio_views.user_change_password_view, name='user_change_password'),
+    path('kopia-zapasowa/pobierz/', portfolio_views.download_backup_zip, name='download_backup_zip'),
     path('kolekcje/', include('library.urls')),
     path('data-analysis/', include('da_portfolio.urls')),
 ]
