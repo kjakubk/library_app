@@ -64,19 +64,28 @@
 
                             <!-- Rząd 2: Sygnatura | Orientacyjny rok pochodzenia -->
                             <div class="col-12 col-md-6 mb-2">
-                                <label for="{{ form.signature.id_for_label }}" class="form-label small fw-bold text-muted text-uppercase mb-1">
-                                    {{ form.signature.label }}
-                                </label>
-                                {{ form.signature }}
-                                <datalist id="signature_datalist">
-                                    {% for sig in form.available_signatures %}
-                                        <option value="{{ sig }}"></option>
-                                    {% endfor %}
-                                </datalist>
-                                <div class="form-text small text-muted" style="font-size: 0.76rem;">
-                                    💡 Wybierz z listy podpowiedzi lub wpisz dowolną nową nazwę sygnatury.
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label for="{{ form.signature_select.id_for_label }}" class="form-label small fw-bold text-muted text-uppercase mb-0">
+                                        Sygnatura (Marka)
+                                    </label>
+                                    <button type="button" class="btn btn-link btn-sm text-primary p-0 text-decoration-none small fw-semibold" id="toggleCustomSigBtn">
+                                        ➕ Wpisz nową
+                                    </button>
                                 </div>
-                                {% if form.signature.errors %}<div class="text-danger small mt-1 fw-bold">{{ form.signature.errors|striptags }}</div>{% endif %}
+                                {{ form.signature_select }}
+                                {% if form.signature_select.errors %}<div class="text-danger small mt-1 fw-bold">{{ form.signature_select.errors|striptags }}</div>{% endif %}
+
+                                <!-- Pole na nową, niestandardową sygnaturę -->
+                                <div id="customSignatureContainer" class="mt-2 p-2 bg-body-secondary rounded-3 border" style="display: none;">
+                                    <label for="{{ form.custom_signature.id_for_label }}" class="form-label small fw-bold text-primary mb-1 d-flex align-items-center gap-1">
+                                        <i class="bi bi-pencil-square"></i> Wpisz nową nazwę sygnatury:
+                                    </label>
+                                    {{ form.custom_signature }}
+                                    <div class="form-text small text-muted" style="font-size: 0.75rem;">
+                                        Zostanie automatycznie zapisana i dołączona do Twojej kolekcji.
+                                    </div>
+                                    {% if form.custom_signature.errors %}<div class="text-danger small mt-1 fw-bold">{{ form.custom_signature.errors|striptags }}</div>{% endif %}
+                                </div>
                             </div>
 
                             <div class="col-12 col-md-6 mb-2">
@@ -273,6 +282,49 @@
                 el.classList.add('form-control', 'bg-body', 'text-body', 'border-secondary', 'border-opacity-50', 'shadow-none', 'rounded-3', 'py-2');
             }
         });
+
+        // Obsługa wyboru i wpisywania nowej sygnatury
+        const sigSelect = document.getElementById('signatureSelectField');
+        const customSigContainer = document.getElementById('customSignatureContainer');
+        const customSigInput = document.getElementById('customSignatureField');
+        const toggleBtn = document.getElementById('toggleCustomSigBtn');
+
+        function checkSignatureState() {
+            if (!sigSelect || !customSigContainer) return;
+            if (sigSelect.value === '__CUSTOM__' || (customSigInput && customSigInput.value.trim().length > 0)) {
+                customSigContainer.style.display = 'block';
+                sigSelect.value = '__CUSTOM__';
+            } else {
+                customSigContainer.style.display = 'none';
+            }
+        }
+
+        if (sigSelect) {
+            sigSelect.addEventListener('change', function() {
+                if (this.value === '__CUSTOM__') {
+                    customSigContainer.style.display = 'block';
+                    if (customSigInput) {
+                        customSigInput.focus();
+                    }
+                } else {
+                    customSigContainer.style.display = 'none';
+                    if (customSigInput) {
+                        customSigInput.value = '';
+                    }
+                }
+            });
+        }
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (sigSelect) sigSelect.value = '__CUSTOM__';
+                if (customSigContainer) customSigContainer.style.display = 'block';
+                if (customSigInput) customSigInput.focus();
+            });
+        }
+
+        checkSignatureState();
     });
 </script>
 {% endblock %}

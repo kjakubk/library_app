@@ -45,14 +45,18 @@ class CSVImportForm(forms.Form):
 
 
 class PorcelainForm(forms.ModelForm):
-    signature = forms.CharField(
+    signature_select = forms.ChoiceField(
         required=False,
-        label="Sygnatura (Marka)",
+        label="Sygnatura (Wybierz z listy lub dodaj nową)",
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'signatureSelectField'})
+    )
+    custom_signature = forms.CharField(
+        required=False,
+        label="Wpisz nową nazwę sygnatury",
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'list': 'signature_datalist',
-            'placeholder': 'Wybierz z listy lub wpisz nową sygnaturę...',
-            'autocomplete': 'off'
+            'id': 'customSignatureField',
+            'placeholder': 'Wpisz nową nazwę sygnatury (np. KPM Krister Waldenburg)...'
         })
     )
 
@@ -61,7 +65,6 @@ class PorcelainForm(forms.ModelForm):
         fields = [
             'name', 
             'style',
-            'signature', 
             'year_of_origin', 
             'condition', 
             'price', 
@@ -80,7 +83,8 @@ class PorcelainForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Zbieramy wszystkie domyślne sygnatury oraz te już zapisane w bazie
+        
+        # 1. Zbieramy wszystkie sygnatury z bazy oraz domyślne
         db_sigs = list(
             Porcelain.objects.exclude(signature__isnull=True)
             .exclude(signature__exact='')
@@ -88,8 +92,49 @@ class PorcelainForm(forms.ModelForm):
             .distinct()
         )
         default_sigs = [val for val, label in Porcelain.SIGNATURE_CHOICES if val.strip()]
-        # Łączymy unikalne w kolejności alfabetycznej
-        self.available_signatures = sorted(list(set(default_sigs + db_sigs)), key=lambda s: s.lower())
+        all_sigs = sorted(list(set(default_sigs + db_sigs)), key=lambda s: s.lower())
+
+        choices = [('', '--- Wybierz sygnaturę z listy ---')]
+        for sig in all_sigs:
+            choices.append((sig, sig))
+        choices.append(('__CUSTOM__', '➕ Inna sygnatura / Wpisz nową...'))
+        self.fields['signature_select'].choices = choices
+
+        # 2. Ustawiamy wartości początkowe przy edycji
+        if self.instance and self.instance.pk and self.instance.signature:
+            curr_sig = self.instance.signature.strip()
+            if curr_sig in all_sigs:
+                self.initial['signature_select'] = curr_sig
+            else:
+                self.initial['signature_select'] = '__CUSTOM__'
+                self.initial['custom_signature'] = curr_sig
+
+    def clean(self):
+        cleaned_data = super().clean()
+        sig_choice = cleaned_data.get('signature_select', '').strip()
+        custom_sig = cleaned_data.get('custom_signature', '').strip()
+
+        if sig_choice == '__CUSTOM__':
+            if not custom_sig:
+                self.add_error('custom_signature', 'Wpisz nazwę nowej sygnatury lub wybierz sygnaturę z listy.')
+            final_signature = custom_sig
+        elif sig_choice:
+            final_signature = sig_choice
+        elif custom_sig:
+            final_signature = custom_sig
+        else:
+            final_signature = ''
+
+        cleaned_data['signature'] = final_signature
+        self.instance.signature = final_signature
+        return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.signature = self.cleaned_data.get('signature', '')
+        if commit:
+            instance.save()
+        return instance
 
 class BoardGameForm(forms.ModelForm):
     class Meta:
