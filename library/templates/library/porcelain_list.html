@@ -4,23 +4,89 @@
 {% block title %}Porcelana - Kolekcje{% endblock %}
 
 {% block content %}
+<style>
+    .transition-hover {
+        transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, background-color 0.18s ease;
+    }
+    .transition-hover:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+        background-color: var(--bs-tertiary-bg) !important;
+    }
+</style>
 <div class="container-fluid px-2 px-md-4 py-4 mb-5">
     
-    <!-- SEKCJA KAFELKÓW ZE STATYSTYKAMI -->
-    <div class="row g-3 mb-4">
-        <!-- Kafelek 1: Podsumowanie elementów (Typy) -->
-        <div class="col-12 col-lg-6">
-            <div class="card bg-body shadow-sm border rounded-4 p-3 h-100">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="small fw-bold text-muted text-uppercase" style="letter-spacing: 0.5px;">☕ Rodzaje elementów</span>
-                    <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1 rounded-pill" style="font-size: 0.7rem;">Top 5</span>
+    <!-- SEKCJA 1: GÓRNE WSKAŹNIKI KPI KOLEKCJI -->
+    <div class="row g-2 g-md-3 mb-4">
+        <!-- KPI 1: Łącznie eksponatów -->
+        <div class="col-6 col-md-3">
+            <div class="card bg-body shadow-sm border rounded-4 p-3 h-100 position-relative overflow-hidden">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="small fw-bold text-muted text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">Eksponaty</span>
+                    <span class="fs-5">☕</span>
                 </div>
-                <div class="d-flex flex-wrap gap-2 mt-1">
+                <div class="fs-3 fw-bold text-body mb-0">{{ total_collection_count|default:"0" }}</div>
+                <div class="small text-muted opacity-75" style="font-size: 0.75rem;">
+                    {% if total_count != total_collection_count %}Wyfiltrowano: <strong>{{ total_count }}</strong>{% else %}Wszystkie w kolekcji{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI 2: Manufaktury i Sygnatury -->
+        <div class="col-6 col-md-3">
+            <div class="card bg-body shadow-sm border rounded-4 p-3 h-100 position-relative overflow-hidden">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="small fw-bold text-muted text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">Manufaktury</span>
+                    <span class="fs-5">🏺</span>
+                </div>
+                <div class="fs-3 fw-bold text-primary mb-0">{{ total_signatures_count|default:"0" }}</div>
+                <div class="small text-muted opacity-75" style="font-size: 0.75rem;">Unikalnych sygnatur</div>
+            </div>
+        </div>
+
+        <!-- KPI 3: Style i Wzory -->
+        <div class="col-6 col-md-3">
+            <div class="card bg-body shadow-sm border rounded-4 p-3 h-100 position-relative overflow-hidden">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="small fw-bold text-muted text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">Wzory i Style</span>
+                    <span class="fs-5">🎨</span>
+                </div>
+                <div class="fs-3 fw-bold text-info mb-0">{{ total_styles_count|default:"0" }}</div>
+                <div class="small text-muted opacity-75" style="font-size: 0.75rem;">Różnych motywów</div>
+            </div>
+        </div>
+
+        <!-- KPI 4: Foto-dokumentacja -->
+        <div class="col-6 col-md-3">
+            <div class="card bg-body shadow-sm border rounded-4 p-3 h-100 position-relative overflow-hidden">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="small fw-bold text-muted text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">Foto Sygnatury</span>
+                    <span class="fs-5">📸</span>
+                </div>
+                <div class="fs-3 fw-bold text-success mb-0">{{ items_with_sig_photos|default:"0" }}</div>
+                <div class="small text-muted opacity-75" style="font-size: 0.75rem;">Ze zdjęciem spodu</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEKCJA 2: SZCZEGÓŁOWE ROZKŁADY STATYSTYCZNE -->
+    <div class="row g-3 mb-4">
+        <!-- Kafelek A: Rodzaje elementów (Top 6 z szybkim filtrem) -->
+        <div class="col-12 col-lg-6">
+            <div class="card bg-body shadow-sm border rounded-4 p-3 p-md-4 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fs-5">🍽️</span>
+                        <span class="small fw-bold text-muted text-uppercase" style="letter-spacing: 0.5px;">Rodzaje elementów</span>
+                    </div>
+                    <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1 rounded-pill" style="font-size: 0.7rem;">Top 6</span>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
                     {% for stat in name_stats %}
-                        <div class="badge bg-body-secondary border text-body px-3 py-2 rounded-3 d-flex align-items-center gap-2 fw-normal text-start">
+                        <a href="?q={{ stat.name|urlencode }}" class="badge bg-body-secondary border text-body text-decoration-none px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2 fw-medium text-start transition-hover shadow-sm" title="Kliknij, aby przefiltrować po tym elemencie">
                             <span>{{ stat.name }}</span>
                             <span class="badge bg-primary text-white rounded-pill px-2">{{ stat.count }}</span>
-                        </div>
+                        </a>
                     {% empty %}
                         <span class="text-muted small fst-italic">Brak danych do podsumowania.</span>
                     {% endfor %}
@@ -28,21 +94,24 @@
             </div>
         </div>
 
-        <!-- Kafelek 2: Podsumowanie sygnatur (Marki) -->
+        <!-- Kafelek B: Sygnatury i Marki (Top 6 z paskiem i filtrem) -->
         <div class="col-12 col-lg-6">
-            <div class="card bg-body shadow-sm border rounded-4 p-3 h-100">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="small fw-bold text-muted text-uppercase" style="letter-spacing: 0.5px;">🏺 Sygnatury i marki</span>
-                    <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1 rounded-pill" style="font-size: 0.7rem;">Top 5</span>
+            <div class="card bg-body shadow-sm border rounded-4 p-3 p-md-4 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fs-5">🏺</span>
+                        <span class="small fw-bold text-muted text-uppercase" style="letter-spacing: 0.5px;">Sygnatury i Manufaktury</span>
+                    </div>
+                    <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1 rounded-pill" style="font-size: 0.7rem;">Top 6</span>
                 </div>
-                <div class="d-flex flex-wrap gap-2 mt-1">
+                <div class="d-flex flex-column gap-2">
                     {% for stat in signature_stats %}
-                        <div class="badge bg-body-secondary border text-body px-3 py-2 rounded-3 d-flex align-items-center justify-content-between gap-3 fw-normal text-start w-100" style="max-width: none;">
-                            <span class="text-wrap">{{ stat.signature }}</span>
-                            <span class="badge bg-success text-white rounded-pill px-2 flex-shrink-0">{{ stat.count }}</span>
-                        </div>
+                        <a href="?signature={{ stat.signature|urlencode }}" class="p-2 px-3 bg-body-secondary border rounded-3 text-decoration-none text-body d-flex align-items-center justify-content-between gap-3 transition-hover shadow-sm" title="Kliknij, aby wyświetlić elementy tej sygnatury">
+                            <span class="text-truncate fw-medium small">{{ stat.signature }}</span>
+                            <span class="badge bg-success text-white rounded-pill px-2.5 py-1 flex-shrink-0">{{ stat.count }} szt.</span>
+                        </a>
                     {% empty %}
-                        <span class="text-muted small fst-italic">Brak przypisanych sygnatur.</span>
+                        <span class="text-muted small fst-italic py-2">Brak przypisanych sygnatur.</span>
                     {% endfor %}
                 </div>
             </div>

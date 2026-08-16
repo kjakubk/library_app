@@ -66,17 +66,31 @@ def porcelain_list(request):
     if sort_by in sort_mapping:
         items = items.order_by(sort_mapping[sort_by])
 
+    all_items = Porcelain.objects.all()
+    total_collection_count = all_items.count()
+    
     available_styles = Porcelain.objects.exclude(style__isnull=True).exclude(style__exact='').values_list('style', flat=True).distinct().order_by('style')
     available_signatures = Porcelain.objects.exclude(signature__isnull=True).exclude(signature__exact='').values_list('signature', flat=True).distinct().order_by('signature')
 
-    name_stats = Porcelain.objects.values('name').annotate(count=Count('id')).order_by('-count')[:5]
-    signature_stats = Porcelain.objects.exclude(signature__isnull=True).exclude(signature__exact='').values_list('signature').annotate(count=Count('id')).order_by('-count')[:5]
+    total_signatures_count = available_signatures.count()
+    total_styles_count = available_styles.count()
+    items_with_sig_photos = all_items.exclude(signature_image__isnull=True).exclude(signature_image__exact='').count()
+
+    name_stats = Porcelain.objects.values('name').annotate(count=Count('id')).order_by('-count')[:6]
+    signature_stats = Porcelain.objects.exclude(signature__isnull=True).exclude(signature__exact='').values('signature').annotate(count=Count('id')).order_by('-count')[:6]
+    condition_stats = Porcelain.objects.exclude(condition__isnull=True).exclude(condition__exact='').values('condition').annotate(count=Count('id')).order_by('-count')
+    
     total_count = items.count()
 
     context = {
         'items': items,
         'name_stats': name_stats,
         'signature_stats': signature_stats,
+        'condition_stats': condition_stats,
+        'total_collection_count': total_collection_count,
+        'total_signatures_count': total_signatures_count,
+        'total_styles_count': total_styles_count,
+        'items_with_sig_photos': items_with_sig_photos,
         'total_count': total_count,
         'current_sort': sort_by,
         'available_styles': available_styles,
