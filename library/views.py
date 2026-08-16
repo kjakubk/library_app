@@ -11,6 +11,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.files.base import ContentFile
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
 from .forms import BookForm, CSVImportForm, VinylRecordForm, PorcelainForm, BoardGameForm, VideoGameForm
 from .models import BoardGame, Book, Porcelain, VideoGame, VinylRecord, CATEGORY_CHOICES
@@ -88,22 +89,88 @@ def porcelain_list(request):
 
 @login_required
 def porcelain_create(request):
-    """Dodawanie nowego elementu porcelany."""
+    """Dodawanie nowego elementu porcelany (z opcją szybkiego kopiowania z innego elementu)."""
+    copy_from_id = request.GET.get('copy_from')
+    initial_data = {}
+
+    if copy_from_id and request.method == 'GET':
+        try:
+            template_item = Porcelain.objects.get(pk=copy_from_id)
+            initial_data = {
+                'name': template_item.name,
+                'style': template_item.style,
+                'year_of_origin': template_item.year_of_origin,
+                'condition': template_item.condition,
+                'price': template_item.price,
+            }
+        except Porcelain.DoesNotExist:
+            pass
+
     if request.method == 'POST':
         form = PorcelainForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Pomyślnie dodano nowy element porcelany!')
-            return redirect('porcelain_list')
+            saved_item = form.save()
+            action = request.POST.get('action', '')
+
+            if action == 'save_and_clone':
+                messages.success(request, f'Pomyślnie zapisano „{saved_item.name}”. Formularz przygotowany do dodania kolejnego elementu z tej serii!')
+                return redirect(f"{reverse('porcelain_create')}?copy_from={saved_item.pk}")
+            else:
+                messages.success(request, 'Pomyślnie dodano nowy element porcelany!')
+                return redirect('porcelain_list')
     else:
-        form = PorcelainForm()
+        if copy_from_id and initial_data:
+            template_item = Porcelain.objects.get(pk=copy_from_id)
+            form = PorcelainForm(initial=initial_data, instance=Porcelain(signature=template_item.signature))
+        else:
+            form = PorcelainForm()
         
-    return render(request, 'library/porcelain_form.html', {'form': form})
+    return render(request, 'library/porcelain_form.html', {
+        'form': form, 
+        'is_copied': bool(copy_from_id)
+    })
+
+
+@login_required
+def porcelain_duplicate(request, pk):
+    """Szybkie powielenie (klonowanie) istniejącego elementu porcelany N razy."""
+    item = get_object_or_404(Porcelain, pk=pk)
+
+    if request.method == 'POST':
+        try:
+            copies = int(request.POST.get('copies_count', 1))
+        except (ValueError, TypeError):
+            copies = 1
+
+        copies = max(1, min(copies, 50)) # Limit od 1 do 50 kopii naraz
+        add_numbering = request.POST.get('add_numbering') == 'on'
+
+        for i in range(1, copies + 1):
+            new_name = f"{item.name} #{i}" if (copies > 1 and add_numbering) else item.name
+            Porcelain.objects.create(
+                name=new_name,
+                style=item.style,
+                signature=item.signature,
+                year_of_origin=item.year_of_origin,
+                condition=item.condition,
+                price=item.price,
+                signature_image=item.signature_image
+            )
+
+        if copies == 1:
+            messages.success(request, f'Pomyślnie skopiowano element „{item.name}”.')
+        else:
+            messages.success(request, f'Pomyślnie utworzono {copies} kopii elementu „{item.name}”!')
+
+        return redirect('porcelain_list')
+
+    # W przypadku GET przekierowujemy do formularza z pre-filled danymi
+    return redirect(f"{reverse('porcelain_create')}?copy_from={item.pk}")
 
 
 @login_required
 def porcelain_edit(request, pk):
-    """Edycja elementu porcelany z opcją usuwania pojedynczych zdjęć."""
+    """Edycja elementu porcelany z opcją usuwania pojedynczych zdjęć i szybkiego powielania."""
     item = get_object_or_404(Porcelain, pk=pk)
     
     delete_img_field = request.GET.get('delete_img')
@@ -119,9 +186,15 @@ def porcelain_edit(request, pk):
     if request.method == 'POST':
         form = PorcelainForm(request.POST, request.FILES, instance=item)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Zmiany w elemencie porcelany zostały pomyślnie zapisane.')
-            return redirect('porcelain_list')
+            saved_item = form.save()
+            action = request.POST.get('action', '')
+
+            if action == 'save_and_clone':
+                messages.success(request, f'Zapisano zmiany w „{saved_item.name}”. Formularz przygotowany do dodania kolejnego elementu z tej serii!')
+                return redirect(f"{reverse('porcelain_create')}?copy_from={saved_item.pk}")
+            else:
+                messages.success(request, 'Zmiany w elemencie porcelany zostały pomyślnie zapisane.')
+                return redirect('porcelain_list')
     else:
         form = PorcelainForm(instance=item)
     

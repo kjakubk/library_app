@@ -8,6 +8,7 @@ urlpatterns = [
     path('porcelana/', views.porcelain_list, name='porcelain_list'),
     path('porcelana/dodaj/', views.porcelain_create, name='porcelain_create'),
     path('porcelana/<int:pk>/edytuj/', views.porcelain_edit, name='porcelain_edit'),
+    path('porcelana/<int:pk>/duplikuj/', views.porcelain_duplicate, name='porcelain_duplicate'),
     path('porcelana/<int:pk>/usun/', views.porcelain_delete, name='porcelain_delete'),
 
     # ==========================================

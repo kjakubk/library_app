@@ -213,6 +213,7 @@
                                     {% if item.image_1 or item.image_2 or item.image_3 or item.signature_image %}
                                         <button type="button" class="btn btn-sm btn-outline-primary rounded-2 border px-2 py-1" onclick="openGalleryModal({{ item.pk }})" title="Przeglądaj wszystkie zdjęcia">👁️ Podgląd</button>
                                     {% endif %}
+                                    <button type="button" class="btn btn-sm btn-outline-info rounded-2 border px-2 py-1 text-nowrap" onclick="openDuplicateModal({{ item.pk }}, '{{ item.name|escapejs }}', '{{ item.signature|escapejs }}')" title="Powiel / Klonuj ten element (np. 12 sztuk zastawy)">📋 Duplikuj</button>
                                     <a href="{% url 'porcelain_edit' item.pk %}" class="btn btn-sm btn-outline-secondary rounded-2 border px-2 py-1" title="Edytuj">✏️ Edytuj</a>
                                 </div>
                             </td>
@@ -260,6 +261,70 @@
             <div class="modal-footer border-top justify-content-center py-2">
                 <span id="galleryCounter" class="small text-muted fw-medium">Zdjęcie 1 z 1</span>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DUPLIKOWANIA / POWIELANIA -->
+<div class="modal fade" id="duplicateModal" tabindex="-1" aria-labelledby="duplicateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-body border rounded-4 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold text-body" id="duplicateModalLabel">
+                    📋 Powiel / Klonuj element zastawy
+                </h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <form method="POST" id="duplicateForm" action="">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <div class="small text-muted text-uppercase fw-bold mb-1">Element wzorcowy:</div>
+                        <div class="p-3 bg-body-secondary rounded-3 border">
+                            <strong id="duplicateItemName" class="text-body d-block fs-6"></strong>
+                            <span id="duplicateItemSignature" class="small text-muted"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="copiesCountInput" class="form-label fw-bold small text-muted text-uppercase mb-1">
+                            Liczba kopii do utworzenia:
+                        </label>
+                        <div class="input-group">
+                            <button class="btn btn-outline-secondary" type="button" onclick="adjustCopies(-1)">−</button>
+                            <input type="number" id="copiesCountInput" name="copies_count" class="form-control text-center fw-bold fs-5" value="1" min="1" max="50">
+                            <button class="btn btn-outline-secondary" type="button" onclick="adjustCopies(1)">+</button>
+                        </div>
+                        <div class="form-text small text-muted">
+                            Możesz szybko utworzyć od 1 do 50 identycznych sztuk (np. 6 lub 12 elementów zastawy).
+                        </div>
+                    </div>
+
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" role="switch" id="addNumberingCheck" name="add_numbering" checked>
+                        <label class="form-check-label small fw-medium" for="addNumberingCheck">
+                            Dodaj automatyczną numerację (#1, #2, #3...) do nazwy
+                        </label>
+                    </div>
+
+                    <div class="p-2.5 bg-info bg-opacity-10 border border-info border-opacity-25 rounded-3 small text-body">
+                        💡 <strong>Wskazówka:</strong> Wszystkie parametry (sygnatura, styl, rok, stan, cena) zostaną automatycznie powielone.
+                    </div>
+                </div>
+
+                <div class="modal-footer border-top d-flex justify-content-between p-3">
+                    <a href="#" id="openTemplateFormLink" class="btn btn-outline-secondary btn-sm rounded-pill px-3 text-nowrap">
+                        ✏️ Otwórz jako szablon
+                    </a>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-light btn-sm rounded-pill px-3" data-bs-dismiss="modal">Anuluj</button>
+                        <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm">
+                            ✨ Utwórz kopie
+                        </button>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -312,6 +377,24 @@
             document.getElementById('galleryModalImage').src = currentGalleryImages[currentIndex];
             document.getElementById('galleryCounter').textContent = `Zdjęcie ${currentIndex + 1} z ${currentGalleryImages.length}`;
         }
+    }
+
+    function openDuplicateModal(itemId, itemName, itemSignature) {
+        document.getElementById('duplicateItemName').textContent = itemName;
+        document.getElementById('duplicateItemSignature').textContent = itemSignature ? ('Sygnatura: ' + itemSignature) : 'Brak sygnatury';
+        document.getElementById('duplicateForm').action = '/kolekcje/porcelana/' + itemId + '/duplikuj/';
+        document.getElementById('openTemplateFormLink').href = '/kolekcje/porcelana/dodaj/?copy_from=' + itemId;
+        document.getElementById('copiesCountInput').value = 1;
+
+        var dupModal = new bootstrap.Modal(document.getElementById('duplicateModal'));
+        dupModal.show();
+    }
+
+    function adjustCopies(delta) {
+        const input = document.getElementById('copiesCountInput');
+        let val = parseInt(input.value) || 1;
+        val = Math.max(1, Math.min(50, val + delta));
+        input.value = val;
     }
 </script>
 {% endblock %}

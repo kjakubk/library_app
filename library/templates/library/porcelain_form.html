@@ -36,6 +36,16 @@
                     <form method="POST" enctype="multipart/form-data" id="modernDjangoForm">
                         {% csrf_token %}
 
+                        {% if is_copied %}
+                            <div class="alert alert-primary rounded-4 shadow-sm py-2.5 px-3 mb-4 d-flex align-items-center gap-3 border-0 bg-primary bg-opacity-10 text-primary">
+                                <span class="fs-4">📋</span>
+                                <div>
+                                    <div class="fw-bold small">Wstępnie wypełniono danymi z poprzedniego elementu!</div>
+                                    <div class="small opacity-75" style="font-size: 0.78rem;">Zmień nazwę lub zdjęcia i zapisz kolejny element z tej samej serii.</div>
+                                </div>
+                            </div>
+                        {% endif %}
+
                         {% if form.non_field_errors %}
                             <div class="alert alert-danger rounded-4 shadow-sm mb-4">
                                 {{ form.non_field_errors }}
@@ -237,10 +247,15 @@
                                     </a>
                                 {% endif %}
                             </div>
-                            <div class="d-flex flex-column-reverse flex-sm-row gap-2 gap-sm-3 align-items-stretch">
-                                <a href="{% url 'porcelain_list' %}" class="btn btn-light text-muted text-decoration-none small fw-medium py-2 px-4 rounded-pill text-center border shadow-none text-nowrap">Wróć bez zapisu</a>
-                                <button type="submit" class="btn btn-success px-4 px-sm-5 py-2 rounded-pill fw-bold shadow-sm d-inline-flex align-items-center justify-content-center gap-2 text-nowrap">
-                                    💾 <span>Zapisz zbiór</span>
+                            <div class="d-flex flex-column-reverse flex-sm-row gap-2 gap-sm-2 align-items-stretch">
+                                <a href="{% url 'porcelain_list' %}" class="btn btn-light text-muted text-decoration-none small fw-medium py-2 px-3 rounded-pill text-center border shadow-none text-nowrap">Anuluj</a>
+                                
+                                <button type="submit" name="action" value="save_and_clone" class="btn btn-outline-primary px-3 px-sm-4 py-2 rounded-pill fw-semibold shadow-sm d-inline-flex align-items-center justify-content-center gap-2 text-nowrap" title="Zapisuje ten element i od razu otwiera formularz z wypełnionymi danymi dla kolejnego">
+                                    📋 <span>Zapisz i dodaj podobny</span>
+                                </button>
+                                
+                                <button type="submit" name="action" value="save" class="btn btn-success px-4 px-sm-5 py-2 rounded-pill fw-bold shadow-sm d-inline-flex align-items-center justify-content-center gap-2 text-nowrap">
+                                    💾 <span>Zapisz</span>
                                 </button>
                             </div>
                         </div>
