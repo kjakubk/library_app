@@ -94,10 +94,13 @@ class PorcelainForm(forms.ModelForm):
         default_sigs = [val for val, label in Porcelain.SIGNATURE_CHOICES if val.strip()]
         all_sigs = sorted(list(set(default_sigs + db_sigs)), key=lambda s: s.lower())
 
-        choices = [('', '--- Wybierz sygnaturę z listy ---')]
+        choices = [
+            ('', '--- Wybierz sygnaturę z listy ---'),
+            ('__CUSTOM__', '➕ ✍️ [WPISZ NOWĄ / INNĄ SYGNATURĘ...]')
+        ]
         for sig in all_sigs:
             choices.append((sig, sig))
-        choices.append(('__CUSTOM__', '➕ Inna sygnatura / Wpisz nową...'))
+        choices.append(('__CUSTOM__', '➕ ✍️ [WPISZ NOWĄ / INNĄ SYGNATURĘ...]'))
         self.fields['signature_select'].choices = choices
 
         # 2. Ustawiamy wartości początkowe przy edycji

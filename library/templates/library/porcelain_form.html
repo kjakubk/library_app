@@ -64,25 +64,34 @@
 
                             <!-- Rząd 2: Sygnatura | Orientacyjny rok pochodzenia -->
                             <div class="col-12 col-md-6 mb-2">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <label for="{{ form.signature_select.id_for_label }}" class="form-label small fw-bold text-muted text-uppercase mb-0">
-                                        Sygnatura (Marka)
+                                <label class="form-label small fw-bold text-muted text-uppercase mb-1">
+                                    Sygnatura (Marka)
+                                </label>
+                                
+                                <!-- Przyciski wyboru trybu: Lista vs Wpisz nową -->
+                                <div class="btn-group w-100 mb-2 p-1 bg-body-secondary rounded-3 border" role="group">
+                                    <input type="radio" class="btn-check" name="sigModeRadio" id="sigModeList" autocomplete="off" checked>
+                                    <label class="btn btn-sm btn-outline-secondary border-0 rounded-2 fw-semibold py-1.5" for="sigModeList" id="sigModeListLabel">
+                                        📋 Wybierz z listy
                                     </label>
-                                    <button type="button" class="btn btn-link btn-sm text-primary p-0 text-decoration-none small fw-semibold" id="toggleCustomSigBtn">
-                                        ➕ Wpisz nową
-                                    </button>
-                                </div>
-                                {{ form.signature_select }}
-                                {% if form.signature_select.errors %}<div class="text-danger small mt-1 fw-bold">{{ form.signature_select.errors|striptags }}</div>{% endif %}
 
-                                <!-- Pole na nową, niestandardową sygnaturę -->
-                                <div id="customSignatureContainer" class="mt-2 p-2 bg-body-secondary rounded-3 border" style="display: none;">
-                                    <label for="{{ form.custom_signature.id_for_label }}" class="form-label small fw-bold text-primary mb-1 d-flex align-items-center gap-1">
-                                        <i class="bi bi-pencil-square"></i> Wpisz nową nazwę sygnatury:
+                                    <input type="radio" class="btn-check" name="sigModeRadio" id="sigModeCustom" autocomplete="off">
+                                    <label class="btn btn-sm btn-outline-primary border-0 rounded-2 fw-semibold py-1.5" for="sigModeCustom" id="sigModeCustomLabel">
+                                        ✍️ Wpisz nową sygnaturę
                                     </label>
+                                </div>
+
+                                <!-- 1. Tryb Listy Rozwijanej -->
+                                <div id="signatureListWrapper">
+                                    {{ form.signature_select }}
+                                    {% if form.signature_select.errors %}<div class="text-danger small mt-1 fw-bold">{{ form.signature_select.errors|striptags }}</div>{% endif %}
+                                </div>
+
+                                <!-- 2. Tryb Wpisywania Nowej Sygnatury -->
+                                <div id="signatureCustomWrapper" style="display: none;">
                                     {{ form.custom_signature }}
                                     <div class="form-text small text-muted" style="font-size: 0.75rem;">
-                                        Zostanie automatycznie zapisana i dołączona do Twojej kolekcji.
+                                        Wpisz dowolną nazwę manufaktury (np. <em>KPM Krister Waldenburg</em>, <em>Ćmielów Goplana</em>). Zostanie automatycznie dodana do listy.
                                     </div>
                                     {% if form.custom_signature.errors %}<div class="text-danger small mt-1 fw-bold">{{ form.custom_signature.errors|striptags }}</div>{% endif %}
                                 </div>
@@ -283,48 +292,48 @@
             }
         });
 
-        // Obsługa wyboru i wpisywania nowej sygnatury
+        // Obsługa przełącznika trybów sygnatury (Wybierz z listy vs Wpisz nową)
+        const radioList = document.getElementById('sigModeList');
+        const radioCustom = document.getElementById('sigModeCustom');
+        const listWrapper = document.getElementById('signatureListWrapper');
+        const customWrapper = document.getElementById('signatureCustomWrapper');
         const sigSelect = document.getElementById('signatureSelectField');
-        const customSigContainer = document.getElementById('customSignatureContainer');
         const customSigInput = document.getElementById('customSignatureField');
-        const toggleBtn = document.getElementById('toggleCustomSigBtn');
 
-        function checkSignatureState() {
-            if (!sigSelect || !customSigContainer) return;
-            if (sigSelect.value === '__CUSTOM__' || (customSigInput && customSigInput.value.trim().length > 0)) {
-                customSigContainer.style.display = 'block';
-                sigSelect.value = '__CUSTOM__';
+        function setMode(mode) {
+            if (mode === 'custom') {
+                if (radioCustom) radioCustom.checked = true;
+                if (listWrapper) listWrapper.style.display = 'none';
+                if (customWrapper) customWrapper.style.display = 'block';
+                if (sigSelect) sigSelect.value = '__CUSTOM__';
+                if (customSigInput) customSigInput.focus();
             } else {
-                customSigContainer.style.display = 'none';
+                if (radioList) radioList.checked = true;
+                if (listWrapper) listWrapper.style.display = 'block';
+                if (customWrapper) customWrapper.style.display = 'none';
+                if (sigSelect && sigSelect.value === '__CUSTOM__') {
+                    sigSelect.value = '';
+                }
             }
         }
+
+        if (radioList) radioList.addEventListener('change', function() { setMode('list'); });
+        if (radioCustom) radioCustom.addEventListener('change', function() { setMode('custom'); });
 
         if (sigSelect) {
             sigSelect.addEventListener('change', function() {
                 if (this.value === '__CUSTOM__') {
-                    customSigContainer.style.display = 'block';
-                    if (customSigInput) {
-                        customSigInput.focus();
-                    }
-                } else {
-                    customSigContainer.style.display = 'none';
-                    if (customSigInput) {
-                        customSigInput.value = '';
-                    }
+                    setMode('custom');
                 }
             });
         }
 
-        if (toggleBtn) {
-            toggleBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                if (sigSelect) sigSelect.value = '__CUSTOM__';
-                if (customSigContainer) customSigContainer.style.display = 'block';
-                if (customSigInput) customSigInput.focus();
-            });
+        // Inicjalizacja stanu
+        if ((customSigInput && customSigInput.value.trim().length > 0) || (sigSelect && sigSelect.value === '__CUSTOM__')) {
+            setMode('custom');
+        } else {
+            setMode('list');
         }
-
-        checkSignatureState();
     });
 </script>
 {% endblock %}
