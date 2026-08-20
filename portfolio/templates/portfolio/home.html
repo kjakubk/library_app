@@ -1,60 +1,73 @@
 {% extends 'library/base.html' %}
 
-{% block title %}Jakub Kępczyński - Portfolio & Data Hub{% endblock %}
+{% block title %}Kolekcjoner - Strona Główna{% endblock %}
 
 {% block content %}
 <div class="px-2 px-md-3 py-3 py-md-5 my-2 my-md-4 text-center">
     <div class="d-inline-flex align-items-center gap-2 px-3 py-1.5 rounded-pill bg-primary bg-opacity-10 text-primary small fw-semibold mb-3">
-        <i class="bi bi-code-slash"></i> Data Analyst & Python Developer
+        <i class="bi bi-collection"></i> Panel Kolekcjonera
     </div>
-    <h1 class="fs-2 fs-md-1 fw-bold mb-3" style="color: var(--text-main);">Witaj w moim Data Hubie!</h1>
+    <h1 class="fs-2 fs-md-1 fw-bold mb-3" style="color: var(--text-main);">Witaj w Twoim systemie kolekcji!</h1>
     <div class="col-lg-7 mx-auto">
         <p class="lead mb-4 fs-6 fs-md-5" style="color: var(--text-muted);">
-            Nazywam się <strong>Jakub Kępczyński</strong>. Na co dzień jako Data Analyst i Power BI Developer przekuwam surowe dane w czytelne dashboardy, wdrażam analitykę HR i automatyzuję procesy ETL. 
-            <br><br>
-            Po godzinach rozwijam tę aplikację – łącząc analitykę rynkową branży gamedev z prywatnym systemem inwentaryzacji zbiorów: od niemieckiej porcelany <em>China Blau</em>, przez klasyki winylowe rocka, aż po gry planszowe i wideo.
+            Oto Twoje centrum zarządzania domowymi zbiorami. Przeglądaj, zarządzaj i powiększaj swoje unikatowe zbiory: od klasycznych powieści, poprzez rzadką porcelanę, aż po stare płyty winylowe i gry.
         </p>
         <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center mt-3 mt-md-4">
-            <a href="{% url 'cv_view' %}" class="btn btn-primary px-4 py-2.5 rounded-3 shadow-sm fw-semibold d-flex align-items-center justify-content-center">
-                <i class="bi bi-person-vcard me-2"></i> Zobacz moje CV
+            <a href="{% url 'book_list' %}" class="btn btn-primary px-4 py-2.5 rounded-3 shadow-sm fw-semibold d-flex align-items-center justify-content-center">
+                <i class="bi bi-journal-bookmark-fill me-2"></i> Przejdź do Biblioteki
             </a>
-            <a href="{% url 'da_portfolio:game_market' %}" class="btn btn-outline-primary px-4 py-2.5 rounded-3 fw-semibold d-flex align-items-center justify-content-center">
-                <i class="bi bi-graph-up-arrow me-2"></i> Rynek Gamingowy
-            </a>
-            <a href="{% url 'book_list' %}" class="btn btn-outline-secondary px-4 py-2.5 rounded-3 fw-semibold d-flex align-items-center justify-content-center">
-                <i class="bi bi-collection me-2"></i> Kolekcje
+            <a href="{% url 'porcelain_list' %}" class="btn btn-outline-secondary px-4 py-2.5 rounded-3 fw-semibold d-flex align-items-center justify-content-center">
+                <i class="bi bi-cup-hot-fill me-2"></i> Porcelana
             </a>
         </div>
     </div>
 </div>
 
-<!-- Kafelki technologiczne -->
+<!-- Kafelki ze statystykami kolekcji -->
 <div class="row g-3 text-center mt-2 mt-md-4">
-    <div class="col-12 col-md-4">
+    <div class="col-12 col-md-4 col-lg-2">
         <div class="p-3 p-md-4 border-0 rounded-4 shadow-sm h-100" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
             <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 48px; height: 48px;">
-                <i class="bi bi-cpu fs-4"></i>
+                <i class="bi bi-book fs-4"></i>
             </div>
-            <h5 class="fw-bold mb-2">Python & Django</h5>
-            <p class="small text-muted mb-0">Solidny backend, architektura relacyjna, integracje z zewnętrznymi API (IGDB, yfinance, Google Books, BN).</p>
+            <h5 class="fw-bold mb-1">{{ book_count }}</h5>
+            <p class="small text-muted mb-0">Książek</p>
         </div>
     </div>
-    <div class="col-12 col-md-4">
-        <div class="p-3 p-md-4 border-0 rounded-4 shadow-sm h-100" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
-            <div class="bg-success bg-opacity-10 text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 48px; height: 48px;">
-                <i class="bi bi-database-check fs-4"></i>
-            </div>
-            <h5 class="fw-bold mb-2">PostgreSQL & ETL</h5>
-            <p class="small text-muted mb-0">Wydajne modelowanie danych, transakcyjność, relacje wiele-do-wielu oraz wielowątkowe potoki zasilające.</p>
-        </div>
-    </div>
-    <div class="col-12 col-md-4">
+    <div class="col-12 col-md-4 col-lg-2">
         <div class="p-3 p-md-4 border-0 rounded-4 shadow-sm h-100" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
             <div class="bg-info bg-opacity-10 text-info rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 48px; height: 48px;">
-                <i class="bi bi-bar-chart-line fs-4"></i>
+                <i class="bi bi-cup-hot fs-4"></i>
             </div>
-            <h5 class="fw-bold mb-2">Data & BI Analytics</h5>
-            <p class="small text-muted mb-0">Karty wskaźników, interaktywne wykresy Chart.js, przygotowanie danych i geolokalizacji pod Power BI.</p>
+            <h5 class="fw-bold mb-1">{{ porcelain_count }}</h5>
+            <p class="small text-muted mb-0">Porcelany</p>
+        </div>
+    </div>
+    <div class="col-12 col-md-4 col-lg-3">
+        <div class="p-3 p-md-4 border-0 rounded-4 shadow-sm h-100" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
+            <div class="bg-success bg-opacity-10 text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 48px; height: 48px;">
+                <i class="bi bi-vinyl fs-4"></i>
+            </div>
+            <h5 class="fw-bold mb-1">{{ vinyl_count }}</h5>
+            <p class="small text-muted mb-0">Płyt Winylowych</p>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-lg-2">
+        <div class="p-3 p-md-4 border-0 rounded-4 shadow-sm h-100" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
+            <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 48px; height: 48px;">
+                <i class="bi bi-controller fs-4"></i>
+            </div>
+            <h5 class="fw-bold mb-1">{{ video_game_count }}</h5>
+            <p class="small text-muted mb-0">Gier Wideo</p>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-lg-3">
+        <div class="p-3 p-md-4 border-0 rounded-4 shadow-sm h-100" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
+            <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 48px; height: 48px;">
+                <i class="bi bi-dice-5 fs-4"></i>
+            </div>
+            <h5 class="fw-bold mb-1">{{ board_game_count }}</h5>
+            <p class="small text-muted mb-0">Gier Planszowych</p>
         </div>
     </div>
 </div>

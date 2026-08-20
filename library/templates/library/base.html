@@ -365,21 +365,7 @@
                     </a>
                 </li>
 
-                <!-- CV / O mnie -->
-                <li class="menu-item mb-1">
-                    <a href="{% url 'cv_view' %}" class="sidebar-link {% if request.resolver_match.url_name == 'cv_view' %}active{% endif %}">
-                        <i class="bi bi-person-vcard sidebar-icon"></i>
-                        <span>O mnie / CV</span>
-                    </a>
-                </li>
-
-                <!-- Data Analysis Dashboard -->
-                <li class="menu-item mb-1">
-                    <a href="{% url 'da_portfolio:game_market' %}" class="sidebar-link {% if 'data-analysis' in request.path %}active{% endif %}">
-                        <i class="bi bi-graph-up-arrow sidebar-icon text-primary"></i>
-                        <span>Data Analysis</span>
-                    </a>
-                </li>
+                <!-- CV i Data Analysis usunięte -->
 
                 <!-- Portfolio Foto -->
                 <li class="menu-item mb-1">
@@ -528,7 +514,7 @@
                             <li><span class="dropdown-item-text fw-bold text-body">{{ user.username }}</span></li>
                             <li><hr class="dropdown-divider my-1"></li>
                             <li><a class="dropdown-item small" href="{% url 'user_list' %}"><i class="bi bi-people me-2"></i>Użytkownicy</a></li>
-                            <li><a class="dropdown-item small" href="{% url 'cv_view' %}"><i class="bi bi-person-vcard me-2"></i>Moje CV</a></li>
+                            <!-- Link do CV usunięty -->
                             <li><hr class="dropdown-divider my-1"></li>
                             <li><a class="dropdown-item small text-danger" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Wyloguj się</a></li>
                         </ul>
@@ -572,11 +558,7 @@
                 <span>Główna</span>
             </a>
 
-            <!-- 2. Data Analysis -->
-            <a href="{% url 'da_portfolio:game_market' %}" class="mobile-nav-item {% if 'data-analysis' in request.path %}active{% endif %}">
-                <i class="bi bi-graph-up-arrow"></i>
-                <span>Analiza</span>
-            </a>
+            <!-- 2. Data Analysis usunięte -->
 
             <!-- 3. Kolekcje (Wysuwany Bottom Sheet) -->
             <button class="mobile-nav-item {% if 'kolekcje' in request.path %}active{% endif %}" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileCollectionsSheet" aria-controls="mobileCollectionsSheet">

@@ -14,17 +14,19 @@ from django.http import HttpResponse
 from .models import Photo, Album, Experience
 from .forms import PhotoForm, AlbumForm, LoginForm, UserAdminCreateForm, UserAdminPasswordChangeForm
 
+from library.models import Book, Porcelain, VinylRecord, VideoGame, BoardGame
 
 def home_view(request):
     """Strona główna witryny / powitanie (wymaga zalogowania przez middleware)."""
-    return render(request, 'portfolio/home.html')
-
-
-def cv_view(request):
-    """Interaktywny widok CV i doświadczenia zawodowego."""
-    experiences = Experience.objects.all().order_by('-start_date')
-    return render(request, 'portfolio/cv.html', {'experiences': experiences})
-
+    # Zbieranie fajnych statystyk dla różnych kolekcji
+    context = {
+        'book_count': Book.objects.count(),
+        'porcelain_count': Porcelain.objects.count(),
+        'vinyl_count': VinylRecord.objects.count(),
+        'video_game_count': VideoGame.objects.count(),
+        'board_game_count': BoardGame.objects.count(),
+    }
+    return render(request, 'portfolio/home.html', context)
 
 def portfolio_gallery(request):
     """Galeria zdjęć z filtrowaniem po albumach."""

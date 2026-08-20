@@ -50,7 +50,6 @@ INSTALLED_APPS = [
     # My apps:
     'library',
     'portfolio',
-    'da_portfolio',
 ]
 
 MIDDLEWARE = [

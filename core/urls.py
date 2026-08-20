@@ -10,7 +10,6 @@ from portfolio import views as portfolio_views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', portfolio_views.home_view, name='home'),
-    path('cv/', portfolio_views.cv_view, name='cv_view'),
     path('galeria/', include('portfolio.urls')),
     path('logowanie/', portfolio_views.login_view, name='login'),
     path('wyloguj/', portfolio_views.logout_view, name='logout'),
@@ -20,7 +19,6 @@ urlpatterns = [
     path('uzytkownicy/<int:pk>/haslo/', portfolio_views.user_change_password_view, name='user_change_password'),
     path('kopia-zapasowa/pobierz/', portfolio_views.download_backup_zip, name='download_backup_zip'),
     path('kolekcje/', include('library.urls')),
-    path('data-analysis/', include('da_portfolio.urls')),
 ]
 
 if settings.DEBUG:
