@@ -52,7 +52,23 @@ urlpatterns = [
     path('ksiazki/<int:pk>/toggle-read/', views.toggle_book_read, name='toggle_book_read'),
 
     # ==========================================
-    # 6. ENDPOINTY API (ISBN LOOKUP)
+    # 6. KONSOLE I AKCESORIA
+    # ==========================================
+    path('konsole/', views.console_list, name='console_list'),
+    path('konsole/dodaj/', views.console_create, name='console_create'),
+    path('konsole/<int:pk>/edytuj/', views.console_update, name='console_update'),
+    path('konsole/<int:pk>/usun/', views.console_delete, name='console_delete'),
+
+    # ==========================================
+    # 7. INNE ANTYKI
+    # ==========================================
+    path('antyki/', views.antique_list, name='antique_list'),
+    path('antyki/dodaj/', views.antique_create, name='antique_create'),
+    path('antyki/<int:pk>/edytuj/', views.antique_update, name='antique_update'),
+    path('antyki/<int:pk>/usun/', views.antique_delete, name='antique_delete'),
+
+    # ==========================================
+    # 8. ENDPOINTY API (ISBN LOOKUP)
     # ==========================================
     path('api/ksiazka/<str:isbn>/', views.fetch_book_data, name='fetch_book_data'),
 ]

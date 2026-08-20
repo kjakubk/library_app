@@ -333,3 +333,66 @@ class BoardGame(models.Model):
 
     def __str__(self):
         return self.title
+
+# ==========================================
+# 6. KONSOLE I AKCESORIA
+# ==========================================
+
+class ConsoleHardware(models.Model):
+    name = models.CharField(max_length=200, verbose_name="Nazwa konsoli / akcesorium")
+    manufacturer = models.CharField(max_length=200, blank=True, null=True, verbose_name="Producent (np. Sony, Nintendo)")
+    category = models.CharField(max_length=100, blank=True, null=True, verbose_name="Kategoria (np. Konsola, Pad, Karta pamięci)")
+    release_year = models.IntegerField(blank=True, null=True, verbose_name="Rok wydania")
+    
+    condition = models.CharField(max_length=50, blank=True, null=True, verbose_name="Stan zachowania")
+    price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Wartość / Cena")
+    
+    image = models.ImageField(upload_to='consoles/', blank=True, null=True, verbose_name="Zdjęcie główne")
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Data dodania")
+
+    class Meta:
+        verbose_name = "Konsola / Akcesorium"
+        verbose_name_plural = "Konsole i Akcesoria"
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['name']),
+            models.Index(fields=['manufacturer']),
+            models.Index(fields=['category']),
+            models.Index(fields=['-created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.manufacturer})"
+
+
+# ==========================================
+# 7. INNE ANTYKI
+# ==========================================
+
+class Antique(models.Model):
+    name = models.CharField(max_length=200, verbose_name="Nazwa przedmiotu (np. Lampa, Obraz, Ramka)")
+    material = models.CharField(max_length=100, blank=True, null=True, verbose_name="Materiał (np. Mosiądz, Szkło, Drewno)")
+    style = models.CharField(max_length=100, blank=True, null=True, verbose_name="Styl / Epoka")
+    year_of_origin = models.CharField(max_length=100, blank=True, null=True, verbose_name="Orientacyjny rok pochodzenia")
+    
+    condition = models.CharField(max_length=50, blank=True, null=True, verbose_name="Stan zachowania")
+    price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Wartość / Cena")
+    
+    image = models.ImageField(upload_to='antiques/', blank=True, null=True, verbose_name="Zdjęcie główne")
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Data dodania")
+
+    class Meta:
+        verbose_name = "Inny Antyk"
+        verbose_name_plural = "Inne Antyki"
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['name']),
+            models.Index(fields=['material']),
+            models.Index(fields=['style']),
+            models.Index(fields=['-created_at']),
+        ]
+
+    def __str__(self):
+        return self.name

@@ -14,7 +14,7 @@ from django.http import HttpResponse
 from .models import Photo, Album, Experience
 from .forms import PhotoForm, AlbumForm, LoginForm, UserAdminCreateForm, UserAdminPasswordChangeForm
 
-from library.models import Book, Porcelain, VinylRecord, VideoGame, BoardGame
+from library.models import Book, Porcelain, VinylRecord, VideoGame, BoardGame, ConsoleHardware, Antique
 
 def home_view(request):
     """Strona główna witryny / powitanie (wymaga zalogowania przez middleware)."""
@@ -25,6 +25,8 @@ def home_view(request):
         'vinyl_count': VinylRecord.objects.count(),
         'video_game_count': VideoGame.objects.count(),
         'board_game_count': BoardGame.objects.count(),
+        'console_count': ConsoleHardware.objects.count(),
+        'antique_count': Antique.objects.count(),
     }
     return render(request, 'portfolio/home.html', context)
 

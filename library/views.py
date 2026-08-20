@@ -13,8 +13,8 @@ from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
-from .forms import BookForm, CSVImportForm, VinylRecordForm, PorcelainForm, BoardGameForm, VideoGameForm
-from .models import BoardGame, Book, Porcelain, VideoGame, VinylRecord, CATEGORY_CHOICES
+from .forms import BookForm, CSVImportForm, VinylRecordForm, PorcelainForm, BoardGameForm, VideoGameForm, ConsoleHardwareForm, AntiqueForm
+from .models import BoardGame, Book, Porcelain, VideoGame, VinylRecord, ConsoleHardware, Antique, CATEGORY_CHOICES
 from .book_services import (
     get_unified_book_data, 
     download_and_save_book_cover, 
@@ -963,3 +963,131 @@ def toggle_book_read(request, pk):
         except Book.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Książka nie istnieje'}, status=404)
     return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
+
+
+# ==========================================
+# 6. KONSOLE I AKCESORIA
+# ==========================================
+
+@login_required
+def console_list(request):
+    query = request.GET.get('q', '').strip()
+    items = ConsoleHardware.objects.all()
+    if query:
+        items = items.filter(
+            Q(name__icontains=query) |
+            Q(manufacturer__icontains=query) |
+            Q(category__icontains=query)
+        )
+    items = items.order_by('name')
+
+    aggregates = ConsoleHardware.objects.aggregate(
+        total_count=Count('id'),
+        with_image=Count('id', filter=~Q(image__isnull=True) & ~Q(image__exact=''))
+    )
+    
+    context = {
+        'items': items,
+        'query': query,
+        'total_count': aggregates['total_count'],
+        'with_image': aggregates['with_image'],
+    }
+    return render(request, 'library/console_list.html', context)
+
+@login_required
+def console_create(request):
+    if request.method == 'POST':
+        form = ConsoleHardwareForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Pomyślnie dodano element.')
+            return redirect('console_list')
+    else:
+        form = ConsoleHardwareForm()
+    return render(request, 'library/console_form.html', {'form': form, 'title': 'Dodaj konsolę lub akcesorium'})
+
+@login_required
+def console_update(request, pk):
+    item = get_object_or_404(ConsoleHardware, pk=pk)
+    if request.method == 'POST':
+        form = ConsoleHardwareForm(request.POST, request.FILES, instance=item)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Zaktualizowano pomyślnie.')
+            return redirect('console_list')
+    else:
+        form = ConsoleHardwareForm(instance=item)
+    return render(request, 'library/console_form.html', {'form': form, 'title': 'Edytuj konsolę lub akcesorium', 'item': item})
+
+@login_required
+def console_delete(request, pk):
+    item = get_object_or_404(ConsoleHardware, pk=pk)
+    if request.method == 'POST':
+        item.delete()
+        messages.success(request, 'Usunięto pomyślnie.')
+        return redirect('console_list')
+    return redirect('console_list')
+
+
+# ==========================================
+# 7. INNE ANTYKI
+# ==========================================
+
+@login_required
+def antique_list(request):
+    query = request.GET.get('q', '').strip()
+    items = Antique.objects.all()
+    if query:
+        items = items.filter(
+            Q(name__icontains=query) |
+            Q(material__icontains=query) |
+            Q(style__icontains=query)
+        )
+    items = items.order_by('name')
+
+    aggregates = Antique.objects.aggregate(
+        total_count=Count('id'),
+        with_image=Count('id', filter=~Q(image__isnull=True) & ~Q(image__exact=''))
+    )
+
+    context = {
+        'items': items,
+        'query': query,
+        'total_count': aggregates['total_count'],
+        'with_image': aggregates['with_image'],
+    }
+    return render(request, 'library/antique_list.html', context)
+
+@login_required
+def antique_create(request):
+    if request.method == 'POST':
+        form = AntiqueForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Pomyślnie dodano antyk.')
+            return redirect('antique_list')
+    else:
+        form = AntiqueForm()
+    return render(request, 'library/antique_form.html', {'form': form, 'title': 'Dodaj antyk'})
+
+@login_required
+def antique_update(request, pk):
+    item = get_object_or_404(Antique, pk=pk)
+    if request.method == 'POST':
+        form = AntiqueForm(request.POST, request.FILES, instance=item)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Zaktualizowano antyk.')
+            return redirect('antique_list')
+    else:
+        form = AntiqueForm(instance=item)
+    return render(request, 'library/antique_form.html', {'form': form, 'title': 'Edytuj antyk', 'item': item})
+
+@login_required
+def antique_delete(request, pk):
+    item = get_object_or_404(Antique, pk=pk)
+    if request.method == 'POST':
+        item.delete()
+        messages.success(request, 'Usunięto pomyślnie.')
+        return redirect('antique_list')
+    return redirect('antique_list')

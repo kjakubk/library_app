@@ -1,5 +1,5 @@
 from django import forms
-from .models import Book, VinylRecord,Porcelain,BoardGame,VideoGame
+from .models import Book, VinylRecord, Porcelain, BoardGame, VideoGame, ConsoleHardware, Antique
 
 
 class VinylRecordForm(forms.ModelForm):
@@ -177,4 +177,39 @@ class VideoGameForm(forms.ModelForm):
             'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'cover_image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
             'media_image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+        }
+
+
+class ConsoleHardwareForm(forms.ModelForm):
+    class Meta:
+        model = ConsoleHardware
+        fields = [
+            'name', 'manufacturer', 'category', 'release_year', 
+            'condition', 'price', 'image'
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. PlayStation 5 / DualSense'}),
+            'manufacturer': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. Sony, Nintendo'}),
+            'category': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. Konsola, Pad'}),
+            'release_year': forms.NumberInput(attrs={'class': 'form-control'}),
+            'condition': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. Idealny / Używany'}),
+            'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+        }
+
+class AntiqueForm(forms.ModelForm):
+    class Meta:
+        model = Antique
+        fields = [
+            'name', 'material', 'style', 'year_of_origin', 
+            'condition', 'price', 'image'
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. Lampa naftowa, Mosiężny świecznik'}),
+            'material': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. Mosiądz, Miedź, Szkło'}),
+            'style': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. Art Deco, Secesja'}),
+            'year_of_origin': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. 1920-1930'}),
+            'condition': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. Dobry, do renowacji'}),
+            'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
         }

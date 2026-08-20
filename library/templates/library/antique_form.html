@@ -1,0 +1,109 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if item %}Edytuj antyk - {{ item.name }}{% else %}Dodaj antyk{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-2 px-md-4 py-4 mb-5 d-flex justify-content-center">
+    
+    <div class="card bg-body shadow-sm border rounded-4 overflow-hidden w-100" style="max-width: 800px;">
+        <div class="card-header bg-body border-bottom px-4 py-3">
+            <h4 class="mb-0 fw-bold text-body d-flex align-items-center gap-2">
+                {% if item %}
+                    ✏️ Edytuj: <span class="text-primary">{{ item.name }}</span>
+                {% else %}
+                    🕰️ Dodaj inny antyk
+                {% endif %}
+            </h4>
+        </div>
+        
+        <div class="card-body p-4 p-md-5">
+            <form method="POST" enctype="multipart/form-data" class="row g-4">
+                {% csrf_token %}
+                
+                <div class="col-md-6">
+                    <label class="form-label fw-medium text-body">Nazwa przedmiotu</label>
+                    {{ form.name }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-medium text-body">Materiał</label>
+                    {{ form.material }}
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label fw-medium text-body">Styl / Epoka</label>
+                    {{ form.style }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-medium text-body">Orientacyjny rok</label>
+                    {{ form.year_of_origin }}
+                </div>
+
+                <div class="col-md-8">
+                    <label class="form-label fw-medium text-body">Stan zachowania</label>
+                    {{ form.condition }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-medium text-body">Wartość (PLN)</label>
+                    {{ form.price }}
+                </div>
+
+                <div class="col-12 mt-2">
+                    <hr class="border-secondary border-opacity-25">
+                    <h6 class="fw-bold text-body mb-3">📸 Zdjęcie główne</h6>
+                </div>
+
+                <div class="col-md-6">
+                    {{ form.image }}
+                    {% if item and item.image %}
+                        <div class="mt-2 p-2 bg-body-secondary rounded-3 d-inline-block border">
+                            <img src="{{ item.image.url }}" alt="Zdjęcie" class="rounded" style="height: 100px; object-fit: cover;">
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="col-12 mt-5 d-flex justify-content-between border-top pt-4">
+                    <div>
+                        {% if item %}
+                            <button type="button" class="btn btn-outline-danger rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                                🗑️ Usuń
+                            </button>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'antique_list' %}" class="btn btn-outline-secondary rounded-pill px-4">Anuluj</a>
+                        <button type="submit" class="btn btn-primary rounded-pill px-5 fw-semibold shadow-sm">
+                            {% if item %}Zapisz zmiany{% else %}Dodaj do kolekcji{% endif %}
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% if item %}
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header bg-danger text-white rounded-top-4">
+                <h5 class="modal-title fw-bold">Potwierdzenie usunięcia</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <p class="mb-0 fs-5">Czy na pewno chcesz usunąć przedmiot<br><strong>{{ item.name }}</strong>?</p>
+            </div>
+            <div class="modal-footer justify-content-center border-0 pb-4">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Anuluj</button>
+                <form method="POST" action="{% url 'antique_delete' item.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm">Tak, usuń</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
