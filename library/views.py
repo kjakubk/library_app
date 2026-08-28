@@ -1226,29 +1226,21 @@ def steam_fetch_games(request):
     if not steam_id or not api_key:
         return JsonResponse({'error': 'Missing API Key or ID'}, status=400)
         
-    is_steam_id64 = steam_id.isdigit() and len(steam_id) == 17 and steam_id.startswith('7656')
-    
-    if not is_steam_id64:
+    if not steam_id.isdigit():
         vanity_url = f'http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key={api_key}&vanityurl={steam_id}'
         try:
-            r = requests.get(vanity_url, timeout=10)
-            if r.status_code != 200:
-                return JsonResponse({'error': f'Steam API odrzuciło żądanie (Vanity). Status: {r.status_code}'}, status=400)
-            data = r.json()
-            if data.get('response', {}).get('success') == 1:
-                steam_id = data['response']['steamid']
+            r = requests.get(vanity_url, timeout=10).json()
+            if r.get('response', {}).get('success') == 1:
+                steam_id = r['response']['steamid']
             else:
-                return JsonResponse({'error': 'Nie znaleziono profilu Steam o tej nazwie'}, status=400)
-        except Exception as e:
-            return JsonResponse({'error': f'Błąd przy sprawdzaniu nazwy: {str(e)}'}, status=500)
+                return JsonResponse({'error': 'Vanity ID not found'}, status=400)
+        except Exception:
+            return JsonResponse({'error': 'Connection error'}, status=500)
             
     owned_games_url = f'http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={api_key}&steamid={steam_id}&include_appinfo=1&include_played_free_games=1'
     try:
-        r = requests.get(owned_games_url, timeout=15)
-        if r.status_code != 200:
-            return JsonResponse({'error': f'Steam API zwróciło błąd. Status: {r.status_code}'}, status=400)
-        data = r.json()
-        games = data.get('response', {}).get('games', [])
+        r = requests.get(owned_games_url, timeout=15).json()
+        games = r.get('response', {}).get('games', [])
         if not games:
             return JsonResponse({'games': []})
             
