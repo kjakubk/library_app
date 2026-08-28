@@ -14,12 +14,12 @@ class VinylRecordForm(forms.ModelForm):
         widgets = {
             'artist': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. Pink Floyd'}),
             'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. The Dark Side of the Moon'}),
-            'label': forms.TextInput(attrs={'class': 'form-control'}),
-            'genre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. Rock'}),
-            'release_year': forms.NumberInput(attrs={'class': 'form-control'}),
+            'label': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. Harvest / EMI'}),
+            'genre': forms.Select(attrs={'class': 'form-select'}),
+            'release_year': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'np. 1973'}),
             'disc_count': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
-            'condition': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. NM / VG+'}),
-            'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'condition': forms.Select(attrs={'class': 'form-select'}),
+            'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
             'front_cover': forms.ClearableFileInput(attrs={'class': 'form-control'}),
             'back_cover': forms.ClearableFileInput(attrs={'class': 'form-control'}),
         }

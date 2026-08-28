@@ -159,15 +159,45 @@ class Porcelain(models.Model):
 # ==========================================
 
 class VinylRecord(models.Model):
+    GENRE_CHOICES = [
+        ('Rock', 'Rock'),
+        ('Pop', 'Pop'),
+        ('Jazz', 'Jazz'),
+        ('Blues', 'Blues'),
+        ('Elektroniczna / Synth', 'Elektroniczna / Synth'),
+        ('Hip-Hop / Rap', 'Hip-Hop / Rap'),
+        ('Metal / Hard Rock', 'Metal / Hard Rock'),
+        ('Klasyczna', 'Klasyczna'),
+        ('Polski Rock / Polska Muzyka', 'Polski Rock / Polska Muzyka'),
+        ('Funk / Soul / R&B', 'Funk / Soul / R&B'),
+        ('Reggae / Dub', 'Reggae / Dub'),
+        ('Punk / New Wave', 'Punk / New Wave'),
+        ('Filmowa / Soundtrack', 'Filmowa / Soundtrack'),
+        ('Folk / Country', 'Folk / Country'),
+        ('Ambient / Chillout', 'Ambient / Chillout'),
+        ('Inny', 'Inny'),
+    ]
+
+    CONDITION_CHOICES = [
+        ('Mint (M) - Nowy / Folia', 'Mint (M) - Nowy / Fabryczna folia'),
+        ('Near Mint (NM / M-)', 'Near Mint (NM / M-) - Prawie idealny'),
+        ('Excellent (EX / VG++)', 'Excellent (EX / VG++) - Znakomity'),
+        ('Very Good Plus (VG+)', 'Very Good Plus (VG+) - Bardzo dobry plus'),
+        ('Very Good (VG)', 'Very Good (VG) - Bardzo dobry'),
+        ('Good Plus (G+)', 'Good Plus (G+) - Dobry plus'),
+        ('Good (G)', 'Good (G) - Dobry'),
+        ('Fair / Poor (F/P)', 'Fair / Poor (F/P) - Dostateczny / Uszkodzony'),
+    ]
+
     artist = models.CharField(max_length=200, verbose_name="Wykonawca / Zespół")
     title = models.CharField(max_length=200, verbose_name="Tytuł albumu")
     label = models.CharField(max_length=200, blank=True, null=True, verbose_name="Wytwórnia płytowa")
     
-    genre = models.CharField(max_length=100, blank=True, null=True, verbose_name="Gatunek")
+    genre = models.CharField(max_length=100, choices=GENRE_CHOICES, blank=True, null=True, verbose_name="Gatunek")
     release_year = models.IntegerField(blank=True, null=True, verbose_name="Rok wydania")
     disc_count = models.IntegerField(default=1, verbose_name="Ilość płyt w wydaniu")
     
-    condition = models.CharField(max_length=50, blank=True, null=True, verbose_name="Stan (Płyta / Okładka)")
+    condition = models.CharField(max_length=100, choices=CONDITION_CHOICES, blank=True, null=True, verbose_name="Stan (Płyta / Okładka)")
     price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Cena / Wartość")
     
     front_cover = models.ImageField(upload_to='vinyls/front/', blank=True, null=True, verbose_name="Przód okładki")
