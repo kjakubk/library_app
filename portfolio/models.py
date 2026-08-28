@@ -77,8 +77,8 @@ class Experience(models.Model):
     job_title = models.CharField(max_length=150, verbose_name="Stanowisko")
     company = models.CharField(max_length=150, verbose_name="Firma / Organizacja")
     location = models.CharField(max_length=100, blank=True, default="", verbose_name="Lokalizacja / Tryb")
-    start_date = models.CharField(max_length=50, default="2023", verbose_name="Data rozpoczęcia (np. 01.2023)")
-    end_date = models.CharField(max_length=50, blank=True, default="Obecnie", verbose_name="Data zakończenia")
+    start_date = models.DateField(null=True, blank=True, verbose_name="Data rozpoczęcia")
+    end_date = models.DateField(null=True, blank=True, verbose_name="Data zakończenia")
     is_current = models.BooleanField(default=False, verbose_name="Aktualne stanowisko")
     description = models.TextField(verbose_name="Opis obowiązków i osiągnięć")
     order = models.IntegerField(default=0, verbose_name="Kolejność")
@@ -86,7 +86,7 @@ class Experience(models.Model):
     class Meta:
         verbose_name = "Doświadczenie zawodowe"
         verbose_name_plural = "Doświadczenia zawodowe"
-        ordering = ['order', '-id']
+        ordering = ['-is_current', '-start_date', '-id']
 
     def __str__(self):
         return f"{self.job_title} w {self.company}"

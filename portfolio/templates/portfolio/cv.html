@@ -49,15 +49,27 @@
     .cv-sidebar {
         background-color: var(--bs-tertiary-bg);
         border-right: 1px solid var(--bs-border-color);
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        word-break: break-word;
+        overflow-wrap: anywhere;
     }
     @media (max-width: 991px) {
         .cv-sidebar {
             border-right: none;
             border-bottom: 1px solid var(--bs-border-color);
+            min-height: auto;
         }
     }
 
     .skill-badge {
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: anywhere !important;
+        max-width: 100%;
+        text-align: left;
+        line-height: 1.35;
         transition: all 0.2s ease;
     }
     .skill-badge:hover {
@@ -326,11 +338,11 @@
                                     </div>
                                     <div class="d-flex align-items-center gap-2">
                                         <span class="badge bg-body-secondary text-body border px-2.5 py-1 rounded-pill small font-monospace">
-                                            {{ exp.start_date }} — {{ exp.end_date|default:"Obecnie" }}
+                                            {% if exp.start_date %}{{ exp.start_date|date:"m.Y" }}{% else %}—{% endif %} — {% if exp.is_current or not exp.end_date %}<span class="text-primary fw-bold">Obecnie</span>{% else %}{{ exp.end_date|date:"m.Y" }}{% endif %}
                                         </span>
                                         <!-- Przyciski edycji/usuwania -->
                                         <div class="no-print d-flex gap-1">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary border-0 p-1" onclick="openEditExperienceModal({{ exp.pk }}, '{{ exp.job_title|escapejs }}', '{{ exp.company|escapejs }}', '{{ exp.location|escapejs }}', '{{ exp.start_date|escapejs }}', '{{ exp.end_date|escapejs }}', {{ exp.is_current|yesno:'true,false' }}, '{{ exp.description|escapejs }}')" title="Edytuj">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary border-0 p-1" onclick="openEditExperienceModal({{ exp.pk }}, '{{ exp.job_title|escapejs }}', '{{ exp.company|escapejs }}', '{{ exp.location|escapejs }}', '{{ exp.start_date|date:'Y-m-d'|default:'' }}', '{{ exp.end_date|date:'Y-m-d'|default:'' }}', {{ exp.is_current|yesno:'true,false' }}, '{{ exp.description|escapejs }}')" title="Edytuj">
                                                 ✏️
                                             </button>
                                             <form method="POST" action="{% url 'cv_experience_delete' exp.pk %}" class="d-inline" onsubmit="return confirm('Czy na pewno usunąć stanowisko {{ exp.job_title }} w {{ exp.company }}?')">
@@ -492,20 +504,16 @@
                         <input type="text" name="company" id="exp_company" class="form-control" placeholder="np. Tech Solutions Sp. z o.o." required>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label small fw-medium">Lokalizacja / Tryb</label>
-                        <input type="text" name="location" id="exp_location" class="form-control" placeholder="np. Zdalnie / Warszawa">
-                    </div>
-                    <div class="col-md-4">
                         <label class="form-label small fw-medium">Data rozpoczęcia</label>
-                        <input type="text" name="start_date" id="exp_start_date" class="form-control" placeholder="np. 01.2022 lub 2022" required>
+                        <input type="date" name="start_date" id="exp_start_date" class="form-control" required>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label small fw-medium">Data zakończenia</label>
-                        <input type="text" name="end_date" id="exp_end_date" class="form-control" placeholder="np. Obecnie lub 12.2023">
+                        <input type="date" name="end_date" id="exp_end_date" class="form-control">
                     </div>
                     <div class="col-12">
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="is_current" id="exp_is_current" onchange="document.getElementById('exp_end_date').disabled = this.checked; if(this.checked) document.getElementById('exp_end_date').value='Obecnie';">
+                            <input class="form-check-input" type="checkbox" name="is_current" id="exp_is_current" onchange="toggleExpCurrent(this)">
                             <label class="form-check-label small" for="exp_is_current">Aktualnie pracuję na tym stanowisku</label>
                         </div>
                     </div>
@@ -672,20 +680,45 @@
 </div>
 
 <script>
+    function toggleExpCurrent(checkbox) {
+        const endDateInput = document.getElementById('exp_end_date');
+        if (checkbox.checked) {
+            endDateInput.value = '';
+            endDateInput.disabled = true;
+        } else {
+            endDateInput.disabled = false;
+        }
+    }
+
     function openEditExperienceModal(pk, title, company, location, start, end, isCurrent, desc) {
         document.getElementById('expModalTitle').textContent = '✏️ Edytuj Doświadczenie';
         document.getElementById('expForm').action = `/cv/doswiadczenie/${pk}/zapisz/`;
         document.getElementById('exp_job_title').value = title;
         document.getElementById('exp_company').value = company;
-        document.getElementById('exp_location').value = location;
         document.getElementById('exp_start_date').value = start;
         document.getElementById('exp_end_date').value = end;
         document.getElementById('exp_is_current').checked = isCurrent;
+        document.getElementById('exp_end_date').disabled = isCurrent;
         document.getElementById('exp_description').value = desc;
 
         const modal = new bootstrap.Modal(document.getElementById('addExperienceModal'));
         modal.show();
     }
+
+    // Resetuj formularz przy dodawaniu nowego doświadczenia
+    document.getElementById('addExperienceModal').addEventListener('show.bs.modal', function (event) {
+        // Jeśli otwarto przyciskiem dodawania (nie edycji)
+        if (!event.relatedTarget || event.relatedTarget.getAttribute('data-bs-target') !== '#addExperienceModal') return;
+        document.getElementById('expModalTitle').textContent = '💼 Doświadczenie zawodowe';
+        document.getElementById('expForm').action = `{% url 'cv_experience_add' %}`;
+        document.getElementById('exp_job_title').value = '';
+        document.getElementById('exp_company').value = '';
+        document.getElementById('exp_start_date').value = '';
+        document.getElementById('exp_end_date').value = '';
+        document.getElementById('exp_end_date').disabled = false;
+        document.getElementById('exp_is_current').checked = false;
+        document.getElementById('exp_description').value = '';
+    });
 
     function openEditEducationModal(pk, school, degree, field, years, desc) {
         document.getElementById('eduModalTitle').textContent = '✏️ Edytuj Edukację';
@@ -699,6 +732,17 @@
         const modal = new bootstrap.Modal(document.getElementById('addEducationModal'));
         modal.show();
     }
+
+    document.getElementById('addEducationModal').addEventListener('show.bs.modal', function (event) {
+        if (!event.relatedTarget || event.relatedTarget.getAttribute('data-bs-target') !== '#addEducationModal') return;
+        document.getElementById('eduModalTitle').textContent = '🎓 Edukacja';
+        document.getElementById('eduForm').action = `{% url 'cv_education_add' %}`;
+        document.getElementById('edu_school').value = '';
+        document.getElementById('edu_degree').value = '';
+        document.getElementById('edu_field').value = '';
+        document.getElementById('edu_years').value = '';
+        document.getElementById('edu_description').value = '';
+    });
 </script>
 
 {% endblock %}

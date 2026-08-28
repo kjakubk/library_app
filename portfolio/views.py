@@ -372,11 +372,14 @@ def cv_experience_save(request, pk=None):
     exp.job_title = request.POST.get('job_title', '').strip()
     exp.company = request.POST.get('company', '').strip()
     exp.location = request.POST.get('location', '').strip()
-    exp.start_date = request.POST.get('start_date', '').strip()
-    exp.end_date = request.POST.get('end_date', '').strip()
-    exp.is_current = bool(request.POST.get('is_current'))
-    if exp.is_current:
-        exp.end_date = 'Obecnie'
+    
+    start_date_raw = request.POST.get('start_date', '').strip()
+    end_date_raw = request.POST.get('end_date', '').strip()
+    is_current = bool(request.POST.get('is_current'))
+
+    exp.is_current = is_current
+    exp.start_date = start_date_raw if start_date_raw else None
+    exp.end_date = None if (is_current or not end_date_raw) else end_date_raw
     exp.description = request.POST.get('description', '').strip()
 
     if exp.job_title and exp.company:
