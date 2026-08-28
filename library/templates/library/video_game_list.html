@@ -254,6 +254,11 @@
                 </button>
             </div>
 
+            <!-- Import Libib -->
+            <button type="button" class="btn btn-outline-info btn-sm px-3.5 py-2 rounded-pill fw-semibold d-flex align-items-center gap-1 shadow-sm" onclick="openLibibModal('videogame')">
+                📥 Import Libib
+            </button>
+
             <!-- Dodaj grę -->
             <a href="{% url 'video_game_create' %}" class="btn btn-success btn-sm px-3.5 py-2 rounded-pill fw-semibold d-flex align-items-center gap-1 shadow-sm text-decoration-none">
                 <i class="bi bi-plus-lg"></i> Dodaj grę
@@ -582,5 +587,187 @@
         try { savedMode = localStorage.getItem('video_game_view_mode') || 'table'; } catch(e) {}
         switchViewMode(savedMode);
     });
+
+    // =============================================
+    // LIBIB HTML IMPORTER
+    // =============================================
+    let libibGamesToImport = [];
+    let libibCurrentIndex = 0;
+    let libibTarget = 'videogame';
+
+    function openLibibModal(target) {
+        libibTarget = target || 'videogame';
+        libibGamesToImport = [];
+        libibCurrentIndex = 0;
+        document.getElementById('libibSetupStep').classList.remove('d-none');
+        document.getElementById('libibProgressStep').classList.add('d-none');
+        document.getElementById('libibSetupError').classList.add('d-none');
+        document.getElementById('libibHtmlInput').value = '';
+        const modal = new bootstrap.Modal(document.getElementById('libibImportModal'));
+        modal.show();
+    }
+
+    function parseLibibHtml() {
+        const html = document.getElementById('libibHtmlInput').value.trim();
+        const errorDiv = document.getElementById('libibSetupError');
+
+        if (!html) {
+            errorDiv.textContent = 'Wklej kod HTML z Libib.';
+            errorDiv.classList.remove('d-none');
+            return;
+        }
+
+        errorDiv.classList.add('d-none');
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        let items = doc.querySelectorAll('.item');
+        if (items.length === 0) {
+            items = doc.querySelectorAll('[data-join-id]');
+        }
+
+        libibGamesToImport = [];
+        const seen = new Set();
+
+        items.forEach(el => {
+            // Tytuł
+            const titleEl = el.querySelector('.item-title') || el.querySelector('img[alt]');
+            let title = titleEl ? (titleEl.textContent || titleEl.getAttribute('alt') || '') : '';
+            title = title.trim();
+            if (!title) return;
+
+            // Platforma
+            const authorEl = el.querySelector('.item-author');
+            let platform = authorEl ? authorEl.textContent.trim() : '';
+
+            // Jeśli platforma jest w nawiasie tytułu, a w authorze pusto:
+            if (!platform) {
+                const match = title.match(/\(([^)]+)\)$/);
+                if (match) {
+                    platform = match[1];
+                }
+            }
+            if (!platform) platform = 'Inna';
+
+            // Okładka
+            const imgEl = el.querySelector('img');
+            let coverUrl = imgEl ? (imgEl.getAttribute('src') || '') : '';
+            if (coverUrl.includes('missing.png')) coverUrl = '';
+            if (coverUrl.startsWith('[')) {
+                // markdown wrapper cleanup e.g. [https://...](https://...)
+                const matchUrl = coverUrl.match(/https?:\/\/[^\s)\]]+/);
+                if (matchUrl) coverUrl = matchUrl[0];
+            }
+
+            const key = `${platform}_${title}`.toLowerCase();
+            if (!seen.has(key)) {
+                seen.add(key);
+                libibGamesToImport.push({
+                    title: title,
+                    platform: platform,
+                    cover_url: coverUrl,
+                    target: libibTarget
+                });
+            }
+        });
+
+        if (libibGamesToImport.length === 0) {
+            errorDiv.textContent = 'Nie udało się rozpoznać gier w wklejonym kodzie HTML. Upewnij się, że wkleiłeś fragment z elementami <div class="item ...">';
+            errorDiv.classList.remove('d-none');
+            return;
+        }
+
+        document.getElementById('libibSetupStep').classList.add('d-none');
+        document.getElementById('libibProgressStep').classList.remove('d-none');
+        document.getElementById('libibStatusText').textContent = `Rozpoznano ${libibGamesToImport.length} gier z Libib. Kliknij Start!`;
+        document.getElementById('libibStartImportContainer').classList.remove('d-none');
+        document.getElementById('libibProgressBar').style.width = '0%';
+        document.getElementById('libibProgressCounter').textContent = '';
+    }
+
+    function startLibibImport() {
+        document.getElementById('libibStartImportContainer').classList.add('d-none');
+        libibCurrentIndex = 0;
+        document.getElementById('libibProgressBar').style.width = '0%';
+        importNextLibibGame();
+    }
+
+    async function importNextLibibGame() {
+        if (libibCurrentIndex >= libibGamesToImport.length) {
+            document.getElementById('libibStatusText').textContent = 'Import z Libib zakończony sukcesem!';
+            document.getElementById('libibProgressBar').style.width = '100%';
+            document.getElementById('libibProgressBar').classList.remove('progress-bar-animated');
+            document.getElementById('libibProgressBar').classList.add('bg-success');
+            setTimeout(() => { window.location.reload(); }, 1500);
+            return;
+        }
+
+        const game = libibGamesToImport[libibCurrentIndex];
+        document.getElementById('libibStatusText').textContent = `Importowanie: ${game.title} (${game.platform})`;
+
+        try {
+            const url = `{% url 'libib_import_game' %}`;
+            await fetch(url, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify(game)
+            });
+        } catch(e) {
+            console.error('Błąd importu', game.title, e);
+        }
+
+        libibCurrentIndex++;
+        const pct = Math.round((libibCurrentIndex / libibGamesToImport.length) * 100);
+        document.getElementById('libibProgressBar').style.width = `${pct}%`;
+        document.getElementById('libibProgressCounter').textContent = `${libibCurrentIndex} / ${libibGamesToImport.length}`;
+        setTimeout(importNextLibibGame, 200);
+    }
 </script>
+
+<!-- MODAL LIBIB IMPORT -->
+<div class="modal fade" id="libibImportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-body border rounded-4 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold text-body">📥 Import gier z Libib.com (HTML)</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+
+                <div id="libibSetupStep">
+                    <p class="small text-muted mb-2">
+                        Otwórz swoją bibliotekę na <strong>Libib.com</strong>, kliknij prawym przyciskiem myszy na liście gier &rarr; <em>Zbadaj / Inspect</em> (lub skopiuj zaznaczony fragment strony) i wklej kod HTML poniżej:
+                    </p>
+                    <div class="mb-3">
+                        <textarea id="libibHtmlInput" class="form-control font-monospace small bg-body-secondary" rows="8" placeholder="<div id=&quot;library-items-wrapper&quot;>&#10;  <div class=&quot;item cover videogame&quot;>...</div>&#10;</div>"></textarea>
+                    </div>
+                    <button class="btn btn-info text-white w-100 rounded-pill fw-semibold shadow-sm" onclick="parseLibibHtml()">
+                        🔍 Analizuj kod HTML
+                    </button>
+                    <div id="libibSetupError" class="text-danger small mt-2 d-none"></div>
+                </div>
+
+                <div id="libibProgressStep" class="d-none text-center py-3">
+                    <h6 class="fw-bold mb-3" id="libibStatusText">Analizowanie...</h6>
+                    <div class="progress rounded-pill overflow-hidden" style="height: 10px; background-color: var(--bs-tertiary-bg);">
+                        <div id="libibProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-info" role="progressbar" style="width: 0%;"></div>
+                    </div>
+                    <div class="small text-muted mt-2" id="libibProgressCounter"></div>
+                    <div class="mt-4" id="libibStartImportContainer">
+                        <button class="btn btn-info text-white rounded-pill px-4 fw-semibold shadow-sm" onclick="startLibibImport()">
+                            ▶ Rozpocznij Import
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

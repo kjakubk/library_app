@@ -1405,3 +1405,67 @@ def digital_game_bulk_delete(request):
         return JsonResponse({'deleted': deleted_count})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def libib_import_game(request):
+    """Import pojedynczej gry z Libib (HTML scraper) do VideoGame lub DigitalGame."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST only'}, status=400)
+    try:
+        data = json.loads(request.body)
+        title = data.get('title', '').strip()
+        platform = data.get('platform', '').strip() or 'Inna'
+        cover_url = data.get('cover_url', '').strip()
+        target = data.get('target', 'videogame')  # 'videogame' (fizyczna) lub 'digitalgame' (cyfrowa)
+
+        if not title:
+            return JsonResponse({'error': 'Missing title'}, status=400)
+
+        # Usunięcie zbędnych sufiksów z Libib
+        clean_title = title
+        for suffix in [' Standard Edition', ' Standard', ' EU Version', ' Region Free', ' Edition', ' (Renewed)', ' (Certified Refurbished)']:
+            if clean_title.endswith(suffix):
+                clean_title = clean_title[:-len(suffix)].strip()
+
+        # Usunięcie ewentualnych formatowań markdown w URL okładki
+        if '[' in cover_url:
+            cover_url = cover_url.replace('[', '').replace(']', '').split('(')[-1].replace(')', '').strip()
+        if 'missing.png' in cover_url:
+            cover_url = ''
+
+        if target == 'digitalgame':
+            existing = DigitalGame.objects.filter(platform=platform, title=clean_title).first()
+            game = existing if existing else DigitalGame(title=clean_title, platform=platform, is_finished=False)
+        else:
+            existing = VideoGame.objects.filter(platform=platform, title=clean_title).first()
+            game = existing if existing else VideoGame(title=clean_title, platform=platform)
+
+        # Jeśli gra już istnieje i ma okładkę, pomijamy
+        if existing and existing.cover_image:
+            return JsonResponse({'status': 'skipped'})
+
+        # Pobieranie okładki
+        if cover_url and cover_url.startswith('http'):
+            try:
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                    'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                    'Referer': 'https://www.libib.com/',
+                }
+                resp = requests.get(cover_url, timeout=15, headers=headers, allow_redirects=True)
+                if resp.status_code == 200 and len(resp.content) > 500:
+                    safe_name = ''.join(c for c in clean_title if c.isalnum() or c in '-_')[:50]
+                    if not safe_name:
+                        safe_name = 'game'
+                    content_type = resp.headers.get('Content-Type', 'image/jpeg')
+                    ext = 'png' if ('png' in content_type or cover_url.lower().endswith('.png')) else 'jpg'
+                    game.cover_image.save(f'libib_{safe_name}.{ext}', ContentFile(resp.content), save=False)
+            except Exception:
+                pass
+
+        game.save()
+        return JsonResponse({'status': 'ok'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
