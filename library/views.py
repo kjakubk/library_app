@@ -1140,6 +1140,8 @@ def digital_game_list(request):
 
     context = {
         'page_obj': page_obj,
+        'items': page_obj,
+        'total_count': paginator.count,
         'platforms': platforms,
         'genres': genres,
         'current_sort': sort_by,
