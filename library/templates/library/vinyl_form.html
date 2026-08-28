@@ -65,30 +65,84 @@
                 <!-- Sekcja Zdjęć -->
                 <div class="col-12 mt-2">
                     <hr class="border-secondary border-opacity-25">
-                    <h6 class="fw-bold text-body mb-3">📸 Zdjęcia okładki</h6>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold text-body mb-0">📸 Zdjęcia okładki płyty</h6>
+                        <span class="badge bg-body-secondary text-muted border px-2.5 py-1 rounded-pill small">Obsługa kamery na żywo i telefonu</span>
+                    </div>
                 </div>
 
+                <!-- Przód okładki -->
                 <div class="col-md-6">
-                    <label class="form-label fw-medium text-muted small">Przód okładki (Front)</label>
-                    {{ form.front_cover }}
-                    {% if is_edit and item.front_cover %}
-                        <div class="mt-2 p-2 bg-body-secondary rounded-3 d-inline-block border">
-                            <img src="{{ item.front_cover.url }}" alt="Przód" class="rounded" style="height: 100px; object-fit: cover;">
+                    <label class="form-label fw-medium text-body d-flex justify-content-between align-items-center">
+                        <span>Przód okładki (Front)</span>
+                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 small px-2 py-0.5 rounded-pill">Główna okładka</span>
+                    </label>
+
+                    <div class="card bg-body-secondary border rounded-4 p-3 text-center mb-2">
+                        <!-- Podgląd zdjęcia -->
+                        <div id="preview_front_cover_wrapper" class="mb-3 {% if not is_edit or not item.front_cover %}d-none{% endif %}">
+                            <div class="position-relative d-inline-block rounded-3 overflow-hidden shadow-sm border">
+                                <img id="preview_front_cover" src="{% if is_edit and item.front_cover %}{{ item.front_cover.url }}{% endif %}" alt="Przód okładki" class="img-fluid rounded" style="max-height: 180px; object-fit: contain;">
+                                <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 rounded-circle p-1" style="width: 26px; height: 26px; line-height: 1;" onclick="clearPhotoInput('id_front_cover', 'preview_front_cover_wrapper')" title="Usuń to zdjęcie">✕</button>
+                            </div>
                         </div>
-                    {% endif %}
+
+                        <!-- Puste miejsce / ikona -->
+                        <div id="empty_front_cover_placeholder" class="py-3 text-muted {% if is_edit and item.front_cover %}d-none{% endif %}">
+                            <i class="bi bi-disc fs-1 d-block opacity-50 mb-1"></i>
+                            <span class="small d-block">Brak zdjęcia przodu okładki</span>
+                        </div>
+
+                        <!-- Przyciski akcji -->
+                        <div class="d-flex gap-2 justify-content-center flex-wrap mt-2">
+                            <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold shadow-sm d-flex align-items-center gap-1" onclick="openCameraModal('id_front_cover', 'preview_front_cover', 'preview_front_cover_wrapper', 'empty_front_cover_placeholder')">
+                                📸 Zrób zdjęcie kamerą
+                            </button>
+                            <label class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-medium d-flex align-items-center gap-1 mb-0" style="cursor: pointer;">
+                                📁 Z pliku
+                                <input type="file" name="front_cover" id="id_front_cover" accept="image/*" class="d-none" onchange="handleFileInputChange(this, 'preview_front_cover', 'preview_front_cover_wrapper', 'empty_front_cover_placeholder')">
+                            </label>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Tył okładki -->
                 <div class="col-md-6">
-                    <label class="form-label fw-medium text-muted small">Tył okładki (Back)</label>
-                    {{ form.back_cover }}
-                    {% if is_edit and item.back_cover %}
-                        <div class="mt-2 p-2 bg-body-secondary rounded-3 d-inline-block border">
-                            <img src="{{ item.back_cover.url }}" alt="Tył" class="rounded" style="height: 100px; object-fit: cover;">
+                    <label class="form-label fw-medium text-body d-flex justify-content-between align-items-center">
+                        <span>Tył okładki (Back)</span>
+                        <span class="badge bg-secondary bg-opacity-10 text-body border small px-2 py-0.5 rounded-pill">Opcjonalnie</span>
+                    </label>
+
+                    <div class="card bg-body-secondary border rounded-4 p-3 text-center mb-2">
+                        <!-- Podgląd zdjęcia -->
+                        <div id="preview_back_cover_wrapper" class="mb-3 {% if not is_edit or not item.back_cover %}d-none{% endif %}">
+                            <div class="position-relative d-inline-block rounded-3 overflow-hidden shadow-sm border">
+                                <img id="preview_back_cover" src="{% if is_edit and item.back_cover %}{{ item.back_cover.url }}{% endif %}" alt="Tył okładki" class="img-fluid rounded" style="max-height: 180px; object-fit: contain;">
+                                <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 rounded-circle p-1" style="width: 26px; height: 26px; line-height: 1;" onclick="clearPhotoInput('id_back_cover', 'preview_back_cover_wrapper')" title="Usuń to zdjęcie">✕</button>
+                            </div>
                         </div>
-                    {% endif %}
+
+                        <!-- Puste miejsce / ikona -->
+                        <div id="empty_back_cover_placeholder" class="py-3 text-muted {% if is_edit and item.back_cover %}d-none{% endif %}">
+                            <i class="bi bi-card-image fs-1 d-block opacity-50 mb-1"></i>
+                            <span class="small d-block">Brak zdjęcia tyłu okładki</span>
+                        </div>
+
+                        <!-- Przyciski akcji -->
+                        <div class="d-flex gap-2 justify-content-center flex-wrap mt-2">
+                            <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold shadow-sm d-flex align-items-center gap-1" onclick="openCameraModal('id_back_cover', 'preview_back_cover', 'preview_back_cover_wrapper', 'empty_back_cover_placeholder')">
+                                📸 Zrób zdjęcie kamerą
+                            </button>
+                            <label class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-medium d-flex align-items-center gap-1 mb-0" style="cursor: pointer;">
+                                📁 Z pliku
+                                <input type="file" name="back_cover" id="id_back_cover" accept="image/*" class="d-none" onchange="handleFileInputChange(this, 'preview_back_cover', 'preview_back_cover_wrapper', 'empty_back_cover_placeholder')">
+                            </label>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Przyciski akcji -->
-                <div class="col-12 mt-5 d-flex justify-content-between border-top pt-4">
+                <div class="col-12 mt-4 d-flex justify-content-between border-top pt-4">
                     <!-- Lewa strona: Usuwanie (tylko w trybie edycji) -->
                     <div>
                         {% if is_edit %}
@@ -107,6 +161,63 @@
                     </div>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================= -->
+<!-- MODAL KAMERY / APARATU NA ŻYWO                -->
+<!-- ============================================= -->
+<div class="modal fade" id="cameraCaptureModal" tabindex="-1" aria-labelledby="cameraCaptureModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-body border rounded-4 shadow overflow-hidden">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold text-body" id="cameraCaptureModalLabel">📷 Wykonaj zdjęcie okładki</h5>
+                <button type="button" class="btn-close shadow-none" onclick="closeCameraModal()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3 p-md-4 text-center bg-black position-relative" style="min-height: 380px;">
+                
+                <!-- Podgląd wideo na żywo z kamery -->
+                <video id="cameraVideo" autoplay playsinline class="w-100 rounded-3 shadow-sm" style="max-height: 60vh; object-fit: contain;"></video>
+                
+                <!-- Ukryty canvas do przechwytywania klatki -->
+                <canvas id="cameraCanvas" class="d-none"></canvas>
+
+                <!-- Podgląd wykonanego zdjęcia (przed zatwierdzeniem) -->
+                <div id="capturedPhotoContainer" class="d-none position-absolute top-0 start-0 w-100 h-100 p-3 bg-black d-flex align-items-center justify-content-center">
+                    <img id="capturedPhotoPreview" src="" alt="Przechwycone zdjęcie" class="img-fluid rounded-3 shadow" style="max-height: 55vh; object-fit: contain;">
+                </div>
+
+                <!-- Błąd kamery -->
+                <div id="cameraErrorMsg" class="text-danger small p-3 d-none bg-body rounded-3 shadow-sm border mt-2"></div>
+            </div>
+            
+            <div class="modal-footer border-top bg-body d-flex justify-content-between p-3">
+                <div>
+                    <!-- Przełącznik kamery (jeśli dostępne wiele urządzeń) -->
+                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3 d-none" id="switchCameraBtn" onclick="switchCamera()">
+                        🔄 Zmień kamerę
+                    </button>
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <!-- Przyciski trybu przechwytywania -->
+                    <div id="captureControls" class="d-flex gap-2">
+                        <button type="button" class="btn btn-secondary rounded-pill px-4" onclick="closeCameraModal()">Anuluj</button>
+                        <button type="button" class="btn btn-primary rounded-pill px-4 fw-semibold shadow-sm" id="snapPhotoBtn" onclick="snapPhoto()">
+                            📸 Zrób zdjęcie
+                        </button>
+                    </div>
+
+                    <!-- Przyciski po zrobieniu zdjęcia -->
+                    <div id="acceptControls" class="d-none d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary rounded-pill px-4" onclick="retakePhoto()">🔄 Powtórz</button>
+                        <button type="button" class="btn btn-success rounded-pill px-4 fw-semibold shadow-sm" onclick="acceptCapturedPhoto()">
+                            ✅ Użyj tego zdjęcia
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -135,5 +246,174 @@
 </div>
 {% endif %}
 
-</div>
+<script>
+    let activeStream = null;
+    let targetInputId = null;
+    let targetPreviewImgId = null;
+    let targetWrapperId = null;
+    let targetPlaceholderId = null;
+    let currentFacingMode = 'environment'; // Domyślnie kamera tylna (np. na telefonie)
+    let currentBlob = null;
+
+    // Obsługa zwykłego wyboru pliku
+    function handleFileInputChange(input, previewImgId, wrapperId, placeholderId) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const previewImg = document.getElementById(previewImgId);
+                const wrapper = document.getElementById(wrapperId);
+                const placeholder = document.getElementById(placeholderId);
+                
+                if (previewImg) previewImg.src = e.target.result;
+                if (wrapper) wrapper.classList.remove('d-none');
+                if (placeholder) placeholder.classList.add('d-none');
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    // Usunięcie zdjęcia
+    function clearPhotoInput(inputId, wrapperId) {
+        const input = document.getElementById(inputId);
+        const wrapper = document.getElementById(wrapperId);
+        if (input) input.value = '';
+        if (wrapper) wrapper.classList.add('d-none');
+    }
+
+    // Otwarcie modalu kamery
+    async function openCameraModal(inputId, previewImgId, wrapperId, placeholderId) {
+        targetInputId = inputId;
+        targetPreviewImgId = previewImgId;
+        targetWrapperId = wrapperId;
+        targetPlaceholderId = placeholderId;
+        currentBlob = null;
+
+        document.getElementById('capturedPhotoContainer').classList.add('d-none');
+        document.getElementById('cameraVideo').classList.remove('d-none');
+        document.getElementById('captureControls').classList.remove('d-none');
+        document.getElementById('acceptControls').classList.add('d-none');
+        document.getElementById('cameraErrorMsg').classList.add('d-none');
+
+        const modal = new bootstrap.Modal(document.getElementById('cameraCaptureModal'));
+        modal.show();
+
+        await startCameraStream();
+    }
+
+    // Uruchomienie strumienia wideo
+    async function startCameraStream() {
+        stopCameraStream();
+        const video = document.getElementById('cameraVideo');
+        const errorDiv = document.getElementById('cameraErrorMsg');
+        const switchBtn = document.getElementById('switchCameraBtn');
+
+        try {
+            const constraints = {
+                video: {
+                    facingMode: currentFacingMode,
+                    width: { ideal: 1920 },
+                    height: { ideal: 1920 }
+                },
+                audio: false
+            };
+
+            activeStream = await navigator.mediaDevices.getUserMedia(constraints);
+            video.srcObject = activeStream;
+
+            // Sprawdź czy jest dostępnych więcej kamer
+            if (navigator.mediaDevices.enumerateDevices) {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(d => d.kind === 'videoinput');
+                if (videoDevices.length > 1) {
+                    switchBtn.classList.remove('d-none');
+                }
+            }
+        } catch(err) {
+            console.error('Błąd dostępu do kamery:', err);
+            errorDiv.textContent = 'Nie udało się uzyskać dostępu do kamery: ' + (err.message || 'Brak uprawnień');
+            errorDiv.classList.remove('d-none');
+        }
+    }
+
+    // Zatrzymanie strumienia kamery
+    function stopCameraStream() {
+        if (activeStream) {
+            activeStream.getTracks().forEach(track => track.stop());
+            activeStream = null;
+        }
+    }
+
+    // Przełączanie kamery (przód/tył)
+    async function switchCamera() {
+        currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
+        await startCameraStream();
+    }
+
+    // Zamknięcie modalu
+    function closeCameraModal() {
+        stopCameraStream();
+        const modalEl = document.getElementById('cameraCaptureModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+    }
+
+    // Zrobienie zdjęcia (Snapshot)
+    function snapPhoto() {
+        const video = document.getElementById('cameraVideo');
+        const canvas = document.getElementById('cameraCanvas');
+        if (!video || !video.videoWidth) return;
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob(function(blob) {
+            currentBlob = blob;
+            const dataUrl = URL.createObjectURL(blob);
+            const previewImg = document.getElementById('capturedPhotoPreview');
+            previewImg.src = dataUrl;
+
+            document.getElementById('capturedPhotoContainer').classList.remove('d-none');
+            document.getElementById('captureControls').classList.add('d-none');
+            document.getElementById('acceptControls').classList.remove('d-none');
+        }, 'image/jpeg', 0.95);
+    }
+
+    // Ponowienie zdjęcia
+    function retakePhoto() {
+        currentBlob = null;
+        document.getElementById('capturedPhotoContainer').classList.add('d-none');
+        document.getElementById('captureControls').classList.remove('d-none');
+        document.getElementById('acceptControls').classList.add('d-none');
+    }
+
+    // Akceptacja i przypisanie zdjęcia do formularza
+    function acceptCapturedPhoto() {
+        if (!currentBlob || !targetInputId) return;
+
+        const fileName = `vinyl_camera_${Date.now()}.jpg`;
+        const file = new File([currentBlob], fileName, { type: 'image/jpeg' });
+
+        // Przypisanie do input file za pomocą DataTransfer API
+        const targetInput = document.getElementById(targetInputId);
+        if (targetInput) {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            targetInput.files = dt.files;
+        }
+
+        // Aktualizacja podglądu na stronie
+        const previewImg = document.getElementById(targetPreviewImgId);
+        const wrapper = document.getElementById(targetWrapperId);
+        const placeholder = document.getElementById(targetPlaceholderId);
+
+        if (previewImg) previewImg.src = URL.createObjectURL(currentBlob);
+        if (wrapper) wrapper.classList.remove('d-none');
+        if (placeholder) placeholder.classList.add('d-none');
+
+        closeCameraModal();
+    }
+</script>
+
 {% endblock %}
