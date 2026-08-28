@@ -270,12 +270,41 @@ class Book(models.Model):
 # ==========================================
 
 class VideoGame(models.Model):
+    GENRE_CHOICES = [
+        ('Akcja', 'Akcja (Action)'),
+        ('RPG', 'RPG (Role-Playing Game)'),
+        ('Strzelanka', 'Strzelanka (Shooter)'),
+        ('Przygodowa', 'Przygodowa (Adventure)'),
+        ('Strategia', 'Strategia (Strategy)'),
+        ('Sportowa', 'Sportowa (Sports)'),
+        ('Wyścigi', 'Wyścigi (Racing)'),
+        ('Bijatyka', 'Bijatyka (Fighting)'),
+        ('Platformówka', 'Platformówka (Platformer)'),
+        ('Symulacja', 'Symulacja (Simulation)'),
+        ('Zręcznościowa', 'Zręcznościowa (Arcade)'),
+        ('Logiczna', 'Logiczna (Puzzle)'),
+        ('Horror', 'Horror (Survival Horror)'),
+        ('MMO / Sieciowa', 'MMO / Sieciowa'),
+        ('Inny', 'Inny'),
+    ]
+
+    CONDITION_CHOICES = [
+        ('Nowy (Folia)', 'Nowy (Folia)'),
+        ('Idealny', 'Idealny'),
+        ('Bardzo dobry', 'Bardzo dobry'),
+        ('Dobry', 'Dobry'),
+        ('Dostateczny', 'Dostateczny'),
+        ('Zły / Uszkodzony', 'Zły / Uszkodzony'),
+        ('Tylko nośnik', 'Tylko nośnik (brak pudełka)'),
+        ('Tylko pudełko', 'Tylko pudełko (brak gry)'),
+    ]
+
     title = models.CharField(max_length=200, verbose_name="Tytuł gry")
     platform = models.CharField(max_length=100, verbose_name="Platforma (np. PC, PS5, Switch)")
-    genre = models.CharField(max_length=100, blank=True, null=True, verbose_name="Gatunek (np. RPG, Shooter)")
+    genre = models.CharField(max_length=100, choices=GENRE_CHOICES, blank=True, null=True, verbose_name="Gatunek")
     release_year = models.IntegerField(blank=True, null=True, verbose_name="Rok wydania")
     
-    condition = models.CharField(max_length=50, blank=True, null=True, verbose_name="Stan (Pudełko / Nośnik)")
+    condition = models.CharField(max_length=50, choices=CONDITION_CHOICES, blank=True, null=True, verbose_name="Stan")
     price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Cena / Wartość")
     
     cover_image = models.ImageField(upload_to='videogames/covers/', blank=True, null=True, verbose_name="Okładka gry")

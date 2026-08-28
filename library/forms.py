@@ -171,9 +171,9 @@ class VideoGameForm(forms.ModelForm):
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. Cyberpunk 2077'}),
             'platform': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. PC, PS5, Xbox Series X'}),
-            'genre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. Action RPG'}),
+            'genre': forms.Select(attrs={'class': 'form-select'}),
             'release_year': forms.NumberInput(attrs={'class': 'form-control'}),
-            'condition': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. Idealny / Folia'}),
+            'condition': forms.Select(attrs={'class': 'form-select'}),
             'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'cover_image': forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': 'image/*', 'capture': 'environment'}),
             'back_cover_image': forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': 'image/*', 'capture': 'environment'}),
