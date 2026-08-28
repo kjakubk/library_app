@@ -1340,3 +1340,41 @@ def steam_import_game(request):
         return JsonResponse({'status': 'ok'})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def heroic_import(request):
+    """Import gier Epic Games z pliku legendary_library.json z Heroic Games Launcher."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST only'}, status=400)
+    try:
+        data = json.loads(request.body)
+        app_name = data.get('app_name', '')
+        title = data.get('title', '')
+        cover_url = data.get('cover_url', '')
+
+        if not title:
+            return JsonResponse({'error': 'Missing title'}, status=400)
+
+        if DigitalGame.objects.filter(platform='Epic Games', title=title).exists():
+            return JsonResponse({'status': 'skipped'})
+
+        game = DigitalGame(
+            title=title,
+            platform='Epic Games',
+            is_finished=False
+        )
+
+        if cover_url:
+            try:
+                resp = requests.get(cover_url, timeout=10)
+                if resp.status_code == 200:
+                    safe_name = ''.join(c for c in app_name if c.isalnum() or c in '-_')[:60]
+                    game.cover_image.save(f'epic_{safe_name}.jpg', ContentFile(resp.content), save=False)
+            except Exception:
+                pass
+
+        game.save()
+        return JsonResponse({'status': 'ok'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

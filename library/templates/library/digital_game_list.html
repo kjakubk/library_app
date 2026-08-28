@@ -258,6 +258,11 @@
             <button type="button" class="btn btn-outline-primary btn-sm px-3.5 py-2 rounded-pill fw-semibold d-flex align-items-center gap-1 shadow-sm" onclick="openSteamModal()">
                 <i class="bi bi-steam"></i> Import Steam
             </button>
+
+            <!-- Import Heroic/Epic -->
+            <button type="button" class="btn btn-outline-warning btn-sm px-3.5 py-2 rounded-pill fw-semibold d-flex align-items-center gap-1 shadow-sm" onclick="openHeroicModal()">
+                🎮 Import Epic (Heroic)
+            </button>
             
             <!-- Dodaj grę -->
             <a href="{% url 'digital_game_create' %}" class="btn btn-success btn-sm px-3.5 py-2 rounded-pill fw-semibold d-flex align-items-center gap-1 shadow-sm text-decoration-none">
@@ -810,5 +815,203 @@
         // Add a tiny delay so it doesn't overload the server
         setTimeout(importNextSteamGame, 300);
     }
+
+    // =============================================
+    // HEROIC / EPIC GAMES IMPORT
+    // =============================================
+    let heroicGamesToImport = [];
+    let heroicCurrentIndex = 0;
+
+    function openHeroicModal() {
+        heroicGamesToImport = [];
+        heroicCurrentIndex = 0;
+        document.getElementById('heroicSetupStep').classList.remove('d-none');
+        document.getElementById('heroicProgressStep').classList.add('d-none');
+        document.getElementById('heroicSetupError').classList.add('d-none');
+        document.getElementById('heroicFileInput').value = '';
+        document.getElementById('heroicFileLabel').textContent = 'Wybierz plik legendary_library.json';
+        const modal = new bootstrap.Modal(document.getElementById('heroicImportModal'));
+        modal.show();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const fileInput = document.getElementById('heroicFileInput');
+        if (fileInput) {
+            fileInput.addEventListener('change', function() {
+                if (this.files[0]) {
+                    document.getElementById('heroicFileLabel').textContent = this.files[0].name;
+                }
+            });
+        }
+    });
+
+    async function parseHeroicFile() {
+        const fileInput = document.getElementById('heroicFileInput');
+        const errorDiv = document.getElementById('heroicSetupError');
+
+        if (!fileInput.files[0]) {
+            errorDiv.textContent = 'Wybierz plik JSON.';
+            errorDiv.classList.remove('d-none');
+            return;
+        }
+
+        errorDiv.classList.add('d-none');
+
+        const text = await fileInput.files[0].text();
+        let library;
+        try {
+            library = JSON.parse(text);
+        } catch(e) {
+            errorDiv.textContent = 'Błąd: plik nie jest prawidłowym JSON. Sprawdź czy wybrałeś właściwy plik.';
+            errorDiv.classList.remove('d-none');
+            return;
+        }
+
+        // legendary_library.json to tablica obiektów lub obiekt z kluczem "library"
+        const games = Array.isArray(library) ? library : (library.library || []);
+
+        // Filtruj i buduj listę do importu
+        const existingTitles = new Set();
+        heroicGamesToImport = [];
+
+        for (const g of games) {
+            const title = g.title || g.app_title;
+            const appName = g.app_name || '';
+            if (!title) continue;
+
+            // Znajdź najlepszą okładkę - priorytet: DieselGameBoxTall -> DieselGameBox -> Thumbnail
+            let coverUrl = '';
+            const images = g.keyImages || [];
+            const priorities = ['DieselGameBoxTall', 'DieselGameBox', 'DieselStoreFrontTall', 'Thumbnail', 'OfferImageTall'];
+            for (const prio of priorities) {
+                const img = images.find(i => i.type === prio);
+                if (img && img.url) { coverUrl = img.url; break; }
+            }
+            if (!coverUrl && images.length > 0) coverUrl = images[0].url || '';
+
+            heroicGamesToImport.push({ title, app_name: appName, cover_url: coverUrl });
+        }
+
+        if (heroicGamesToImport.length === 0) {
+            errorDiv.textContent = 'Nie znaleziono gier w pliku. Upewnij się, że to plik legendary_library.json.';
+            errorDiv.classList.remove('d-none');
+            return;
+        }
+
+        document.getElementById('heroicSetupStep').classList.add('d-none');
+        document.getElementById('heroicProgressStep').classList.remove('d-none');
+        document.getElementById('heroicStatusText').textContent = `Znaleziono ${heroicGamesToImport.length} gier. Kliknij Start!`;
+        document.getElementById('heroicStartImportContainer').classList.remove('d-none');
+        document.getElementById('heroicProgressBar').style.width = '0%';
+        document.getElementById('heroicProgressCounter').textContent = '';
+    }
+
+    function startHeroicImport() {
+        document.getElementById('heroicStartImportContainer').classList.add('d-none');
+        heroicCurrentIndex = 0;
+        document.getElementById('heroicProgressBar').style.width = '0%';
+        importNextHeroicGame();
+    }
+
+    async function importNextHeroicGame() {
+        if (heroicCurrentIndex >= heroicGamesToImport.length) {
+            document.getElementById('heroicStatusText').textContent = 'Import zakończony sukcesem!';
+            document.getElementById('heroicProgressBar').style.width = '100%';
+            document.getElementById('heroicProgressBar').classList.remove('progress-bar-animated');
+            document.getElementById('heroicProgressBar').classList.add('bg-success');
+            setTimeout(() => { window.location.reload(); }, 1500);
+            return;
+        }
+
+        const game = heroicGamesToImport[heroicCurrentIndex];
+        document.getElementById('heroicStatusText').textContent = `Importowanie: ${game.title}`;
+
+        try {
+            const url = `{% url 'heroic_import' %}`;
+            const res = await fetch(url, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    title: game.title,
+                    app_name: game.app_name,
+                    cover_url: game.cover_url
+                })
+            });
+
+            if (!res.ok) {
+                const txt = await res.text();
+                console.error('Błąd importu:', game.title, txt);
+            }
+        } catch(e) {
+            console.error('Błąd sieci:', game.title, e);
+        }
+
+        heroicCurrentIndex++;
+        const pct = Math.round((heroicCurrentIndex / heroicGamesToImport.length) * 100);
+        document.getElementById('heroicProgressBar').style.width = `${pct}%`;
+        document.getElementById('heroicProgressCounter').textContent = `${heroicCurrentIndex} / ${heroicGamesToImport.length}`;
+        setTimeout(importNextHeroicGame, 300);
+    }
 </script>
+
+<!-- MODAL HEROIC / EPIC GAMES -->
+<div class="modal fade" id="heroicImportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-body border rounded-4 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold text-body">🎮 Import Epic Games (Heroic)</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+
+                <div id="heroicSetupStep">
+                    <p class="small text-muted mb-3">
+                        Wgraj plik <code>legendary_library.json</code> z Heroic Games Launcher.<br>
+                        Znajdziesz go tutaj:
+                    </p>
+                    <ul class="small text-muted mb-3 ps-3">
+                        <li><strong>Windows:</strong> <code>%APPDATA%\heroic\store_cache\legendary_library.json</code></li>
+                        <li><strong>Linux:</strong> <code>~/.config/heroic/store_cache/legendary_library.json</code></li>
+                        <li><strong>macOS:</strong> <code>~/Library/Application Support/heroic/store_cache/legendary_library.json</code></li>
+                    </ul>
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Plik biblioteki Heroic</label>
+                        <div class="input-group">
+                            <label class="input-group-text bg-body-secondary border rounded-start-3" for="heroicFileInput">
+                                📁
+                            </label>
+                            <input type="file" class="d-none" id="heroicFileInput" accept=".json">
+                            <span class="form-control bg-body-secondary text-muted rounded-end-3 text-truncate small" id="heroicFileLabel" style="cursor:pointer;" onclick="document.getElementById('heroicFileInput').click()">
+                                Wybierz plik legendary_library.json
+                            </span>
+                        </div>
+                    </div>
+                    <button class="btn btn-warning w-100 rounded-pill fw-semibold text-dark" onclick="parseHeroicFile()">
+                        🔍 Analizuj bibliotekę
+                    </button>
+                    <div id="heroicSetupError" class="text-danger small mt-2 d-none"></div>
+                </div>
+
+                <div id="heroicProgressStep" class="d-none text-center py-3">
+                    <h6 class="fw-bold mb-3" id="heroicStatusText">Analizowanie...</h6>
+                    <div class="progress rounded-pill overflow-hidden" style="height: 10px; background-color: var(--bs-tertiary-bg);">
+                        <div id="heroicProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-warning" role="progressbar" style="width: 0%;"></div>
+                    </div>
+                    <div class="small text-muted mt-2" id="heroicProgressCounter"></div>
+                    <div class="mt-4" id="heroicStartImportContainer">
+                        <button class="btn btn-warning rounded-pill px-4 fw-semibold text-dark" onclick="startHeroicImport()">
+                            ▶ Rozpocznij Import
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

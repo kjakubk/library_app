@@ -81,4 +81,5 @@ urlpatterns = [
     path('api/ksiazka/<str:isbn>/', views.fetch_book_data, name='fetch_book_data'),
     path('api/steam/fetch_games/', views.steam_fetch_games, name='steam_fetch_games'),
     path('api/steam/import_game/', views.steam_import_game, name='steam_import_game'),
+    path('api/heroic/import/', views.heroic_import, name='heroic_import'),
 ]
