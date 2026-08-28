@@ -16,12 +16,46 @@
             <a href="{% url 'book_list' %}" class="btn btn-primary px-4 py-2.5 rounded-3 shadow-sm fw-semibold d-flex align-items-center justify-content-center">
                 <i class="bi bi-journal-bookmark-fill me-2"></i> Przejdź do Biblioteki
             </a>
+            <a href="{% url 'cv_view' %}" class="btn btn-outline-primary px-4 py-2.5 rounded-3 shadow-sm fw-semibold d-flex align-items-center justify-content-center">
+                <i class="bi bi-file-earmark-person-fill me-2"></i> Moje CV
+            </a>
             <a href="{% url 'porcelain_list' %}" class="btn btn-outline-secondary px-4 py-2.5 rounded-3 fw-semibold d-flex align-items-center justify-content-center">
                 <i class="bi bi-cup-hot-fill me-2"></i> Porcelana
             </a>
         </div>
     </div>
 </div>
+
+<!-- Sekcja CV / Profilu Zawodowego -->
+{% if profile %}
+<div class="card bg-body shadow-sm border rounded-4 overflow-hidden mb-4 p-4 p-md-4">
+    <div class="row align-items-center g-3">
+        <div class="col-auto">
+            {% if profile.avatar %}
+                <img src="{{ profile.avatar.url }}" alt="{{ profile.full_name }}" class="rounded-circle shadow-sm border object-fit-cover" style="width: 72px; height: 72px;">
+            {% else %}
+                <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center shadow-sm border" style="width: 72px; height: 72px;">
+                    <i class="bi bi-person-fill fs-2"></i>
+                </div>
+            {% endif %}
+        </div>
+        <div class="col">
+            <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                <h4 class="mb-0 fw-bold text-body">{{ profile.full_name }}</h4>
+                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 small px-2.5 py-1 rounded-pill">{{ profile.title }}</span>
+            </div>
+            <p class="text-muted small mb-0 text-truncate" style="max-width: 600px;">
+                {{ profile.summary|default:"Profesjonalny profil zawodowy, doświadczenie i edukacja." }}
+            </p>
+        </div>
+        <div class="col-12 col-md-auto d-flex gap-2">
+            <a href="{% url 'cv_view' %}" class="btn btn-primary btn-sm rounded-pill px-4 py-2 fw-semibold shadow-sm w-100 w-md-auto d-flex align-items-center justify-content-center gap-1">
+                <i class="bi bi-pencil-square"></i> Otwórz i edytuj CV
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <!-- Kafelki ze statystykami kolekcji -->
 <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3 text-center mt-2 mt-md-4">

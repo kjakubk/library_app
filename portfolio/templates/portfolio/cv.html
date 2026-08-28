@@ -1,0 +1,704 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Moje CV - Curriculum Vitae{% endblock %}
+
+{% block content %}
+<style>
+    /* Stylizacja dokumentu CV */
+    .cv-paper {
+        background: var(--bs-body-bg);
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+        border: 1px solid var(--bs-border-color);
+        overflow: hidden;
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-left: 28px;
+        padding-bottom: 24px;
+    }
+    .timeline-item:last-child {
+        padding-bottom: 0;
+    }
+    .timeline-item::before {
+        content: "";
+        position: absolute;
+        left: 6px;
+        top: 6px;
+        bottom: 0;
+        width: 2px;
+        background-color: var(--bs-border-color);
+    }
+    .timeline-item:last-child::before {
+        display: none;
+    }
+    .timeline-dot {
+        position: absolute;
+        left: 0;
+        top: 4px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background-color: var(--bs-primary);
+        border: 3px solid var(--bs-body-bg);
+        box-shadow: 0 0 0 2px var(--bs-primary);
+    }
+
+    .cv-sidebar {
+        background-color: var(--bs-tertiary-bg);
+        border-right: 1px solid var(--bs-border-color);
+    }
+    @media (max-width: 991px) {
+        .cv-sidebar {
+            border-right: none;
+            border-bottom: 1px solid var(--bs-border-color);
+        }
+    }
+
+    .skill-badge {
+        transition: all 0.2s ease;
+    }
+    .skill-badge:hover {
+        transform: translateY(-2px);
+    }
+
+    /* Reguły do drukowania / eksportu PDF */
+    @media print {
+        body {
+            background: #ffffff !important;
+            color: #000000 !important;
+        }
+        .sidebar, .top-navbar, .mobile-bottom-nav, .cv-action-toolbar, .no-print, .btn, .dropdown {
+            display: none !important;
+        }
+        .main-content {
+            margin-left: 0 !important;
+            padding: 0 !important;
+        }
+        .cv-paper {
+            box-shadow: none !important;
+            border: none !important;
+            border-radius: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        .cv-sidebar {
+            background-color: #f8f9fa !important;
+            border-right: 1px solid #dee2e6 !important;
+        }
+        .container-fluid {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+        }
+    }
+</style>
+
+<div class="container-fluid px-2 px-md-4 py-3 py-md-4 mb-5" style="max-width: 1200px;">
+
+    <!-- PASEK AKCJI (GÓRA) -->
+    <div class="cv-action-toolbar d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center bg-body px-4 py-3 rounded-4 shadow-sm border mb-4 gap-3">
+        <div class="d-flex align-items-center gap-2">
+            <span class="fs-4">📄</span>
+            <div>
+                <h5 class="mb-0 fw-bold text-body">Curriculum Vitae</h5>
+                <span class="small text-muted">Twoja cyfrowa wizytówka z edycją na żywo</span>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+            <!-- Przycisk edycji profilu -->
+            <button type="button" class="btn btn-primary btn-sm rounded-pill px-3.5 py-2 fw-semibold d-flex align-items-center gap-1 shadow-sm" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                <i class="bi bi-pencil-square"></i> Edytuj Profil & Bio
+            </button>
+
+            <!-- Dropdown dodawania pozycji -->
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary btn-sm rounded-pill px-3.5 py-2 fw-semibold dropdown-toggle shadow-sm d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-plus-lg"></i> Dodaj sekcję
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end rounded-3 shadow border">
+                    <li><a class="dropdown-item py-2" href="#" data-bs-toggle="modal" data-bs-target="#addExperienceModal">💼 Doświadczenie zawodowe</a></li>
+                    <li><a class="dropdown-item py-2" href="#" data-bs-toggle="modal" data-bs-target="#addEducationModal">🎓 Edukacja</a></li>
+                    <li><a class="dropdown-item py-2" href="#" data-bs-toggle="modal" data-bs-target="#addSkillModal">⚡ Umiejętność</a></li>
+                    <li><a class="dropdown-item py-2" href="#" data-bs-toggle="modal" data-bs-target="#addLanguageModal">🌍 Język obcy</a></li>
+                    <li><a class="dropdown-item py-2" href="#" data-bs-toggle="modal" data-bs-target="#addCertificateModal">🏆 Certyfikat / Kurs</a></li>
+                </ul>
+            </div>
+
+            <!-- Drukuj / PDF -->
+            <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3.5 py-2 fw-semibold d-flex align-items-center gap-1 shadow-sm" onclick="window.print()">
+                <i class="bi bi-printer"></i> Drukuj / PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- GŁÓWNA KARTA CV -->
+    <div class="cv-paper">
+        <div class="row g-0">
+            
+            <!-- LEWA KOLUMNA (SIDEBAR): DANE OSOBOWE, SKILLSE, JĘZYKI -->
+            <div class="col-lg-4 cv-sidebar p-4 p-md-4.5">
+                
+                <!-- Awatar / Zdjęcie profilowe -->
+                <div class="text-center mb-4">
+                    <div class="position-relative d-inline-block">
+                        {% if profile.avatar %}
+                            <img src="{{ profile.avatar.url }}" alt="{{ profile.full_name }}" class="rounded-circle shadow border border-3 border-body object-fit-cover" style="width: 140px; height: 140px;">
+                        {% else %}
+                            <div class="rounded-circle shadow border border-3 border-body bg-primary bg-opacity-10 text-primary d-inline-flex align-items-center justify-content-center" style="width: 140px; height: 140px;">
+                                <i class="bi bi-person-fill" style="font-size: 4rem;"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <h3 class="fw-bold text-body mt-3 mb-1 fs-4">{{ profile.full_name }}</h3>
+                    <p class="text-primary fw-medium small mb-0">{{ profile.title }}</p>
+                </div>
+
+                <hr class="border-secondary border-opacity-25 my-4">
+
+                <!-- DANE KONTAKTOWE -->
+                <div class="mb-4">
+                    <h6 class="text-uppercase fw-bold small text-muted mb-3" style="letter-spacing: 1px;">Kontakt</h6>
+                    <ul class="list-unstyled small mb-0 d-flex flex-column gap-2 text-body">
+                        {% if profile.location %}
+                            <li class="d-flex align-items-center gap-2">
+                                <i class="bi bi-geo-alt text-primary fs-6"></i>
+                                <span>{{ profile.location }}</span>
+                            </li>
+                        {% endif %}
+                        {% if profile.email %}
+                            <li class="d-flex align-items-center gap-2">
+                                <i class="bi bi-envelope text-primary fs-6"></i>
+                                <a href="mailto:{{ profile.email }}" class="text-body text-decoration-none text-truncate">{{ profile.email }}</a>
+                            </li>
+                        {% endif %}
+                        {% if profile.phone %}
+                            <li class="d-flex align-items-center gap-2">
+                                <i class="bi bi-telephone text-primary fs-6"></i>
+                                <a href="tel:{{ profile.phone }}" class="text-body text-decoration-none">{{ profile.phone }}</a>
+                            </li>
+                        {% endif %}
+                        {% if profile.linkedin %}
+                            <li class="d-flex align-items-center gap-2">
+                                <i class="bi bi-linkedin text-primary fs-6"></i>
+                                <a href="{{ profile.linkedin }}" target="_blank" class="text-body text-decoration-none text-truncate">LinkedIn</a>
+                            </li>
+                        {% endif %}
+                        {% if profile.github %}
+                            <li class="d-flex align-items-center gap-2">
+                                <i class="bi bi-github text-primary fs-6"></i>
+                                <a href="{{ profile.github }}" target="_blank" class="text-body text-decoration-none text-truncate">GitHub</a>
+                            </li>
+                        {% endif %}
+                        {% if profile.website %}
+                            <li class="d-flex align-items-center gap-2">
+                                <i class="bi bi-globe text-primary fs-6"></i>
+                                <a href="{{ profile.website }}" target="_blank" class="text-body text-decoration-none text-truncate">{{ profile.website }}</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
+
+                <hr class="border-secondary border-opacity-25 my-4">
+
+                <!-- UMIEJĘTNOŚCI (SKILLS) -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="text-uppercase fw-bold small text-muted mb-0" style="letter-spacing: 1px;">Umiejętności</h6>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-circle p-0 no-print" style="width: 22px; height: 22px; line-height: 1;" data-bs-toggle="modal" data-bs-target="#addSkillModal" title="Dodaj umiejętność">+</button>
+                    </div>
+
+                    {% for category, cat_skills in skills_by_category.items %}
+                        <div class="mb-3">
+                            <div class="text-muted small fw-semibold mb-1.5" style="font-size: 0.76rem;">{{ category }}</div>
+                            <div class="d-flex flex-wrap gap-1.5">
+                                {% for s in cat_skills %}
+                                    <span class="badge bg-body text-body border shadow-sm px-2.5 py-1.5 rounded-pill small fw-normal d-inline-flex align-items-center gap-1 skill-badge">
+                                        {{ s.name }}
+                                        <form method="POST" action="{% url 'cv_skill_delete' s.pk %}" class="d-inline no-print" onsubmit="return confirm('Usunąć umiejętność {{ s.name }}?')">
+                                            {% csrf_token %}
+                                            <button type="submit" class="border-0 bg-transparent p-0 text-muted hover-danger" style="line-height: 0.8; font-size: 0.75rem;" title="Usuń">✕</button>
+                                        </form>
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p class="small text-muted mb-0">Brak dodanych umiejętności. Kliknij "+" aby dodać.</p>
+                    {% endfor %}
+                </div>
+
+                <hr class="border-secondary border-opacity-25 my-4">
+
+                <!-- JĘZYKI OBCE -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="text-uppercase fw-bold small text-muted mb-0" style="letter-spacing: 1px;">Języki obce</h6>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-circle p-0 no-print" style="width: 22px; height: 22px; line-height: 1;" data-bs-toggle="modal" data-bs-target="#addLanguageModal" title="Dodaj język">+</button>
+                    </div>
+
+                    <div class="d-flex flex-column gap-2">
+                        {% for l in languages %}
+                            <div class="d-flex justify-content-between align-items-center small">
+                                <span class="fw-medium text-body">{{ l.name }}</span>
+                                <div class="d-flex align-items-center gap-1.5">
+                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-0.5 rounded-pill">{{ l.level }}</span>
+                                    <form method="POST" action="{% url 'cv_language_delete' l.pk %}" class="d-inline no-print" onsubmit="return confirm('Usunąć język {{ l.name }}?')">
+                                        {% csrf_token %}
+                                        <button type="submit" class="border-0 bg-transparent p-0 text-muted" title="Usuń">✕</button>
+                                    </form>
+                                </div>
+                            </div>
+                        {% empty %}
+                            <p class="small text-muted mb-0">Brak dodanych języków.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <hr class="border-secondary border-opacity-25 my-4">
+
+                <!-- CERTYFIKATY & KURSY -->
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="text-uppercase fw-bold small text-muted mb-0" style="letter-spacing: 1px;">Certyfikaty</h6>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-circle p-0 no-print" style="width: 22px; height: 22px; line-height: 1;" data-bs-toggle="modal" data-bs-target="#addCertificateModal" title="Dodaj certyfikat">+</button>
+                    </div>
+
+                    <div class="d-flex flex-column gap-2.5">
+                        {% for c in certificates %}
+                            <div class="p-2 bg-body rounded-3 border shadow-sm position-relative">
+                                <div class="fw-bold text-body small">{{ c.title }}</div>
+                                <div class="text-muted small" style="font-size: 0.75rem;">{{ c.issuer }}{% if c.year %} • {{ c.year }}{% endif %}</div>
+                                <form method="POST" action="{% url 'cv_certificate_delete' c.pk %}" class="position-absolute top-0 end-0 m-1.5 no-print" onsubmit="return confirm('Usunąć certyfikat {{ c.title }}?')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="border-0 bg-transparent p-0 text-muted" title="Usuń">✕</button>
+                                </form>
+                            </div>
+                        {% empty %}
+                            <p class="small text-muted mb-0">Brak dodanych certyfikatów.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- PRAWA KOLUMNA (MAIN CONTENT): PODSUMOWANIE, DOŚWIADCZENIE, EDUKACJA -->
+            <div class="col-lg-8 p-4 p-md-5">
+                
+                <!-- PODSUMOWANIE ZAWODOWE / BIO -->
+                <div class="mb-5">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span class="p-2 bg-primary bg-opacity-10 text-primary rounded-3 fs-6">👤</span>
+                        <h4 class="fw-bold text-body mb-0">Podsumowanie Zawodowe</h4>
+                    </div>
+                    <div class="text-body lead fs-6" style="line-height: 1.7;">
+                        {{ profile.summary|linebreaks }}
+                    </div>
+                </div>
+
+                <!-- DOŚWIADCZENIE ZAWODOWE -->
+                <div class="mb-5">
+                    <div class="d-flex align-items-center justify-content-between mb-4">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="p-2 bg-primary bg-opacity-10 text-primary rounded-3 fs-6">💼</span>
+                            <h4 class="fw-bold text-body mb-0">Doświadczenie Zawodowe</h4>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 no-print" data-bs-toggle="modal" data-bs-target="#addExperienceModal">
+                            + Dodaj
+                        </button>
+                    </div>
+
+                    <div class="timeline">
+                        {% for exp in experiences %}
+                            <div class="timeline-item">
+                                <div class="timeline-dot"></div>
+                                <div class="d-flex justify-content-between align-items-start mb-1 flex-wrap gap-1">
+                                    <div>
+                                        <h5 class="fw-bold text-body mb-0 fs-6">{{ exp.job_title }}</h5>
+                                        <span class="text-primary fw-semibold small">{{ exp.company }}</span>
+                                        {% if exp.location %}
+                                            <span class="text-muted small"> • {{ exp.location }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge bg-body-secondary text-body border px-2.5 py-1 rounded-pill small font-monospace">
+                                            {{ exp.start_date }} — {{ exp.end_date|default:"Obecnie" }}
+                                        </span>
+                                        <!-- Przyciski edycji/usuwania -->
+                                        <div class="no-print d-flex gap-1">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary border-0 p-1" onclick="openEditExperienceModal({{ exp.pk }}, '{{ exp.job_title|escapejs }}', '{{ exp.company|escapejs }}', '{{ exp.location|escapejs }}', '{{ exp.start_date|escapejs }}', '{{ exp.end_date|escapejs }}', {{ exp.is_current|yesno:'true,false' }}, '{{ exp.description|escapejs }}')" title="Edytuj">
+                                                ✏️
+                                            </button>
+                                            <form method="POST" action="{% url 'cv_experience_delete' exp.pk %}" class="d-inline" onsubmit="return confirm('Czy na pewno usunąć stanowisko {{ exp.job_title }} w {{ exp.company }}?')">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger border-0 p-1" title="Usuń">
+                                                    🗑️
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-muted small mt-2" style="line-height: 1.6;">
+                                    {{ exp.description|linebreaks }}
+                                </div>
+                            </div>
+                        {% empty %}
+                            <p class="text-muted small mb-0">Brak wpisów doświadczenia. Kliknij "+ Dodaj" aby dodać swoje stanowiska.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- EDUKACJA -->
+                <div>
+                    <div class="d-flex align-items-center justify-content-between mb-4">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="p-2 bg-primary bg-opacity-10 text-primary rounded-3 fs-6">🎓</span>
+                            <h4 class="fw-bold text-body mb-0">Edukacja & Kształcenie</h4>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 no-print" data-bs-toggle="modal" data-bs-target="#addEducationModal">
+                            + Dodaj
+                        </button>
+                    </div>
+
+                    <div class="timeline">
+                        {% for edu in educations %}
+                            <div class="timeline-item">
+                                <div class="timeline-dot"></div>
+                                <div class="d-flex justify-content-between align-items-start mb-1 flex-wrap gap-1">
+                                    <div>
+                                        <h5 class="fw-bold text-body mb-0 fs-6">{{ edu.degree }} - {{ edu.field_of_study }}</h5>
+                                        <span class="text-primary fw-semibold small">{{ edu.school }}</span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge bg-body-secondary text-body border px-2.5 py-1 rounded-pill small font-monospace">
+                                            {{ edu.years }}
+                                        </span>
+                                        <div class="no-print d-flex gap-1">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary border-0 p-1" onclick="openEditEducationModal({{ edu.pk }}, '{{ edu.school|escapejs }}', '{{ edu.degree|escapejs }}', '{{ edu.field_of_study|escapejs }}', '{{ edu.years|escapejs }}', '{{ edu.description|escapejs }}')" title="Edytuj">
+                                                ✏️
+                                            </button>
+                                            <form method="POST" action="{% url 'cv_education_delete' edu.pk %}" class="d-inline" onsubmit="return confirm('Czy na pewno usunąć wpis edukacji?')">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger border-0 p-1" title="Usuń">
+                                                    🗑️
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% if edu.description %}
+                                    <div class="text-muted small mt-2" style="line-height: 1.6;">
+                                        {{ edu.description|linebreaks }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% empty %}
+                            <p class="text-muted small mb-0">Brak wpisów edukacji. Kliknij "+ Dodaj" aby dodać uczelnię lub szkołę.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================= -->
+<!-- MODALE DO EDYCJI CV                           -->
+<!-- ============================================= -->
+
+<!-- 1. Modal: Edycja Profilu -->
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-body border rounded-4 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold">✏️ Edytuj Profil CV</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{% url 'cv_profile_update' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body p-4 row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-medium">Imię i nazwisko</label>
+                        <input type="text" name="full_name" class="form-control" value="{{ profile.full_name }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-medium">Tytuł zawodowy (Rola)</label>
+                        <input type="text" name="title" class="form-control" value="{{ profile.title }}" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-medium">Podsumowanie zawodowe (Bio)</label>
+                        <textarea name="summary" class="form-control" rows="4">{{ profile.summary }}</textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-medium">Email</label>
+                        <input type="email" name="email" class="form-control" value="{{ profile.email }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-medium">Telefon</label>
+                        <input type="text" name="phone" class="form-control" value="{{ profile.phone }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-medium">Lokalizacja (np. Warszawa, Polska)</label>
+                        <input type="text" name="location" class="form-control" value="{{ profile.location }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-medium">LinkedIn URL</label>
+                        <input type="url" name="linkedin" class="form-control" value="{{ profile.linkedin }}" placeholder="https://linkedin.com/in/...">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-medium">GitHub URL</label>
+                        <input type="url" name="github" class="form-control" value="{{ profile.github }}" placeholder="https://github.com/...">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-medium">Strona WWW / Portfolio</label>
+                        <input type="url" name="website" class="form-control" value="{{ profile.website }}">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-medium">Zdjęcie profilowe (Awatar)</label>
+                        <input type="file" name="avatar" class="form-control" accept="image/*">
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">Zapisz profil</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 2. Modal: Dodaj / Edytuj Doświadczenie -->
+<div class="modal fade" id="addExperienceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-body border rounded-4 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold" id="expModalTitle">💼 Doświadczenie zawodowe</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" id="expForm" action="{% url 'cv_experience_add' %}">
+                {% csrf_token %}
+                <div class="modal-body p-4 row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-medium">Stanowisko</label>
+                        <input type="text" name="job_title" id="exp_job_title" class="form-control" placeholder="np. Senior Data Analyst" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-medium">Firma / Organizacja</label>
+                        <input type="text" name="company" id="exp_company" class="form-control" placeholder="np. Tech Solutions Sp. z o.o." required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-medium">Lokalizacja / Tryb</label>
+                        <input type="text" name="location" id="exp_location" class="form-control" placeholder="np. Zdalnie / Warszawa">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-medium">Data rozpoczęcia</label>
+                        <input type="text" name="start_date" id="exp_start_date" class="form-control" placeholder="np. 01.2022 lub 2022" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-medium">Data zakończenia</label>
+                        <input type="text" name="end_date" id="exp_end_date" class="form-control" placeholder="np. Obecnie lub 12.2023">
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="is_current" id="exp_is_current" onchange="document.getElementById('exp_end_date').disabled = this.checked; if(this.checked) document.getElementById('exp_end_date').value='Obecnie';">
+                            <label class="form-check-label small" for="exp_is_current">Aktualnie pracuję na tym stanowisku</label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-medium">Opis obowiązków i kluczowych osiągnięć</label>
+                        <textarea name="description" id="exp_description" class="form-control" rows="4" placeholder="• Projektowanie i wdrażanie procesów ETL&#10;• Optymalizacja zapytań SQL..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">Zapisz</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 3. Modal: Dodaj / Edytuj Edukację -->
+<div class="modal fade" id="addEducationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-body border rounded-4 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold" id="eduModalTitle">🎓 Edukacja</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" id="eduForm" action="{% url 'cv_education_add' %}">
+                {% csrf_token %}
+                <div class="modal-body p-4 row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-medium">Uczelnia / Szkoła</label>
+                        <input type="text" name="school" id="edu_school" class="form-control" placeholder="np. Politechnika Warszawska" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-medium">Stopień / Tytuł</label>
+                        <input type="text" name="degree" id="edu_degree" class="form-control" placeholder="np. Inżynier / Magister" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-medium">Kierunek / Specjalizacja</label>
+                        <input type="text" name="field_of_study" id="edu_field" class="form-control" placeholder="np. Informatyka Stosowana" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-medium">Lata nauki</label>
+                        <input type="text" name="years" id="edu_years" class="form-control" placeholder="np. 2018 - 2022" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-medium">Dodatkowy opis (opcjonalnie)</label>
+                        <textarea name="description" id="edu_description" class="form-control" rows="2" placeholder="np. Specjalizacja w inżynierii oprogramowania..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">Zapisz</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 4. Modal: Dodaj Umiejętność -->
+<div class="modal fade" id="addSkillModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-body border rounded-4 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold">⚡ Dodaj Umiejętność</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{% url 'cv_skill_add' %}">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Nazwa umiejętności / Technologii</label>
+                        <input type="text" name="name" class="form-control" placeholder="np. Python, Django, PostgreSQL, Docker" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Kategoria</label>
+                        <input type="text" name="category" class="form-control" list="categorySuggestions" value="Języki i Technologie" required>
+                        <datalist id="categorySuggestions">
+                            <option value="Języki programowania">
+                            <option value="Frameworki & Biblioteki">
+                            <option value="Bazy Danych">
+                            <option value="DevOps & Chmura">
+                            <option value="Narzędzia & Analityka">
+                            <option value="Umiejętności miękkie">
+                        </datalist>
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">Dodaj</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 5. Modal: Dodaj Język -->
+<div class="modal fade" id="addLanguageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-body border rounded-4 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold">🌍 Dodaj Język Obcy</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{% url 'cv_language_add' %}">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Język</label>
+                        <input type="text" name="name" class="form-control" placeholder="np. Angielski, Niemiecki" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Poziom biegłości</label>
+                        <select name="level" class="form-select">
+                            <option value="Ojczysty (Native)">Ojczysty (Native)</option>
+                            <option value="C2 (Biegły)">C2 (Biegły)</option>
+                            <option value="C1 (Zaawansowany)">C1 (Zaawansowany)</option>
+                            <option value="B2 (Średniozaawansowany wyższy)" selected>B2 (Średniozaawansowany wyższy)</option>
+                            <option value="B1 (Średniozaawansowany)">B1 (Średniozaawansowany)</option>
+                            <option value="A2 (Podstawowy wyższy)">A2 (Podstawowy wyższy)</option>
+                            <option value="A1 (Początkujący)">A1 (Początkujący)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">Dodaj</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 6. Modal: Dodaj Certyfikat -->
+<div class="modal fade" id="addCertificateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-body border rounded-4 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold">🏆 Dodaj Certyfikat / Kurs</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{% url 'cv_certificate_add' %}">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Nazwa certyfikatu / Kursu</label>
+                        <input type="text" name="title" class="form-control" placeholder="np. AWS Certified Cloud Practitioner" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Wydawca / Instytucja</label>
+                        <input type="text" name="issuer" class="form-control" placeholder="np. Amazon Web Services / Coursera" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Data / Rok</label>
+                        <input type="text" name="year" class="form-control" placeholder="np. 2024">
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">Dodaj</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openEditExperienceModal(pk, title, company, location, start, end, isCurrent, desc) {
+        document.getElementById('expModalTitle').textContent = '✏️ Edytuj Doświadczenie';
+        document.getElementById('expForm').action = `/cv/doswiadczenie/${pk}/zapisz/`;
+        document.getElementById('exp_job_title').value = title;
+        document.getElementById('exp_company').value = company;
+        document.getElementById('exp_location').value = location;
+        document.getElementById('exp_start_date').value = start;
+        document.getElementById('exp_end_date').value = end;
+        document.getElementById('exp_is_current').checked = isCurrent;
+        document.getElementById('exp_description').value = desc;
+
+        const modal = new bootstrap.Modal(document.getElementById('addExperienceModal'));
+        modal.show();
+    }
+
+    function openEditEducationModal(pk, school, degree, field, years, desc) {
+        document.getElementById('eduModalTitle').textContent = '✏️ Edytuj Edukację';
+        document.getElementById('eduForm').action = `/cv/edukacja/${pk}/zapisz/`;
+        document.getElementById('edu_school').value = school;
+        document.getElementById('edu_degree').value = degree;
+        document.getElementById('edu_field').value = field;
+        document.getElementById('edu_years').value = years;
+        document.getElementById('edu_description').value = desc;
+
+        const modal = new bootstrap.Modal(document.getElementById('addEducationModal'));
+        modal.show();
+    }
+</script>
+
+{% endblock %}

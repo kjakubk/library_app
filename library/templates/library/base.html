@@ -365,7 +365,13 @@
                     </a>
                 </li>
 
-                <!-- CV i Data Analysis usunięte -->
+                <!-- Moje CV -->
+                <li class="menu-item mb-1">
+                    <a href="{% url 'cv_view' %}" class="sidebar-link {% if request.resolver_match.url_name == 'cv_view' %}active{% endif %}">
+                        <i class="bi bi-file-earmark-person sidebar-icon text-primary"></i>
+                        <span>Moje CV</span>
+                    </a>
+                </li>
 
                 <!-- Portfolio Foto -->
                 <li class="menu-item mb-1">
@@ -573,7 +579,11 @@
                 <span>Główna</span>
             </a>
 
-            <!-- 2. Data Analysis usunięte -->
+            <!-- 2. Moje CV -->
+            <a href="{% url 'cv_view' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'cv_view' %}active{% endif %}">
+                <i class="bi bi-file-earmark-person{% if request.resolver_match.url_name == 'cv_view' %}-fill{% endif %}"></i>
+                <span>CV</span>
+            </a>
 
             <!-- 3. Kolekcje (Wysuwany Bottom Sheet) -->
             <button class="mobile-nav-item {% if 'kolekcje' in request.path %}active{% endif %}" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileCollectionsSheet" aria-controls="mobileCollectionsSheet">

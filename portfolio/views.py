@@ -18,8 +18,9 @@ from library.models import Book, Porcelain, VinylRecord, VideoGame, BoardGame, C
 
 def home_view(request):
     """Strona główna witryny / powitanie (wymaga zalogowania przez middleware)."""
-    # Zbieranie fajnych statystyk dla różnych kolekcji
+    profile = CVProfile.objects.first()
     context = {
+        'profile': profile,
         'book_count': Book.objects.count(),
         'porcelain_count': Porcelain.objects.count(),
         'vinyl_count': VinylRecord.objects.count(),
@@ -280,3 +281,226 @@ Jak przywrócić w razie potrzeby:
     response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
     response['Content-Disposition'] = f'attachment; filename="kolekcja_backup_{now_str}.zip"'
     return response
+
+
+# ==========================================
+# MODUŁ MOJE CV (INTERAKTYWNE & EDYTOWALNE)
+# ==========================================
+
+from .models import CVProfile, Education, Skill, Language, Certificate
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
+
+def cv_view(request):
+    """Widok profesjonalnego CV z możliwością bezpośredniej edycji na stronie."""
+    profile = CVProfile.objects.first()
+    if not profile:
+        profile = CVProfile.objects.create(
+            full_name="Jakub",
+            title="Specjalista ds. Danych / Programista",
+            summary="Doświadczony specjalista z pasją do automatyzacji procesów, tworzenia skalowalnych aplikacji internetowych oraz kompleksowej analizy danych.",
+            location="Polska"
+        )
+
+    experiences = Experience.objects.all().order_by('order', '-id')
+    educations = Education.objects.all().order_by('order', '-id')
+    skills = Skill.objects.all().order_by('order', 'category', 'name')
+    languages = Language.objects.all().order_by('order', 'name')
+    certificates = Certificate.objects.all().order_by('order', '-id')
+
+    # Grupowanie umiejętności po kategoriach
+    skills_by_category = {}
+    for skill in skills:
+        cat = skill.category or 'Inne'
+        if cat not in skills_by_category:
+            skills_by_category[cat] = []
+        skills_by_category[cat].append(skill)
+
+    context = {
+        'profile': profile,
+        'experiences': experiences,
+        'educations': educations,
+        'skills_by_category': skills_by_category,
+        'skills': skills,
+        'languages': languages,
+        'certificates': certificates,
+        'active_cv': True
+    }
+    return render(request, 'portfolio/cv.html', context)
+
+
+@login_required
+def cv_profile_update(request):
+    """Aktualizacja danych profilowych i nagłówka CV."""
+    if request.method != 'POST':
+        return redirect('cv_view')
+    
+    profile = CVProfile.objects.first()
+    if not profile:
+        profile = CVProfile()
+
+    profile.full_name = request.POST.get('full_name', profile.full_name).strip()
+    profile.title = request.POST.get('title', profile.title).strip()
+    profile.summary = request.POST.get('summary', profile.summary).strip()
+    profile.email = request.POST.get('email', '').strip()
+    profile.phone = request.POST.get('phone', '').strip()
+    profile.location = request.POST.get('location', '').strip()
+    profile.linkedin = request.POST.get('linkedin', '').strip()
+    profile.github = request.POST.get('github', '').strip()
+    profile.website = request.POST.get('website', '').strip()
+
+    if 'avatar' in request.FILES:
+        profile.avatar = request.FILES['avatar']
+
+    profile.save()
+    messages.success(request, 'Dane profilowe CV zostały pomyślnie zaktualizowane!')
+    return redirect('cv_view')
+
+
+@login_required
+def cv_experience_save(request, pk=None):
+    """Dodawanie lub edycja pozycji doświadczenia zawodowego."""
+    if request.method != 'POST':
+        return redirect('cv_view')
+    
+    if pk:
+        exp = get_object_or_404(Experience, pk=pk)
+    else:
+        exp = Experience()
+
+    exp.job_title = request.POST.get('job_title', '').strip()
+    exp.company = request.POST.get('company', '').strip()
+    exp.location = request.POST.get('location', '').strip()
+    exp.start_date = request.POST.get('start_date', '').strip()
+    exp.end_date = request.POST.get('end_date', '').strip()
+    exp.is_current = bool(request.POST.get('is_current'))
+    if exp.is_current:
+        exp.end_date = 'Obecnie'
+    exp.description = request.POST.get('description', '').strip()
+
+    if exp.job_title and exp.company:
+        exp.save()
+        messages.success(request, 'Doświadczenie zawodowe zostało zapisane!')
+    else:
+        messages.error(request, 'Podaj przynajmniej stanowisko i nazwę firmy.')
+
+    return redirect('cv_view')
+
+
+@login_required
+def cv_experience_delete(request, pk):
+    """Usunięcie pozycji doświadczenia zawodowego."""
+    if request.method == 'POST':
+        exp = get_object_or_404(Experience, pk=pk)
+        exp.delete()
+        messages.success(request, 'Pozycja doświadczenia została usunięta.')
+    return redirect('cv_view')
+
+
+@login_required
+def cv_education_save(request, pk=None):
+    """Dodawanie lub edycja edukacji."""
+    if request.method != 'POST':
+        return redirect('cv_view')
+
+    if pk:
+        edu = get_object_or_404(Education, pk=pk)
+    else:
+        edu = Education()
+
+    edu.school = request.POST.get('school', '').strip()
+    edu.degree = request.POST.get('degree', '').strip()
+    edu.field_of_study = request.POST.get('field_of_study', '').strip()
+    edu.years = request.POST.get('years', '').strip()
+    edu.description = request.POST.get('description', '').strip()
+
+    if edu.school and edu.degree:
+        edu.save()
+        messages.success(request, 'Informacje o edukacji zostały zapisane!')
+    else:
+        messages.error(request, 'Podaj nazwę uczelni/szkoły i uzyskany stopień.')
+
+    return redirect('cv_view')
+
+
+@login_required
+def cv_education_delete(request, pk):
+    """Usunięcie pozycji edukacji."""
+    if request.method == 'POST':
+        edu = get_object_or_404(Education, pk=pk)
+        edu.delete()
+        messages.success(request, 'Wpis edukacji został usunięty.')
+    return redirect('cv_view')
+
+
+@login_required
+def cv_skill_add(request):
+    """Dodanie nowej umiejętności."""
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        category = request.POST.get('category', 'Umiejętności techniczne').strip()
+        try:
+            level = int(request.POST.get('level', 5))
+        except (ValueError, TypeError):
+            level = 5
+
+        if name:
+            Skill.objects.create(name=name, category=category, level=level)
+            messages.success(request, f'Dodano umiejętność: {name}')
+    return redirect('cv_view')
+
+
+@login_required
+def cv_skill_delete(request, pk):
+    """Usunięcie umiejętności."""
+    if request.method == 'POST':
+        skill = get_object_or_404(Skill, pk=pk)
+        skill.delete()
+        messages.success(request, 'Umiejętność została usunięta.')
+    return redirect('cv_view')
+
+
+@login_required
+def cv_language_add(request):
+    """Dodanie języka obcego."""
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        level = request.POST.get('level', 'B2').strip()
+        if name:
+            Language.objects.create(name=name, level=level)
+            messages.success(request, f'Dodano język: {name}')
+    return redirect('cv_view')
+
+
+@login_required
+def cv_language_delete(request, pk):
+    """Usunięcie języka."""
+    if request.method == 'POST':
+        lang = get_object_or_404(Language, pk=pk)
+        lang.delete()
+        messages.success(request, 'Język został usunięty.')
+    return redirect('cv_view')
+
+
+@login_required
+def cv_certificate_add(request):
+    """Dodanie certyfikatu / kursu."""
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        issuer = request.POST.get('issuer', '').strip()
+        year = request.POST.get('year', '').strip()
+        if title:
+            Certificate.objects.create(title=title, issuer=issuer, year=year)
+            messages.success(request, f'Dodano certyfikat: {title}')
+    return redirect('cv_view')
+
+
+@login_required
+def cv_certificate_delete(request, pk):
+    """Usunięcie certyfikatu."""
+    if request.method == 'POST':
+        cert = get_object_or_404(Certificate, pk=pk)
+        cert.delete()
+        messages.success(request, 'Certyfikat został usunięty.')
+    return redirect('cv_view')
