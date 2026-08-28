@@ -1157,16 +1157,10 @@ def digital_game_list(request):
         pct = round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0
         genre_stats.append({'genre': s['genre'], 'count': s['count'], 'pct': pct})
 
-    # Paginacja
-    paginator = Paginator(items, 24)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
     context = {
-        'page_obj': page_obj,
-        'items': page_obj,
-        'total_count': paginator.count,
-        
+        'items': items,
+        'total_count': items.count(),
+
         # Dashboard stats
         'total_collection_count': total_collection_count,
         'total_platforms_count': total_platforms_count,
@@ -1175,7 +1169,7 @@ def digital_game_list(request):
         'platform_stats': platform_stats,
         'genre_stats': genre_stats,
         'top_platform': top_platform,
-        
+
         'platforms': available_platforms,
         'genres': available_genres,
         'current_sort': sort_by,
@@ -1344,7 +1338,7 @@ def steam_import_game(request):
 
 @csrf_exempt
 def heroic_import(request):
-    """Import gier Epic Games z pliku legendary_library.json z Heroic Games Launcher."""
+    """Import gier Epic Games lub GOG z pliku JSON z Heroic Games Launcher."""
     if request.method != 'POST':
         return JsonResponse({'error': 'POST only'}, status=400)
     try:
@@ -1352,25 +1346,38 @@ def heroic_import(request):
         app_name = data.get('app_name', '')
         title = data.get('title', '')
         cover_url = data.get('cover_url', '')
+        platform = data.get('platform', 'Epic Games')  # 'Epic Games' lub 'GOG'
 
         if not title:
             return JsonResponse({'error': 'Missing title'}, status=400)
 
-        if DigitalGame.objects.filter(platform='Epic Games', title=title).exists():
+        if DigitalGame.objects.filter(platform=platform, title=title).exists():
             return JsonResponse({'status': 'skipped'})
 
         game = DigitalGame(
             title=title,
-            platform='Epic Games',
+            platform=platform,
             is_finished=False
         )
 
         if cover_url:
             try:
-                resp = requests.get(cover_url, timeout=10)
-                if resp.status_code == 200:
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Referer': 'https://store.epicgames.com/' if platform == 'Epic Games' else 'https://www.gog.com/',
+                }
+                resp = requests.get(cover_url, timeout=15, headers=headers, allow_redirects=True)
+                if resp.status_code == 200 and len(resp.content) > 1000:
                     safe_name = ''.join(c for c in app_name if c.isalnum() or c in '-_')[:60]
-                    game.cover_image.save(f'epic_{safe_name}.jpg', ContentFile(resp.content), save=False)
+                    prefix = 'epic' if platform == 'Epic Games' else 'gog'
+                    # Determine extension from content type or URL
+                    content_type = resp.headers.get('Content-Type', 'image/jpeg')
+                    ext = 'jpg'
+                    if 'png' in content_type or cover_url.lower().endswith('.png'):
+                        ext = 'png'
+                    game.cover_image.save(f'{prefix}_{safe_name}.{ext}', ContentFile(resp.content), save=False)
             except Exception:
                 pass
 

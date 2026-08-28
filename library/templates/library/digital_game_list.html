@@ -260,8 +260,13 @@
             </button>
 
             <!-- Import Heroic/Epic -->
-            <button type="button" class="btn btn-outline-warning btn-sm px-3.5 py-2 rounded-pill fw-semibold d-flex align-items-center gap-1 shadow-sm" onclick="openHeroicModal()">
+            <button type="button" class="btn btn-outline-warning btn-sm px-3.5 py-2 rounded-pill fw-semibold d-flex align-items-center gap-1 shadow-sm" onclick="openHeroicModal('Epic Games')">
                 🎮 Import Epic (Heroic)
+            </button>
+
+            <!-- Import GOG -->
+            <button type="button" class="btn btn-outline-secondary btn-sm px-3.5 py-2 rounded-pill fw-semibold d-flex align-items-center gap-1 shadow-sm" onclick="openHeroicModal('GOG')">
+                👾 Import GOG (Heroic)
             </button>
             
             <!-- Dodaj grę -->
@@ -474,43 +479,6 @@
             </div>
         {% endfor %}
     </div>
-
-    <!-- PAGINACJA -->
-    {% if page_obj.has_other_pages %}
-    <nav aria-label="Paginacja gier" class="d-flex justify-content-center mt-2 mb-4">
-        <ul class="pagination pagination-sm rounded-pill overflow-hidden shadow-sm border mb-0">
-            {% if page_obj.has_previous %}
-                <li class="page-item">
-                    <a class="page-link px-3" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.platform %}&platform={{ request.GET.platform }}{% endif %}{% if request.GET.genre %}&genre={{ request.GET.genre }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" aria-label="Poprzednia">
-                        &laquo;
-                    </a>
-                </li>
-            {% else %}
-                <li class="page-item disabled"><span class="page-link px-3">&laquo;</span></li>
-            {% endif %}
-
-            {% for num in page_obj.paginator.page_range %}
-                {% if page_obj.number == num %}
-                    <li class="page-item active"><span class="page-link px-3">{{ num }}</span></li>
-                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                    <li class="page-item">
-                        <a class="page-link px-3" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.platform %}&platform={{ request.GET.platform }}{% endif %}{% if request.GET.genre %}&genre={{ request.GET.genre }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">{{ num }}</a>
-                    </li>
-                {% endif %}
-            {% endfor %}
-
-            {% if page_obj.has_next %}
-                <li class="page-item">
-                    <a class="page-link px-3" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.platform %}&platform={{ request.GET.platform }}{% endif %}{% if request.GET.genre %}&genre={{ request.GET.genre }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" aria-label="Następna">
-                        &raquo;
-                    </a>
-                </li>
-            {% else %}
-                <li class="page-item disabled"><span class="page-link px-3">&raquo;</span></li>
-            {% endif %}
-        </ul>
-    </nav>
-    {% endif %}
 
 </div>
 
@@ -817,19 +785,37 @@
     }
 
     // =============================================
-    // HEROIC / EPIC GAMES IMPORT
+    // HEROIC / EPIC GAMES + GOG IMPORT
     // =============================================
     let heroicGamesToImport = [];
     let heroicCurrentIndex = 0;
+    let heroicCurrentPlatform = 'Epic Games';
 
-    function openHeroicModal() {
+    function openHeroicModal(platform) {
+        heroicCurrentPlatform = platform || 'Epic Games';
         heroicGamesToImport = [];
         heroicCurrentIndex = 0;
         document.getElementById('heroicSetupStep').classList.remove('d-none');
         document.getElementById('heroicProgressStep').classList.add('d-none');
         document.getElementById('heroicSetupError').classList.add('d-none');
         document.getElementById('heroicFileInput').value = '';
-        document.getElementById('heroicFileLabel').textContent = 'Wybierz plik legendary_library.json';
+
+        const isGOG = heroicCurrentPlatform === 'GOG';
+        document.getElementById('heroicModalTitle').textContent = isGOG ? '👾 Import GOG (Heroic)' : '🎮 Import Epic Games (Heroic)';
+        document.getElementById('heroicFileNameHint').textContent = isGOG ? 'gog_library.json' : 'legendary_library.json';
+        document.getElementById('heroicWinPath').textContent = isGOG
+            ? '%APPDATA%\\heroic\\store_cache\\gog_library.json'
+            : '%APPDATA%\\heroic\\store_cache\\legendary_library.json';
+        document.getElementById('heroicLinuxPath').textContent = isGOG
+            ? '~/.config/heroic/store_cache/gog_library.json'
+            : '~/.config/heroic/store_cache/legendary_library.json';
+        document.getElementById('heroicMacPath').textContent = isGOG
+            ? '~/Library/Application Support/heroic/store_cache/gog_library.json'
+            : '~/Library/Application Support/heroic/store_cache/legendary_library.json';
+        document.getElementById('heroicFileLabel').textContent = `Wybierz plik ${isGOG ? 'gog_library.json' : 'legendary_library.json'}`;
+        document.getElementById('heroicAnalyzeBtn').textContent = `🔍 Analizuj bibliotekę ${heroicCurrentPlatform}`;
+        document.getElementById('heroicProgressBar').className = `progress-bar progress-bar-striped progress-bar-animated ${isGOG ? 'bg-secondary' : 'bg-warning'}`;
+
         const modal = new bootstrap.Modal(document.getElementById('heroicImportModal'));
         modal.show();
     }
@@ -867,40 +853,49 @@
             return;
         }
 
-        // legendary_library.json to tablica obiektów lub obiekt z kluczem "library"
-        const games = Array.isArray(library) ? library : (library.library || []);
-
-        // Filtruj i buduj listę do importu
-        const existingTitles = new Set();
         heroicGamesToImport = [];
 
-        for (const g of games) {
-            const title = g.title || g.app_title;
-            const appName = g.app_name || '';
-            if (!title) continue;
-
-            // Znajdź najlepszą okładkę - priorytet: DieselGameBoxTall -> DieselGameBox -> Thumbnail
-            let coverUrl = '';
-            const images = g.keyImages || [];
-            const priorities = ['DieselGameBoxTall', 'DieselGameBox', 'DieselStoreFrontTall', 'Thumbnail', 'OfferImageTall'];
-            for (const prio of priorities) {
-                const img = images.find(i => i.type === prio);
-                if (img && img.url) { coverUrl = img.url; break; }
+        if (heroicCurrentPlatform === 'GOG') {
+            // gog_library.json: { "games": [ { "app_name", "title", "art_cover", "art_square", ... } ] }
+            const games = Array.isArray(library) ? library : (library.games || library.library || []);
+            for (const g of games) {
+                const title = g.title || g.app_title;
+                const appName = String(g.app_name || g.id || '');
+                if (!title) continue;
+                const coverUrl = g.art_cover || g.art_square || g.cover || '';
+                heroicGamesToImport.push({ title, app_name: appName, cover_url: coverUrl, platform: 'GOG' });
             }
-            if (!coverUrl && images.length > 0) coverUrl = images[0].url || '';
+        } else {
+            // legendary_library.json: array of { app_name, title, keyImages: [{type, url}] }
+            const games = Array.isArray(library) ? library : (library.library || library.games || []);
+            for (const g of games) {
+                const title = g.title || g.app_title;
+                const appName = g.app_name || '';
+                if (!title) continue;
 
-            heroicGamesToImport.push({ title, app_name: appName, cover_url: coverUrl });
+                // Priorytet okładek: pionowe formaty (3:4) są lepsze niż poziome
+                let coverUrl = '';
+                const images = g.keyImages || [];
+                const priorities = ['DieselGameBoxTall', 'DieselGameBox', 'DieselStoreFrontTall', 'OfferImageTall', 'Thumbnail', 'OfferImageWide'];
+                for (const prio of priorities) {
+                    const img = images.find(i => i.type === prio);
+                    if (img && img.url) { coverUrl = img.url; break; }
+                }
+                if (!coverUrl && images.length > 0) coverUrl = images[0].url || '';
+
+                heroicGamesToImport.push({ title, app_name: appName, cover_url: coverUrl, platform: 'Epic Games' });
+            }
         }
 
         if (heroicGamesToImport.length === 0) {
-            errorDiv.textContent = 'Nie znaleziono gier w pliku. Upewnij się, że to plik legendary_library.json.';
+            errorDiv.textContent = `Nie znaleziono gier w pliku. Upewnij się, że to właściwy plik ${heroicCurrentPlatform}.`;
             errorDiv.classList.remove('d-none');
             return;
         }
 
         document.getElementById('heroicSetupStep').classList.add('d-none');
         document.getElementById('heroicProgressStep').classList.remove('d-none');
-        document.getElementById('heroicStatusText').textContent = `Znaleziono ${heroicGamesToImport.length} gier. Kliknij Start!`;
+        document.getElementById('heroicStatusText').textContent = `Znaleziono ${heroicGamesToImport.length} gier ${heroicCurrentPlatform}. Kliknij Start!`;
         document.getElementById('heroicStartImportContainer').classList.remove('d-none');
         document.getElementById('heroicProgressBar').style.width = '0%';
         document.getElementById('heroicProgressCounter').textContent = '';
@@ -938,7 +933,8 @@
                 body: JSON.stringify({
                     title: game.title,
                     app_name: game.app_name,
-                    cover_url: game.cover_url
+                    cover_url: game.cover_url,
+                    platform: game.platform || heroicCurrentPlatform
                 })
             });
 
@@ -963,20 +959,20 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content bg-body border rounded-4 shadow">
             <div class="modal-header border-bottom">
-                <h5 class="modal-title fw-bold text-body">🎮 Import Epic Games (Heroic)</h5>
+                <h5 class="modal-title fw-bold text-body" id="heroicModalTitle">🎮 Import Epic Games (Heroic)</h5>
                 <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
 
                 <div id="heroicSetupStep">
                     <p class="small text-muted mb-3">
-                        Wgraj plik <code>legendary_library.json</code> z Heroic Games Launcher.<br>
+                        Wgraj plik <code id="heroicFileNameHint">legendary_library.json</code> z Heroic Games Launcher.<br>
                         Znajdziesz go tutaj:
                     </p>
                     <ul class="small text-muted mb-3 ps-3">
-                        <li><strong>Windows:</strong> <code>%APPDATA%\heroic\store_cache\legendary_library.json</code></li>
-                        <li><strong>Linux:</strong> <code>~/.config/heroic/store_cache/legendary_library.json</code></li>
-                        <li><strong>macOS:</strong> <code>~/Library/Application Support/heroic/store_cache/legendary_library.json</code></li>
+                        <li><strong>Windows:</strong> <code id="heroicWinPath">%APPDATA%\heroic\store_cache\legendary_library.json</code></li>
+                        <li><strong>Linux:</strong> <code id="heroicLinuxPath">~/.config/heroic/store_cache/legendary_library.json</code></li>
+                        <li><strong>macOS:</strong> <code id="heroicMacPath">~/Library/Application Support/heroic/store_cache/legendary_library.json</code></li>
                     </ul>
                     <div class="mb-3">
                         <label class="form-label small fw-medium">Plik biblioteki Heroic</label>
@@ -990,7 +986,7 @@
                             </span>
                         </div>
                     </div>
-                    <button class="btn btn-warning w-100 rounded-pill fw-semibold text-dark" onclick="parseHeroicFile()">
+                    <button class="btn btn-warning w-100 rounded-pill fw-semibold text-dark" id="heroicAnalyzeBtn" onclick="parseHeroicFile()">
                         🔍 Analizuj bibliotekę
                     </button>
                     <div id="heroicSetupError" class="text-danger small mt-2 d-none"></div>
