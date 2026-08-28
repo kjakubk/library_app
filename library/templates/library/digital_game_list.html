@@ -254,6 +254,11 @@
                 </button>
             </div>
 
+            <!-- Import Steam -->
+            <button type="button" class="btn btn-outline-primary btn-sm px-3.5 py-2 rounded-pill fw-semibold d-flex align-items-center gap-1 shadow-sm" onclick="openSteamModal()">
+                <i class="bi bi-steam"></i> Import Steam
+            </button>
+            
             <!-- Dodaj grę -->
             <a href="{% url 'digital_game_create' %}" class="btn btn-success btn-sm px-3.5 py-2 rounded-pill fw-semibold d-flex align-items-center gap-1 shadow-sm text-decoration-none">
                 <i class="bi bi-plus-lg"></i> Dodaj grę
@@ -467,6 +472,51 @@
 
 </div>
 
+<!-- MODAL STEAM IMPORT -->
+<div class="modal fade" id="steamImportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-body border rounded-4 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold text-body">Import ze Steam</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="steamSetupStep">
+                    <p class="small text-muted mb-3">
+                        Podaj swoje Steam ID (lub unikalną nazwę z linku) oraz Steam Web API Key.
+                        <br>Klucz API możesz wygenerować za darmo na stronie Steama.
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Steam ID / Nick</label>
+                        <input type="text" id="steamIdInput" class="form-control" placeholder="np. 765611980...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Klucz API Steam</label>
+                        <input type="password" id="steamApiKeyInput" class="form-control" placeholder="Twój tajny klucz API">
+                    </div>
+                    <button class="btn btn-primary w-100 rounded-pill fw-semibold" onclick="fetchSteamGames()">
+                        Analizuj bibliotekę
+                    </button>
+                    <div id="steamSetupError" class="text-danger small mt-2 d-none"></div>
+                </div>
+
+                <div id="steamProgressStep" class="d-none text-center py-3">
+                    <h6 class="fw-bold mb-3" id="steamStatusText">Wyszukiwanie...</h6>
+                    <div class="progress rounded-pill overflow-hidden" style="height: 10px; background-color: var(--bs-tertiary-bg);">
+                        <div id="steamProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 0%;"></div>
+                    </div>
+                    <div class="small text-muted mt-2" id="steamProgressCounter"></div>
+                    <div class="mt-4" id="steamStartImportContainer" class="d-none">
+                        <button class="btn btn-success rounded-pill px-4 fw-semibold" id="steamStartBtn" onclick="startSteamImport()">
+                            Rozpocznij Import
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL KARUZELI -->
 <div class="modal fade" id="galleryModal" tabindex="-1" aria-labelledby="galleryModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -572,5 +622,129 @@
         try { savedMode = localStorage.getItem('digital_game_view_mode') || 'table'; } catch(e) {}
         switchViewMode(savedMode);
     });
+
+    // --- Steam Import Logic ---
+    let steamGamesToImport = [];
+    let steamCurrentIndex = 0;
+    
+    function openSteamModal() {
+        const modal = new bootstrap.Modal(document.getElementById('steamImportModal'));
+        
+        // Load from local storage
+        const sid = localStorage.getItem('steam_id') || '';
+        const skey = localStorage.getItem('steam_api_key') || '';
+        document.getElementById('steamIdInput').value = sid;
+        document.getElementById('steamApiKeyInput').value = skey;
+        
+        document.getElementById('steamSetupStep').classList.remove('d-none');
+        document.getElementById('steamProgressStep').classList.add('d-none');
+        document.getElementById('steamSetupError').classList.add('d-none');
+        
+        modal.show();
+    }
+    
+    async function fetchSteamGames() {
+        const sid = document.getElementById('steamIdInput').value.trim();
+        const skey = document.getElementById('steamApiKeyInput').value.trim();
+        const errorDiv = document.getElementById('steamSetupError');
+        
+        if(!sid || !skey) {
+            errorDiv.textContent = 'Wypełnij oba pola.';
+            errorDiv.classList.remove('d-none');
+            return;
+        }
+        
+        localStorage.setItem('steam_id', sid);
+        localStorage.setItem('steam_api_key', skey);
+        
+        errorDiv.classList.add('d-none');
+        
+        // Show progress UI
+        document.getElementById('steamSetupStep').classList.add('d-none');
+        const pStep = document.getElementById('steamProgressStep');
+        pStep.classList.remove('d-none');
+        document.getElementById('steamStatusText').textContent = 'Pobieranie listy gier...';
+        document.getElementById('steamProgressBar').style.width = '100%';
+        document.getElementById('steamProgressBar').classList.add('progress-bar-animated');
+        document.getElementById('steamProgressCounter').textContent = '';
+        document.getElementById('steamStartImportContainer').classList.add('d-none');
+        
+        try {
+            const response = await fetch(`/api/steam/fetch_games/?steam_id=${encodeURIComponent(sid)}&api_key=${encodeURIComponent(skey)}`);
+            const data = await response.json();
+            
+            if(data.error) {
+                document.getElementById('steamSetupStep').classList.remove('d-none');
+                pStep.classList.add('d-none');
+                errorDiv.textContent = data.error;
+                errorDiv.classList.remove('d-none');
+                return;
+            }
+            
+            steamGamesToImport = data.games || [];
+            
+            if(steamGamesToImport.length === 0) {
+                document.getElementById('steamStatusText').textContent = 'Brak nowych gier do importu.';
+                document.getElementById('steamProgressBar').style.width = '100%';
+                document.getElementById('steamProgressBar').classList.remove('progress-bar-animated', 'bg-primary');
+                document.getElementById('steamProgressBar').classList.add('bg-success');
+            } else {
+                document.getElementById('steamStatusText').textContent = `Znaleziono ${steamGamesToImport.length} nowych gier.`;
+                document.getElementById('steamStartImportContainer').classList.remove('d-none');
+            }
+        } catch(err) {
+            document.getElementById('steamSetupStep').classList.remove('d-none');
+            pStep.classList.add('d-none');
+            errorDiv.textContent = 'Błąd połączenia z serwerem.';
+            errorDiv.classList.remove('d-none');
+        }
+    }
+    
+    async function startSteamImport() {
+        document.getElementById('steamStartImportContainer').classList.add('d-none');
+        document.getElementById('steamProgressBar').style.width = '0%';
+        steamCurrentIndex = 0;
+        
+        importNextSteamGame();
+    }
+    
+    async function importNextSteamGame() {
+        if(steamCurrentIndex >= steamGamesToImport.length) {
+            document.getElementById('steamStatusText').textContent = 'Import zakończony sukcesem!';
+            document.getElementById('steamProgressBar').style.width = '100%';
+            document.getElementById('steamProgressBar').classList.remove('progress-bar-animated');
+            document.getElementById('steamProgressBar').classList.add('bg-success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+            return;
+        }
+        
+        const game = steamGamesToImport[steamCurrentIndex];
+        document.getElementById('steamStatusText').textContent = `Importowanie: ${game.name}`;
+        
+        try {
+            await fetch('/api/steam/import_game/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    appid: game.appid,
+                    name: game.name
+                })
+            });
+        } catch(e) {
+            console.error('Failed to import', game.name);
+        }
+        
+        steamCurrentIndex++;
+        const pct = Math.round((steamCurrentIndex / steamGamesToImport.length) * 100);
+        document.getElementById('steamProgressBar').style.width = `${pct}%`;
+        document.getElementById('steamProgressCounter').textContent = `${steamCurrentIndex} / ${steamGamesToImport.length}`;
+        
+        // Add a tiny delay so it doesn't overload the server
+        setTimeout(importNextSteamGame, 300);
+    }
 </script>
 {% endblock %}

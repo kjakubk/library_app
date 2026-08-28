@@ -4,6 +4,7 @@ import ssl
 import io
 import re
 import urllib.request
+import requests
 
 from django.db.models import Q, Count
 from django.contrib import messages
@@ -1149,7 +1150,19 @@ def digital_game_create(request):
     if request.method == 'POST':
         form = DigitalGameForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            game = form.save(commit=False)
+            remote_cover_url = request.POST.get('remote_cover_url')
+            if remote_cover_url and not request.FILES.get('cover_image'):
+                try:
+                    resp = requests.get(remote_cover_url, timeout=10)
+                    if resp.status_code == 200:
+                        file_name = remote_cover_url.split('/')[-1].split('?')[0]
+                        if not file_name or '.' not in file_name:
+                            file_name = 'cover.jpg'
+                        game.cover_image.save(file_name, ContentFile(resp.content), save=False)
+                except Exception as e:
+                    pass
+            game.save()
             messages.success(request, 'Dodano grę cyfrową!')
             return redirect('digital_game_list')
     else:
@@ -1166,8 +1179,20 @@ def digital_game_edit(request, pk):
     if request.method == 'POST':
         form = DigitalGameForm(request.POST, request.FILES, instance=item)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Zaktualizowano grę cyfrową!')
+            game = form.save(commit=False)
+            remote_cover_url = request.POST.get('remote_cover_url')
+            if remote_cover_url and not request.FILES.get('cover_image'):
+                try:
+                    resp = requests.get(remote_cover_url, timeout=10)
+                    if resp.status_code == 200:
+                        file_name = remote_cover_url.split('/')[-1].split('?')[0]
+                        if not file_name or '.' not in file_name:
+                            file_name = 'cover.jpg'
+                        game.cover_image.save(file_name, ContentFile(resp.content), save=False)
+                except Exception as e:
+                    pass
+            game.save()
+            messages.success(request, 'Zaktualizowano grę!')
             return redirect('digital_game_list')
     else:
         form = DigitalGameForm(instance=item)
@@ -1186,3 +1211,87 @@ def digital_game_delete(request, pk):
         messages.success(request, 'Usunięto grę cyfrową.')
         return redirect('digital_game_list')
     return redirect('digital_game_list')
+
+# =======================================================
+# STEAM MASS IMPORT
+# =======================================================
+import json
+from django.views.decorators.csrf import csrf_exempt
+
+def steam_fetch_games(request):
+    steam_id = request.GET.get('steam_id', '').strip()
+    api_key = request.GET.get('api_key', '').strip()
+    
+    if not steam_id or not api_key:
+        return JsonResponse({'error': 'Missing API Key or ID'}, status=400)
+        
+    if not steam_id.isdigit():
+        vanity_url = f'http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key={api_key}&vanityurl={steam_id}'
+        try:
+            r = requests.get(vanity_url, timeout=10).json()
+            if r.get('response', {}).get('success') == 1:
+                steam_id = r['response']['steamid']
+            else:
+                return JsonResponse({'error': 'Vanity ID not found'}, status=400)
+        except Exception:
+            return JsonResponse({'error': 'Connection error'}, status=500)
+            
+    owned_games_url = f'http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={api_key}&steamid={steam_id}&include_appinfo=1&include_played_free_games=1'
+    try:
+        r = requests.get(owned_games_url, timeout=15).json()
+        games = r.get('response', {}).get('games', [])
+        if not games:
+            return JsonResponse({'games': []})
+            
+        existing_titles = set(DigitalGame.objects.filter(platform='Steam').values_list('title', flat=True))
+        
+        results = []
+        for g in games:
+            name = g.get('name', 'Unknown')
+            if name not in existing_titles:
+                results.append({
+                    'appid': g.get('appid'),
+                    'name': name
+                })
+        return JsonResponse({'games': results})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+def steam_import_game(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST only'}, status=400)
+    try:
+        data = json.loads(request.body)
+        appid = data.get('appid')
+        name = data.get('name')
+        
+        if not appid or not name:
+            return JsonResponse({'error': 'Missing data'}, status=400)
+            
+        if DigitalGame.objects.filter(platform='Steam', title=name).exists():
+            return JsonResponse({'status': 'skipped'})
+            
+        game = DigitalGame(
+            title=name,
+            platform='Steam',
+            is_finished=False
+        )
+        
+        cover_url = f'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{appid}/library_600x900.jpg'
+        try:
+            resp = requests.get(cover_url, timeout=10)
+            if resp.status_code == 200:
+                game.cover_image.save(f'steam_{appid}.jpg', ContentFile(resp.content), save=False)
+            else:
+                header_url = f'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{appid}/header.jpg'
+                resp2 = requests.get(header_url, timeout=10)
+                if resp2.status_code == 200:
+                    game.cover_image.save(f'steam_{appid}_header.jpg', ContentFile(resp2.content), save=False)
+        except Exception:
+            pass
+            
+        game.save()
+        return JsonResponse({'status': 'ok'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

@@ -23,9 +23,13 @@
             <form method="POST" enctype="multipart/form-data" class="row g-4">
                 {% csrf_token %}
                 
+                <input type="hidden" name="remote_cover_url" id="remote_cover_url">
                 <div class="col-md-6">
                     <label class="form-label fw-medium text-body">Tytuł gry</label>
-                    {{ form.title }}
+                    <div class="input-group">
+                        {{ form.title }}
+                        <button class="btn btn-outline-primary" type="button" onclick="openRawgModal()" title="Wyszukaj grę w bazie RAWG">🔍 Szukaj (RAWG)</button>
+                    </div>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-medium text-body">Platforma (np. PC, PS5)</label>
@@ -220,5 +224,170 @@
             }, 'image/jpeg', 0.85); // 0.85 to dobra kompresja jpeg
         });
     });
+
+    // --- RAWG Integration ---
+    function openRawgModal() {
+        const modal = new bootstrap.Modal(document.getElementById('rawgModal'));
+        document.getElementById('rawgQuery').value = document.getElementById('id_title').value;
+        const key = localStorage.getItem('rawg_api_key') || '';
+        document.getElementById('rawgApiKey').value = key;
+        
+        document.getElementById('rawgSetup').classList.remove('d-none');
+        document.getElementById('rawgResults').classList.add('d-none');
+        document.getElementById('rawgError').classList.add('d-none');
+        
+        modal.show();
+    }
+    
+    async function searchRawg() {
+        const query = document.getElementById('rawgQuery').value.trim();
+        const key = document.getElementById('rawgApiKey').value.trim();
+        const errorDiv = document.getElementById('rawgError');
+        
+        if(!query || !key) {
+            errorDiv.textContent = 'Wprowadź tytuł i klucz API.';
+            errorDiv.classList.remove('d-none');
+            return;
+        }
+        
+        localStorage.setItem('rawg_api_key', key);
+        errorDiv.classList.add('d-none');
+        
+        const btn = document.getElementById('rawgSearchBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Szukam...';
+        
+        try {
+            const res = await fetch(`https://api.rawg.io/api/games?search=${encodeURIComponent(query)}&key=${encodeURIComponent(key)}&page_size=5`);
+            const data = await res.json();
+            
+            if(data.error) {
+                errorDiv.textContent = 'Błąd API: ' + data.error;
+                errorDiv.classList.remove('d-none');
+                btn.disabled = false;
+                btn.innerHTML = 'Szukaj w bazie RAWG';
+                return;
+            }
+            
+            const resultsDiv = document.getElementById('rawgResultsList');
+            resultsDiv.innerHTML = '';
+            
+            if(!data.results || data.results.length === 0) {
+                resultsDiv.innerHTML = '<p class="text-muted small">Nic nie znaleziono.</p>';
+            } else {
+                data.results.forEach(game => {
+                    const year = game.released ? game.released.substring(0, 4) : '';
+                    const genre = (game.genres && game.genres.length > 0) ? game.genres[0].name : '';
+                    
+                    const div = document.createElement('div');
+                    div.className = 'd-flex align-items-center p-2 border-bottom hover-bg-light';
+                    div.style.cursor = 'pointer';
+                    div.innerHTML = `
+                        <img src="${game.background_image || ''}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" class="me-3">
+                        <div class="flex-grow-1 text-start">
+                            <div class="fw-bold">${game.name}</div>
+                            <div class="small text-muted">${year} | ${genre}</div>
+                        </div>
+                        <button class="btn btn-sm btn-outline-success rounded-pill px-3" onclick="selectRawgGame(event, '${game.name.replace(/'/g, "\\'")}', '${year}', '${genre}', '${game.background_image}')">Wybierz</button>
+                    `;
+                    resultsDiv.appendChild(div);
+                });
+            }
+            
+            document.getElementById('rawgSetup').classList.add('d-none');
+            document.getElementById('rawgResults').classList.remove('d-none');
+            
+        } catch (e) {
+            errorDiv.textContent = 'Błąd połączenia z RAWG.';
+            errorDiv.classList.remove('d-none');
+        }
+        
+        btn.disabled = false;
+        btn.innerHTML = 'Szukaj w bazie RAWG';
+    }
+    
+    function selectRawgGame(e, name, year, genre, imgUrl) {
+        e.preventDefault();
+        
+        // Fill form
+        document.getElementById('id_title').value = name;
+        if(document.getElementById('id_release_year')) document.getElementById('id_release_year').value = year;
+        
+        // Try to match genre dropdown
+        if(genre && document.getElementById('id_genre')) {
+            const select = document.getElementById('id_genre');
+            for(let i=0; i<select.options.length; i++) {
+                if(select.options[i].text.toLowerCase().includes(genre.toLowerCase())) {
+                    select.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+        
+        // Set remote cover
+        if(imgUrl && imgUrl !== 'null') {
+            document.getElementById('remote_cover_url').value = imgUrl;
+            
+            // Show preview
+            const fileInput = document.getElementById('id_cover_image');
+            if(fileInput) {
+                const parentDiv = fileInput.closest('div');
+                let previewDiv = parentDiv.querySelector('.remote-preview');
+                if(!previewDiv) {
+                    const html = `
+                        <div class="remote-preview mt-2 p-2 bg-body-secondary rounded-3 d-inline-block border">
+                            <img src="${imgUrl}" alt="Podgląd" class="rounded" style="height: 100px; object-fit: cover;">
+                            <div class="small text-muted mt-1 text-center">Pobrane z RAWG</div>
+                        </div>
+                    `;
+                    fileInput.insertAdjacentHTML('afterend', html);
+                } else {
+                    previewDiv.querySelector('img').src = imgUrl;
+                }
+            }
+        }
+        
+        bootstrap.Modal.getInstance(document.getElementById('rawgModal')).hide();
+    }
 </script>
+
+<!-- MODAL RAWG -->
+<div class="modal fade" id="rawgModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-body border rounded-4 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold text-body">Wyszukiwarka RAWG.io</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div id="rawgSetup">
+                    <p class="small text-muted mb-3">
+                        Wyszukaj grę na platformie RAWG. Wpisz tytuł i upewnij się, że masz darmowy klucz API (do zdobycia na rawg.io).
+                    </p>
+                    <div class="mb-3 text-start">
+                        <label class="form-label small fw-medium">Tytuł gry</label>
+                        <input type="text" id="rawgQuery" class="form-control">
+                    </div>
+                    <div class="mb-3 text-start">
+                        <label class="form-label small fw-medium">RAWG API Key</label>
+                        <input type="password" id="rawgApiKey" class="form-control" placeholder="Klucz API">
+                    </div>
+                    <button id="rawgSearchBtn" class="btn btn-primary w-100 rounded-pill fw-semibold" onclick="searchRawg()">
+                        Szukaj w bazie RAWG
+                    </button>
+                    <div id="rawgError" class="text-danger small mt-2 d-none"></div>
+                </div>
+                
+                <div id="rawgResults" class="d-none text-start">
+                    <h6 class="fw-bold mb-3">Wyniki wyszukiwania:</h6>
+                    <div id="rawgResultsList" class="d-flex flex-column gap-2 overflow-auto" style="max-height: 400px;">
+                    </div>
+                    <button class="btn btn-outline-secondary btn-sm rounded-pill mt-3 w-100" onclick="document.getElementById('rawgResults').classList.add('d-none'); document.getElementById('rawgSetup').classList.remove('d-none');">
+                        Wróć do wyszukiwania
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

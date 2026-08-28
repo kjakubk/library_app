@@ -79,4 +79,6 @@ urlpatterns = [
     # 9. ENDPOINTY API (ISBN LOOKUP)
     # ==========================================
     path('api/ksiazka/<str:isbn>/', views.fetch_book_data, name='fetch_book_data'),
+    path('api/steam/fetch_games/', views.steam_fetch_games, name='steam_fetch_games'),
+    path('api/steam/import_game/', views.steam_import_game, name='steam_import_game'),
 ]
