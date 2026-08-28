@@ -1100,13 +1100,13 @@ def antique_delete(request, pk):
 # ==========================================
 
 def digital_game_list(request):
-    items = DigitalGame.objects.all()
-    
-    # Filtrowanie i sortowanie (podobnie jak VideoGame)
-    query = request.GET.get('q')
-    platform = request.GET.get('platform')
-    genre = request.GET.get('genre')
+    query = request.GET.get('q', '').strip()
     sort_by = request.GET.get('sort', 'title')
+    selected_platform = request.GET.get('platform', '').strip()
+    selected_genre = request.GET.get('genre', '').strip()
+    
+    all_items = DigitalGame.objects.all()
+    items = all_items
 
     if query:
         items = items.filter(
@@ -1114,36 +1114,70 @@ def digital_game_list(request):
             Q(platform__icontains=query) |
             Q(genre__icontains=query)
         )
-    if platform:
-        items = items.filter(platform=platform)
-    if genre:
-        items = items.filter(genre=genre)
+    if selected_platform:
+        items = items.filter(platform=selected_platform)
+    if selected_genre:
+        items = items.filter(genre=selected_genre)
 
-    # Sortowanie
-    if sort_by == 'title_desc':
-        items = items.order_by('-title')
-    elif sort_by == 'newest':
-        items = items.order_by('-created_at')
-    elif sort_by == 'oldest':
-        items = items.order_by('created_at')
+    sort_mapping = {
+        'title': 'title', '-title': '-title',
+        'platform': 'platform', '-platform': '-platform',
+        'release_year': 'release_year', '-release_year': '-release_year'
+    }
+    
+    if sort_by in sort_mapping:
+        items = items.order_by(sort_mapping[sort_by])
     else:
         items = items.order_by('title')
+
+    # Statistics
+    total_collection_count = all_items.count()
+    available_platforms = DigitalGame.objects.exclude(platform__isnull=True).exclude(platform__exact='').values_list('platform', flat=True).distinct().order_by('platform')
+    available_genres = DigitalGame.objects.exclude(genre__isnull=True).exclude(genre__exact='').values_list('genre', flat=True).distinct().order_by('genre')
+    
+    total_platforms_count = available_platforms.count()
+    total_genres_count = available_genres.count()
+    
+    items_with_covers = all_items.filter(
+        Q(cover_image__isnull=False) & ~Q(cover_image='')
+    ).count()
+    photo_coverage_pct = round((items_with_covers / total_collection_count) * 100, 1) if total_collection_count else 0
+    
+    raw_platform_stats = DigitalGame.objects.exclude(platform__isnull=True).exclude(platform__exact='').values('platform').annotate(count=Count('id')).order_by('-count')[:6]
+    platform_stats = []
+    for s in raw_platform_stats:
+        pct = round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0
+        platform_stats.append({'platform': s['platform'], 'count': s['count'], 'pct': pct})
+        
+    top_platform = platform_stats[0]['platform'] if platform_stats else 'Brak'
+    
+    raw_genre_stats = DigitalGame.objects.exclude(genre__isnull=True).exclude(genre__exact='').values('genre').annotate(count=Count('id')).order_by('-count')[:6]
+    genre_stats = []
+    for s in raw_genre_stats:
+        pct = round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0
+        genre_stats.append({'genre': s['genre'], 'count': s['count'], 'pct': pct})
 
     # Paginacja
     paginator = Paginator(items, 24)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # Do filtrów
-    platforms = DigitalGame.objects.values_list('platform', flat=True).distinct().order_by('platform')
-    genres = DigitalGame.objects.exclude(genre__isnull=True).exclude(genre='').values_list('genre', flat=True).distinct().order_by('genre')
-
     context = {
         'page_obj': page_obj,
         'items': page_obj,
         'total_count': paginator.count,
-        'platforms': platforms,
-        'genres': genres,
+        
+        # Dashboard stats
+        'total_collection_count': total_collection_count,
+        'total_platforms_count': total_platforms_count,
+        'total_genres_count': total_genres_count,
+        'photo_coverage_pct': photo_coverage_pct,
+        'platform_stats': platform_stats,
+        'genre_stats': genre_stats,
+        'top_platform': top_platform,
+        
+        'platforms': available_platforms,
+        'genres': available_genres,
         'current_sort': sort_by,
         'active_kolekcje': True
     }
