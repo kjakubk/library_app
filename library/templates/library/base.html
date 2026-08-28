@@ -419,6 +419,11 @@
                             </a>
                         </li>
                         <li class="tree-submenu-item">
+                            <a href="{% url 'digital_game_list' %}" class="submenu-link {% if request.resolver_match.url_name == 'digital_game_list' %}active{% endif %}">
+                                <span>Gry cyfrowe</span>
+                            </a>
+                        </li>
+                        <li class="tree-submenu-item">
                             <a href="{% url 'board_game_list' %}" class="submenu-link {% if request.resolver_match.url_name == 'board_game_list' %}active{% endif %}">
                                 <span>Gry planszowe</span>
                             </a>
@@ -632,6 +637,14 @@
                             <span class="fs-2 mb-1">🎮</span>
                             <span class="fw-bold small">Gry Wideo</span>
                             <span class="text-muted" style="font-size: 0.72rem;">Platformy & nośniki</span>
+                        </a>
+                    </div>
+                    <!-- Gry Cyfrowe -->
+                    <div class="col-6">
+                        <a href="{% url 'digital_game_list' %}" class="d-flex flex-column align-items-center justify-content-center p-3 rounded-4 border bg-body text-decoration-none text-body shadow-sm h-100 transition-all">
+                            <span class="fs-2 mb-1">☁️</span>
+                            <span class="fw-bold small">Gry Cyfrowe</span>
+                            <span class="text-muted" style="font-size: 0.72rem;">Steam, Epic & inne</span>
                         </a>
                     </div>
                     <!-- Gry Planszowe -->

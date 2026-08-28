@@ -424,5 +424,47 @@ class Antique(models.Model):
             models.Index(fields=['-created_at']),
         ]
 
+# ==========================================
+# 8. GRY CYFROWE
+# ==========================================
+
+class DigitalGame(models.Model):
+    PLATFORM_CHOICES = [
+        ('Steam', 'Steam'),
+        ('Epic Games', 'Epic Games'),
+        ('GOG', 'GOG.com'),
+        ('PlayStation Network', 'PlayStation Network (PSN)'),
+        ('Xbox Live', 'Xbox Live'),
+        ('Nintendo eShop', 'Nintendo eShop'),
+        ('Battle.net', 'Battle.net'),
+        ('EA App', 'EA App / Origin'),
+        ('Ubisoft Connect', 'Ubisoft Connect'),
+        ('Amazon Games', 'Amazon Games'),
+        ('Inna', 'Inna platforma'),
+    ]
+
+    title = models.CharField(max_length=200, verbose_name="Tytuł gry")
+    platform = models.CharField(max_length=100, choices=PLATFORM_CHOICES, verbose_name="Platforma / Sklep")
+    genre = models.CharField(max_length=100, choices=VideoGame.GENRE_CHOICES, blank=True, null=True, verbose_name="Gatunek")
+    release_year = models.IntegerField(blank=True, null=True, verbose_name="Rok wydania")
+    
+    is_finished = models.BooleanField(default=False, verbose_name="Ukończona")
+    notes = models.TextField(blank=True, null=True, verbose_name="Notatki (np. Edycja GOTY, DLC)")
+    
+    cover_image = models.ImageField(upload_to='digital_games/covers/', blank=True, null=True, verbose_name="Okładka gry")
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Data dodania")
+
+    class Meta:
+        verbose_name = "Gra cyfrowa"
+        verbose_name_plural = "Gry cyfrowe"
+        ordering = ['title']
+        indexes = [
+            models.Index(fields=['title']),
+            models.Index(fields=['platform']),
+            models.Index(fields=['genre']),
+            models.Index(fields=['-created_at']),
+        ]
+
     def __str__(self):
-        return self.name
+        return f"{self.title} ({self.platform})"

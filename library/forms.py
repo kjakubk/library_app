@@ -1,5 +1,5 @@
 from django import forms
-from .models import Book, VinylRecord, Porcelain, BoardGame, VideoGame, ConsoleHardware, Antique
+from .models import Book, VinylRecord, Porcelain, BoardGame, VideoGame, ConsoleHardware, Antique, DigitalGame
 
 
 class VinylRecordForm(forms.ModelForm):
@@ -213,4 +213,22 @@ class AntiqueForm(forms.ModelForm):
             'condition': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. Dobry, do renowacji'}),
             'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+        }
+
+
+class DigitalGameForm(forms.ModelForm):
+    class Meta:
+        model = DigitalGame
+        fields = [
+            'title', 'platform', 'genre', 'release_year', 
+            'is_finished', 'notes', 'cover_image'
+        ]
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. Wiedźmin 3: Dziki Gon'}),
+            'platform': forms.Select(attrs={'class': 'form-select'}),
+            'genre': forms.Select(attrs={'class': 'form-select'}),
+            'release_year': forms.NumberInput(attrs={'class': 'form-control'}),
+            'is_finished': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'np. Wersja ze wszystkimi dodatkami (GOTY)'}),
+            'cover_image': forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': 'image/*', 'capture': 'environment'}),
         }

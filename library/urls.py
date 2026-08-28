@@ -68,7 +68,15 @@ urlpatterns = [
     path('antyki/<int:pk>/usun/', views.antique_delete, name='antique_delete'),
 
     # ==========================================
-    # 8. ENDPOINTY API (ISBN LOOKUP)
+    # 8. GRY CYFROWE
+    # ==========================================
+    path('gry-cyfrowe/', views.digital_game_list, name='digital_game_list'),
+    path('gry-cyfrowe/dodaj/', views.digital_game_create, name='digital_game_create'),
+    path('gry-cyfrowe/<int:pk>/edytuj/', views.digital_game_edit, name='digital_game_edit'),
+    path('gry-cyfrowe/<int:pk>/usun/', views.digital_game_delete, name='digital_game_delete'),
+
+    # ==========================================
+    # 9. ENDPOINTY API (ISBN LOOKUP)
     # ==========================================
     path('api/ksiazka/<str:isbn>/', views.fetch_book_data, name='fetch_book_data'),
 ]

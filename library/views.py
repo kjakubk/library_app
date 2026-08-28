@@ -13,8 +13,8 @@ from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
-from .forms import BookForm, CSVImportForm, VinylRecordForm, PorcelainForm, BoardGameForm, VideoGameForm, ConsoleHardwareForm, AntiqueForm
-from .models import BoardGame, Book, Porcelain, VideoGame, VinylRecord, ConsoleHardware, Antique, CATEGORY_CHOICES
+from .forms import BookForm, CSVImportForm, VinylRecordForm, PorcelainForm, BoardGameForm, VideoGameForm, ConsoleHardwareForm, AntiqueForm, DigitalGameForm
+from .models import BoardGame, Book, Porcelain, VideoGame, VinylRecord, ConsoleHardware, Antique, DigitalGame, CATEGORY_CHOICES
 from .book_services import (
     get_unified_book_data, 
     download_and_save_book_cover, 
@@ -1091,3 +1091,98 @@ def antique_delete(request, pk):
         messages.success(request, 'Usunięto pomyślnie.')
         return redirect('antique_list')
     return redirect('antique_list')
+
+
+# ==========================================
+# 8. GRY CYFROWE
+# ==========================================
+
+def digital_game_list(request):
+    items = DigitalGame.objects.all()
+    
+    # Filtrowanie i sortowanie (podobnie jak VideoGame)
+    query = request.GET.get('q')
+    platform = request.GET.get('platform')
+    genre = request.GET.get('genre')
+    sort_by = request.GET.get('sort', 'title')
+
+    if query:
+        items = items.filter(
+            Q(title__icontains=query) | 
+            Q(platform__icontains=query) |
+            Q(genre__icontains=query)
+        )
+    if platform:
+        items = items.filter(platform=platform)
+    if genre:
+        items = items.filter(genre=genre)
+
+    # Sortowanie
+    if sort_by == 'title_desc':
+        items = items.order_by('-title')
+    elif sort_by == 'newest':
+        items = items.order_by('-created_at')
+    elif sort_by == 'oldest':
+        items = items.order_by('created_at')
+    else:
+        items = items.order_by('title')
+
+    # Paginacja
+    paginator = Paginator(items, 24)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # Do filtrów
+    platforms = DigitalGame.objects.values_list('platform', flat=True).distinct().order_by('platform')
+    genres = DigitalGame.objects.exclude(genre__isnull=True).exclude(genre='').values_list('genre', flat=True).distinct().order_by('genre')
+
+    context = {
+        'page_obj': page_obj,
+        'platforms': platforms,
+        'genres': genres,
+        'current_sort': sort_by,
+        'active_kolekcje': True
+    }
+    return render(request, 'library/digital_game_list.html', context)
+
+def digital_game_create(request):
+    if request.method == 'POST':
+        form = DigitalGameForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Dodano grę cyfrową!')
+            return redirect('digital_game_list')
+    else:
+        form = DigitalGameForm()
+    
+    return render(request, 'library/digital_game_form.html', {
+        'form': form, 
+        'is_edit': False,
+        'active_kolekcje': True
+    })
+
+def digital_game_edit(request, pk):
+    item = get_object_or_404(DigitalGame, pk=pk)
+    if request.method == 'POST':
+        form = DigitalGameForm(request.POST, request.FILES, instance=item)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Zaktualizowano grę cyfrową!')
+            return redirect('digital_game_list')
+    else:
+        form = DigitalGameForm(instance=item)
+    
+    return render(request, 'library/digital_game_form.html', {
+        'form': form, 
+        'is_edit': True, 
+        'item': item,
+        'active_kolekcje': True
+    })
+
+def digital_game_delete(request, pk):
+    item = get_object_or_404(DigitalGame, pk=pk)
+    if request.method == 'POST':
+        item.delete()
+        messages.success(request, 'Usunięto grę cyfrową.')
+        return redirect('digital_game_list')
+    return redirect('digital_game_list')
