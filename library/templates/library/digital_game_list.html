@@ -670,7 +670,8 @@
         document.getElementById('steamStartImportContainer').classList.add('d-none');
         
         try {
-            const response = await fetch(`/api/steam/fetch_games/?steam_id=${encodeURIComponent(sid)}&api_key=${encodeURIComponent(skey)}`);
+            const url = `{% url 'steam_fetch_games' %}?steam_id=${encodeURIComponent(sid)}&api_key=${encodeURIComponent(skey)}`;
+            const response = await fetch(url);
             const data = await response.json();
             
             if(data.error) {
@@ -724,7 +725,8 @@
         document.getElementById('steamStatusText').textContent = `Importowanie: ${game.name}`;
         
         try {
-            await fetch('/api/steam/import_game/', {
+            const url = `{% url 'steam_import_game' %}`;
+            await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
