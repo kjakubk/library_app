@@ -133,10 +133,12 @@
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end rounded-3 shadow border">
                     <li><a class="dropdown-item py-2" href="#" data-bs-toggle="modal" data-bs-target="#addExperienceModal">💼 Doświadczenie zawodowe</a></li>
+                    <li><a class="dropdown-item py-2" href="#" data-bs-toggle="modal" data-bs-target="#addProjectModal">🚀 Projekt / Realizacja</a></li>
                     <li><a class="dropdown-item py-2" href="#" data-bs-toggle="modal" data-bs-target="#addEducationModal">🎓 Edukacja</a></li>
                     <li><a class="dropdown-item py-2" href="#" data-bs-toggle="modal" data-bs-target="#addSkillModal">⚡ Umiejętność</a></li>
                     <li><a class="dropdown-item py-2" href="#" data-bs-toggle="modal" data-bs-target="#addLanguageModal">🌍 Język obcy</a></li>
                     <li><a class="dropdown-item py-2" href="#" data-bs-toggle="modal" data-bs-target="#addCertificateModal">🏆 Certyfikat / Kurs</a></li>
+                    <li><a class="dropdown-item py-2" href="#" data-bs-toggle="modal" data-bs-target="#addHobbyModal">🎯 Hobby / Zainteresowania</a></li>
                 </ul>
             </div>
 
@@ -151,7 +153,7 @@
     <div class="cv-paper">
         <div class="row g-0">
             
-            <!-- LEWA KOLUMNA (SIDEBAR): DANE OSOBOWE, SKILLSE, JĘZYKI -->
+            <!-- LEWA KOLUMNA (SIDEBAR): DANE OSOBOWE, SKILLSE, JĘZYKI, HOBBY -->
             <div class="col-lg-4 cv-sidebar p-4 p-md-4.5">
                 
                 <!-- Awatar / Zdjęcie profilowe -->
@@ -274,7 +276,7 @@
                 <hr class="border-secondary border-opacity-25 my-4">
 
                 <!-- CERTYFIKATY & KURSY -->
-                <div>
+                <div class="mb-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h6 class="text-uppercase fw-bold small text-muted mb-0" style="letter-spacing: 1px;">Certyfikaty</h6>
                         <button type="button" class="btn btn-sm btn-outline-primary rounded-circle p-0 no-print" style="width: 22px; height: 22px; line-height: 1;" data-bs-toggle="modal" data-bs-target="#addCertificateModal" title="Dodaj certyfikat">+</button>
@@ -292,6 +294,30 @@
                             </div>
                         {% empty %}
                             <p class="small text-muted mb-0">Brak dodanych certyfikatów.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <hr class="border-secondary border-opacity-25 my-4">
+
+                <!-- HOBBY & ZAINTERESOWANIA -->
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="text-uppercase fw-bold small text-muted mb-0" style="letter-spacing: 1px;">Zainteresowania</h6>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-circle p-0 no-print" style="width: 22px; height: 22px; line-height: 1;" data-bs-toggle="modal" data-bs-target="#addHobbyModal" title="Dodaj hobby">+</button>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-1.5">
+                        {% for h in hobbies %}
+                            <span class="badge bg-body text-body border shadow-sm px-2.5 py-1.5 rounded-pill small fw-normal d-inline-flex align-items-center gap-1.5 skill-badge">
+                                <span>{{ h.icon }}</span> {{ h.name }}
+                                <form method="POST" action="{% url 'cv_hobby_delete' h.pk %}" class="d-inline no-print" onsubmit="return confirm('Usunąć hobby {{ h.name }}?')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="border-0 bg-transparent p-0 text-muted hover-danger" style="line-height: 0.8; font-size: 0.75rem;" title="Usuń">✕</button>
+                                </form>
+                            </span>
+                        {% empty %}
+                            <p class="small text-muted mb-0">Brak dodanych zainteresowań.</p>
                         {% endfor %}
                     </div>
                 </div>
@@ -360,6 +386,72 @@
                             </div>
                         {% empty %}
                             <p class="text-muted small mb-0">Brak wpisów doświadczenia. Kliknij "+ Dodaj" aby dodać swoje stanowiska.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- PROJEKTY & REALIZACJE -->
+                <div class="mb-5">
+                    <div class="d-flex align-items-center justify-content-between mb-4">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="p-2 bg-primary bg-opacity-10 text-primary rounded-3 fs-6">🚀</span>
+                            <h4 class="fw-bold text-body mb-0">Wybrane Projekty</h4>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 no-print" data-bs-toggle="modal" data-bs-target="#addProjectModal">
+                            + Dodaj
+                        </button>
+                    </div>
+
+                    <div class="row g-3">
+                        {% for p in projects %}
+                            <div class="col-12">
+                                <div class="p-3.5 bg-body rounded-4 border shadow-sm position-relative">
+                                    <div class="d-flex justify-content-between align-items-start mb-2 flex-wrap gap-2">
+                                        <div>
+                                            <h5 class="fw-bold text-body mb-0 fs-6 d-flex align-items-center gap-2">
+                                                {{ p.title }}
+                                                {% if p.url %}
+                                                    <a href="{{ p.url }}" target="_blank" class="text-primary text-decoration-none small" title="Otwórz link do projektu">
+                                                        <i class="bi bi-box-arrow-up-right"></i>
+                                                    </a>
+                                                {% endif %}
+                                            </h5>
+                                            {% if p.role %}
+                                                <span class="text-primary fw-medium small">{{ p.role }}</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="no-print d-flex gap-1">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary border-0 p-1" onclick="openEditProjectModal({{ p.pk }}, '{{ p.title|escapejs }}', '{{ p.role|escapejs }}', '{{ p.technologies|escapejs }}', '{{ p.url|escapejs }}', '{{ p.description|escapejs }}')" title="Edytuj">
+                                                ✏️
+                                            </button>
+                                            <form method="POST" action="{% url 'cv_project_delete' p.pk %}" class="d-inline" onsubmit="return confirm('Usunąć projekt {{ p.title }}?')">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger border-0 p-1" title="Usuń">
+                                                    🗑️
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+
+                                    {% if p.technologies %}
+                                        <div class="mb-2 d-flex flex-wrap gap-1">
+                                            {% for tech in p.technologies.split %}
+                                                <span class="badge bg-body-secondary text-body border px-2 py-0.5 rounded-pill small" style="font-size: 0.72rem;">{{ tech|cut:"," }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+
+                                    {% if p.description %}
+                                        <div class="text-muted small mt-2" style="line-height: 1.6;">
+                                            {{ p.description|linebreaks }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% empty %}
+                            <div class="col-12">
+                                <p class="text-muted small mb-0">Brak dodanych projektów. Kliknij "+ Dodaj" aby dodać swoje projekty.</p>
+                            </div>
                         {% endfor %}
                     </div>
                 </div>
@@ -679,6 +771,87 @@
     </div>
 </div>
 
+<!-- 7. Modal: Dodaj / Edytuj Projekt -->
+<div class="modal fade" id="addProjectModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-body border rounded-4 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold" id="projectModalTitle">🚀 Projekt / Realizacja</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" id="projectForm" action="{% url 'cv_project_add' %}">
+                {% csrf_token %}
+                <div class="modal-body p-4 row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-medium">Nazwa projektu</label>
+                        <input type="text" name="title" id="proj_title" class="form-control" placeholder="np. System Zarządzania Biblioteką i Kolekcją" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-medium">Rola / Funkcja w projekcie</label>
+                        <input type="text" name="role" id="proj_role" class="form-control" placeholder="np. Główny Programista / Architekt">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-medium">Technologie (oddzielone spacją lub przecinkiem)</label>
+                        <input type="text" name="technologies" id="proj_tech" class="form-control" placeholder="np. Python, Django, PostgreSQL, Docker, Nginx">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-medium">Link do projektu / GitHub</label>
+                        <input type="url" name="url" id="proj_url" class="form-control" placeholder="https://github.com/...">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-medium">Opis projektu, wyzwań i osiągnięć</label>
+                        <textarea name="description" id="proj_description" class="form-control" rows="3" placeholder="• Zaprojektowanie i wdrożenie aplikacji w architekturze MVC&#10;• Integracja zewnętrznych API i automatyzacja importu danych..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">Zapisz projekt</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 8. Modal: Dodaj Hobby -->
+<div class="modal fade" id="addHobbyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-body border rounded-4 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold">🎯 Dodaj Hobby / Zainteresowanie</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{% url 'cv_hobby_add' %}">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Nazwa hobby</label>
+                        <input type="text" name="name" class="form-control" placeholder="np. Fotografia krajobrazowa, Gry planszowe, Płyty winylowe" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium">Ikona / Emoji</label>
+                        <input type="text" name="icon" class="form-control" list="hobbyIconSuggestions" value="📷" placeholder="np. 📷, 🎮, 🎵, 📚, ✈️, 🚴">
+                        <datalist id="hobbyIconSuggestions">
+                            <option value="📷">
+                            <option value="🎮">
+                            <option value="🎵">
+                            <option value="📚">
+                            <option value="✈️">
+                            <option value="🚴">
+                            <option value="☕">
+                            <option value="🎨">
+                            <option value="🏔️">
+                        </datalist>
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Anuluj</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">Dodaj</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
     function toggleExpCurrent(checkbox) {
         const endDateInput = document.getElementById('exp_end_date');
@@ -707,7 +880,6 @@
 
     // Resetuj formularz przy dodawaniu nowego doświadczenia
     document.getElementById('addExperienceModal').addEventListener('show.bs.modal', function (event) {
-        // Jeśli otwarto przyciskiem dodawania (nie edycji)
         if (!event.relatedTarget || event.relatedTarget.getAttribute('data-bs-target') !== '#addExperienceModal') return;
         document.getElementById('expModalTitle').textContent = '💼 Doświadczenie zawodowe';
         document.getElementById('expForm').action = `{% url 'cv_experience_add' %}`;
@@ -718,6 +890,30 @@
         document.getElementById('exp_end_date').disabled = false;
         document.getElementById('exp_is_current').checked = false;
         document.getElementById('exp_description').value = '';
+    });
+
+    function openEditProjectModal(pk, title, role, tech, url, desc) {
+        document.getElementById('projectModalTitle').textContent = '✏️ Edytuj Projekt';
+        document.getElementById('projectForm').action = `/cv/projekt/${pk}/zapisz/`;
+        document.getElementById('proj_title').value = title;
+        document.getElementById('proj_role').value = role;
+        document.getElementById('proj_tech').value = tech;
+        document.getElementById('proj_url').value = url;
+        document.getElementById('proj_description').value = desc;
+
+        const modal = new bootstrap.Modal(document.getElementById('addProjectModal'));
+        modal.show();
+    }
+
+    document.getElementById('addProjectModal').addEventListener('show.bs.modal', function (event) {
+        if (!event.relatedTarget || event.relatedTarget.getAttribute('data-bs-target') !== '#addProjectModal') return;
+        document.getElementById('projectModalTitle').textContent = '🚀 Projekt / Realizacja';
+        document.getElementById('projectForm').action = `{% url 'cv_project_add' %}`;
+        document.getElementById('proj_title').value = '';
+        document.getElementById('proj_role').value = '';
+        document.getElementById('proj_tech').value = '';
+        document.getElementById('proj_url').value = '';
+        document.getElementById('proj_description').value = '';
     });
 
     function openEditEducationModal(pk, school, degree, field, years, desc) {

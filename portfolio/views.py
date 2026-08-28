@@ -287,7 +287,7 @@ Jak przywrócić w razie potrzeby:
 # MODUŁ MOJE CV (INTERAKTYWNE & EDYTOWALNE)
 # ==========================================
 
-from .models import CVProfile, Education, Skill, Language, Certificate
+from .models import CVProfile, Education, Skill, Language, Certificate, Project, Hobby
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -303,11 +303,13 @@ def cv_view(request):
             location="Polska"
         )
 
-    experiences = Experience.objects.all().order_by('order', '-id')
+    experiences = Experience.objects.all().order_by('-is_current', '-start_date', '-id')
     educations = Education.objects.all().order_by('order', '-id')
     skills = Skill.objects.all().order_by('order', 'category', 'name')
     languages = Language.objects.all().order_by('order', 'name')
     certificates = Certificate.objects.all().order_by('order', '-id')
+    projects = Project.objects.all().order_by('order', '-id')
+    hobbies = Hobby.objects.all().order_by('order', 'name')
 
     # Grupowanie umiejętności po kategoriach
     skills_by_category = {}
@@ -325,6 +327,8 @@ def cv_view(request):
         'skills': skills,
         'languages': languages,
         'certificates': certificates,
+        'projects': projects,
+        'hobbies': hobbies,
         'active_cv': True
     }
     return render(request, 'portfolio/cv.html', context)
@@ -506,4 +510,62 @@ def cv_certificate_delete(request, pk):
         cert = get_object_or_404(Certificate, pk=pk)
         cert.delete()
         messages.success(request, 'Certyfikat został usunięty.')
+    return redirect('cv_view')
+
+
+@login_required
+def cv_project_save(request, pk=None):
+    """Dodawanie lub edycja projektu."""
+    if request.method != 'POST':
+        return redirect('cv_view')
+
+    if pk:
+        project = get_object_or_404(Project, pk=pk)
+    else:
+        project = Project()
+
+    project.title = request.POST.get('title', '').strip()
+    project.role = request.POST.get('role', '').strip()
+    project.technologies = request.POST.get('technologies', '').strip()
+    project.url = request.POST.get('url', '').strip()
+    project.description = request.POST.get('description', '').strip()
+
+    if project.title:
+        project.save()
+        messages.success(request, f'Projekt "{project.title}" został zapisany!')
+    else:
+        messages.error(request, 'Podaj nazwę projektu.')
+
+    return redirect('cv_view')
+
+
+@login_required
+def cv_project_delete(request, pk):
+    """Usunięcie projektu."""
+    if request.method == 'POST':
+        project = get_object_or_404(Project, pk=pk)
+        project.delete()
+        messages.success(request, 'Projekt został usunięty.')
+    return redirect('cv_view')
+
+
+@login_required
+def cv_hobby_add(request):
+    """Dodanie nowego hobby / zainteresowania."""
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        icon = request.POST.get('icon', '🎮').strip()
+        if name:
+            Hobby.objects.create(name=name, icon=icon)
+            messages.success(request, f'Dodano hobby: {name}')
+    return redirect('cv_view')
+
+
+@login_required
+def cv_hobby_delete(request, pk):
+    """Usunięcie hobby."""
+    if request.method == 'POST':
+        hobby = get_object_or_404(Hobby, pk=pk)
+        hobby.delete()
+        messages.success(request, 'Hobby zostało usunięte.')
     return redirect('cv_view')

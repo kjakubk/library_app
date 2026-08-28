@@ -171,3 +171,34 @@ class Certificate(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class Project(models.Model):
+    title = models.CharField(max_length=200, verbose_name="Nazwa projektu")
+    role = models.CharField(max_length=150, blank=True, default="", verbose_name="Rola / Stanowisko w projekcie")
+    technologies = models.CharField(max_length=255, blank=True, default="", verbose_name="Technologie (po przecinku)")
+    url = models.CharField(max_length=255, blank=True, default="", verbose_name="Link do projektu / GitHub")
+    description = models.TextField(blank=True, default="", verbose_name="Opis projektu i osiągniętych rezultatów")
+    order = models.IntegerField(default=0, verbose_name="Kolejność")
+
+    class Meta:
+        verbose_name = "Projekt"
+        verbose_name_plural = "Projekty"
+        ordering = ['order', '-id']
+
+    def __str__(self):
+        return self.title
+
+
+class Hobby(models.Model):
+    name = models.CharField(max_length=100, verbose_name="Nazwa hobby / Zainteresowania")
+    icon = models.CharField(max_length=50, blank=True, default="🎮", verbose_name="Ikona / Emoji")
+    order = models.IntegerField(default=0, verbose_name="Kolejność")
+
+    class Meta:
+        verbose_name = "Hobby"
+        verbose_name_plural = "Hobby i Zainteresowania"
+        ordering = ['order', 'name']
+
+    def __str__(self):
+        return self.name
