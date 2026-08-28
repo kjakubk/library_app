@@ -279,6 +279,7 @@ class VideoGame(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Cena / Wartość")
     
     cover_image = models.ImageField(upload_to='videogames/covers/', blank=True, null=True, verbose_name="Okładka gry")
+    back_cover_image = models.ImageField(upload_to='videogames/back_covers/', blank=True, null=True, verbose_name="Tył pudełka")
     media_image = models.ImageField(upload_to='videogames/media/', blank=True, null=True, verbose_name="Płyta / Kartridż")
     
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Data dodania")

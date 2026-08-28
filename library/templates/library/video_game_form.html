@@ -56,16 +56,25 @@
                     <h6 class="fw-bold text-body mb-3">📸 Zdjęcia gry</h6>
                 </div>
 
-                <div class="col-md-6">
-                    <label class="form-label fw-medium text-muted small">Okładka / Pudełko</label>
+                <div class="col-md-4">
+                    <label class="form-label fw-medium text-muted small">Przód pudełka</label>
                     {{ form.cover_image }}
                     {% if is_edit and item.cover_image %}
                         <div class="mt-2 p-2 bg-body-secondary rounded-3 d-inline-block border">
-                            <img src="{{ item.cover_image.url }}" alt="Okładka" class="rounded" style="height: 100px; object-fit: cover;">
+                            <img src="{{ item.cover_image.url }}" alt="Okładka przód" class="rounded" style="height: 100px; object-fit: cover;">
                         </div>
                     {% endif %}
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
+                    <label class="form-label fw-medium text-muted small">Tył pudełka</label>
+                    {{ form.back_cover_image }}
+                    {% if is_edit and item.back_cover_image %}
+                        <div class="mt-2 p-2 bg-body-secondary rounded-3 d-inline-block border">
+                            <img src="{{ item.back_cover_image.url }}" alt="Okładka tył" class="rounded" style="height: 100px; object-fit: cover;">
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
                     <label class="form-label fw-medium text-muted small">Płyta / Kartridż</label>
                     {{ form.media_image }}
                     {% if is_edit and item.media_image %}

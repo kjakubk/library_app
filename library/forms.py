@@ -166,7 +166,7 @@ class VideoGameForm(forms.ModelForm):
         model = VideoGame
         fields = [
             'title', 'platform', 'genre', 'release_year', 
-            'condition', 'price', 'cover_image', 'media_image'
+            'condition', 'price', 'cover_image', 'back_cover_image', 'media_image'
         ]
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. Cyberpunk 2077'}),
@@ -175,8 +175,9 @@ class VideoGameForm(forms.ModelForm):
             'release_year': forms.NumberInput(attrs={'class': 'form-control'}),
             'condition': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'np. Idealny / Folia'}),
             'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'cover_image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
-            'media_image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'cover_image': forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': 'image/*', 'capture': 'environment'}),
+            'back_cover_image': forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': 'image/*', 'capture': 'environment'}),
+            'media_image': forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': 'image/*', 'capture': 'environment'}),
         }
 
 

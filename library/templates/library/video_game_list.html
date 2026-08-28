@@ -299,6 +299,8 @@
                                 <div class="position-relative d-inline-block rounded-3 overflow-hidden shadow-sm border item-thumb-container" style="width: 52px; height: 52px; cursor: pointer;" onclick="openGalleryModal({{ item.pk }})" title="Podgląd okładki">
                                     {% if item.cover_image %}
                                         <img src="{{ item.cover_image.url }}" alt="{{ item.title }}" class="w-100 h-100 object-fit-cover item-thumb-img">
+                                    {% elif item.back_cover_image %}
+                                        <img src="{{ item.back_cover_image.url }}" alt="Tył okładki" class="w-100 h-100 object-fit-cover item-thumb-img">
                                     {% elif item.media_image %}
                                         <img src="{{ item.media_image.url }}" alt="Nośnik" class="w-100 h-100 object-fit-cover item-thumb-img">
                                     {% else %}
@@ -361,7 +363,7 @@
                             <!-- Akcje -->
                             <td class="text-end pe-3 pe-md-4">
                                 <div class="d-inline-flex align-items-center gap-1">
-                                    {% if item.cover_image or item.media_image %}
+                                    {% if item.cover_image or item.back_cover_image or item.media_image %}
                                         <button type="button" class="btn btn-sm btn-outline-primary border rounded-pill px-2.5 py-1" onclick="openGalleryModal({{ item.pk }})" title="Podgląd">
                                             📸 Foto
                                         </button>
@@ -378,7 +380,8 @@
                              data-title="{{ item.title|escapejs }}"
                              data-images='[
                                 {% if item.cover_image %}"{{ item.cover_image.url }}"{% endif %}
-                                {% if item.media_image %}{% if item.cover_image %},{% endif %}"{{ item.media_image.url }}"{% endif %}
+                                {% if item.back_cover_image %}{% if item.cover_image %},{% endif %}"{{ item.back_cover_image.url }}"{% endif %}
+                                {% if item.media_image %}{% if item.cover_image or item.back_cover_image %},{% endif %}"{{ item.media_image.url }}"{% endif %}
                              ]'></div>
                     {% empty %}
                         <tr>
@@ -405,6 +408,8 @@
                     <div class="position-relative bg-body-secondary overflow-hidden" style="aspect-ratio: 3/4; cursor: pointer;" onclick="openGalleryModal({{ item.pk }})">
                         {% if item.cover_image %}
                             <img src="{{ item.cover_image.url }}" alt="{{ item.title }}" class="w-100 h-100 object-fit-cover item-thumb-img">
+                        {% elif item.back_cover_image %}
+                            <img src="{{ item.back_cover_image.url }}" alt="Tył okładki" class="w-100 h-100 object-fit-cover item-thumb-img">
                         {% elif item.media_image %}
                             <img src="{{ item.media_image.url }}" alt="Nośnik" class="w-100 h-100 object-fit-cover item-thumb-img">
                         {% else %}
@@ -450,7 +455,7 @@
 
                         <!-- Przyciski akcji -->
                         <div class="d-flex gap-1 pt-2 border-top">
-                            {% if item.cover_image or item.media_image %}
+                            {% if item.cover_image or item.back_cover_image or item.media_image %}
                                 <button type="button" class="btn btn-outline-primary btn-sm rounded-pill flex-fill py-1 small" onclick="openGalleryModal({{ item.pk }})">
                                     📸 Okładka
                                 </button>
