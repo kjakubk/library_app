@@ -83,5 +83,6 @@ urlpatterns = [
     path('api/steam/import_game/', views.steam_import_game, name='steam_import_game'),
     path('api/heroic/import/', views.heroic_import, name='heroic_import'),
     path('api/gry-cyfrowe/bulk-delete/', views.digital_game_bulk_delete, name='digital_game_bulk_delete'),
+    path('api/gry/bulk-delete/', views.video_game_bulk_delete, name='video_game_bulk_delete'),
     path('api/libib/import_game/', views.libib_import_game, name='libib_import_game'),
 ]
