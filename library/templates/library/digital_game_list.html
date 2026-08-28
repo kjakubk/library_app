@@ -726,18 +726,31 @@
         
         try {
             const url = `{% url 'steam_import_game' %}`;
-            await fetch(url, {
+            const res = await fetch(url, {
                 method: 'POST',
+                credentials: 'same-origin',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
                 },
                 body: JSON.stringify({
                     appid: game.appid,
                     name: game.name
                 })
             });
+            
+            if (!res.ok) {
+                const text = await res.text();
+                console.error('Błąd importu gry', game.name, text);
+                document.getElementById('steamStatusText').textContent = `Błąd: ${game.name} (${res.status})`;
+                document.getElementById('steamStatusText').classList.add('text-danger');
+                await new Promise(r => setTimeout(r, 1000));
+            }
         } catch(e) {
-            console.error('Failed to import', game.name);
+            console.error('Failed to import', game.name, e);
+            document.getElementById('steamStatusText').textContent = `Błąd sieci przy: ${game.name}`;
+            document.getElementById('steamStatusText').classList.add('text-danger');
+            await new Promise(r => setTimeout(r, 1000));
         }
         
         steamCurrentIndex++;
