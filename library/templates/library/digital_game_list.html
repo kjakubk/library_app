@@ -278,11 +278,26 @@
 
     <!-- WIDOK 1: NOWOCZESNA TABELA GIER WIDEO -->
     <div id="videoGameTableView" class="card bg-body shadow-sm border rounded-4 overflow-hidden mb-4">
+
+        <!-- Pasek zaznaczonych (ukryty dopóki nic nie zaznaczono) -->
+        <div id="bulkActionBar" class="d-none px-3 px-md-4 py-2 bg-danger bg-opacity-10 border-bottom d-flex align-items-center gap-3">
+            <span class="small fw-bold text-danger" id="bulkCountLabel">0 zaznaczonych</span>
+            <button class="btn btn-danger btn-sm rounded-pill px-3 fw-semibold" onclick="bulkDelete()">
+                🗑️ Usuń zaznaczone
+            </button>
+            <button class="btn btn-outline-secondary btn-sm rounded-pill px-3" onclick="clearSelection()">
+                ✕ Odznacz wszystkie
+            </button>
+        </div>
+
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="bg-body-secondary border-bottom">
                     <tr class="small text-muted text-uppercase" style="letter-spacing: 0.5px; font-size: 0.74rem;">
-                        <th class="ps-3 ps-md-4 py-3" style="width: 76px;">Okładka</th>
+                        <th class="ps-3 py-3" style="width: 40px;">
+                            <input type="checkbox" class="form-check-input shadow-none" id="selectAllCheckbox" onchange="toggleSelectAll(this)" title="Zaznacz wszystkie">
+                        </th>
+                        <th class="py-3" style="width: 66px;">Okładka</th>
                         <th class="py-3" style="min-width: 220px;">
                             <a href="?sort={% if current_sort == 'title' %}-title{% else %}title{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.platform %}&platform={{ request.GET.platform }}{% endif %}" class="text-body text-decoration-none d-inline-flex align-items-center gap-1">
                                 Tytuł gry
@@ -308,9 +323,13 @@
                 </thead>
                 <tbody>
                     {% for item in items %}
-                        <tr class="align-middle">
+                        <tr class="align-middle game-row" data-pk="{{ item.pk }}">
+                            <!-- Checkbox zaznaczenia -->
+                            <td class="ps-3 py-2">
+                                <input type="checkbox" class="form-check-input shadow-none game-checkbox" value="{{ item.pk }}" onchange="onCheckboxChange()">
+                            </td>
                             <!-- Miniatura okładki -->
-                            <td class="ps-3 ps-md-4 py-2.5">
+                            <td class="py-2.5">
                                 <div class="position-relative d-inline-block rounded-3 overflow-hidden shadow-sm border item-thumb-container" style="width: 52px; height: 52px; cursor: pointer;" onclick="openGalleryModal({{ item.pk }})" title="Podgląd okładki">
                                     {% if item.cover_image %}
                                         <img src="{{ item.cover_image.url }}" alt="{{ item.title }}" class="w-100 h-100 object-fit-cover item-thumb-img">
@@ -412,7 +431,11 @@
     <div id="videoGameGridView" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-4 g-3 mb-4" style="display: none;">
         {% for item in items %}
             <div class="col">
-                <div class="card bg-body shadow-sm border rounded-4 h-100 overflow-hidden transition-hover">
+                <div class="card bg-body shadow-sm border rounded-4 h-100 overflow-hidden transition-hover position-relative" id="gridCard-{{ item.pk }}">
+                    <!-- Checkbox nakładka -->
+                    <div class="position-absolute top-0 end-0 m-2" style="z-index:10;" onclick="event.stopPropagation()">
+                        <input type="checkbox" class="form-check-input shadow-none grid-game-checkbox" style="width:1.3em;height:1.3em;cursor:pointer;background-color:rgba(255,255,255,0.85);" value="{{ item.pk }}" onchange="onGridCheckboxChange(this, {{ item.pk }})">
+                    </div>
                     <!-- Okładka gry (Format 3:4) -->
                     <div class="position-relative bg-body-secondary overflow-hidden" style="aspect-ratio: 3/4; cursor: pointer;" onclick="openGalleryModal({{ item.pk }})">
                         {% if item.cover_image %}
@@ -782,6 +805,117 @@
         
         // Add a tiny delay so it doesn't overload the server
         setTimeout(importNextSteamGame, 300);
+    }
+
+    // =============================================
+    // BULK SELECT & DELETE
+    // =============================================
+    const selectedIds = new Set();
+
+    function onCheckboxChange() {
+        // Called when a table row checkbox changes
+        document.querySelectorAll('.game-checkbox').forEach(cb => {
+            const pk = parseInt(cb.value);
+            if (cb.checked) {
+                selectedIds.add(pk);
+                cb.closest('tr').classList.add('table-danger');
+            } else {
+                selectedIds.delete(pk);
+                cb.closest('tr').classList.remove('table-danger');
+            }
+            // Sync grid checkbox if visible
+            const gridCb = document.querySelector(`.grid-game-checkbox[value="${pk}"]`);
+            if (gridCb) gridCb.checked = cb.checked;
+        });
+        updateBulkBar();
+    }
+
+    function onGridCheckboxChange(cb, pk) {
+        if (cb.checked) {
+            selectedIds.add(pk);
+            document.getElementById(`gridCard-${pk}`).classList.add('border-danger', 'border-2');
+        } else {
+            selectedIds.delete(pk);
+            document.getElementById(`gridCard-${pk}`).classList.remove('border-danger', 'border-2');
+        }
+        // Sync table checkbox
+        const tableCb = document.querySelector(`.game-checkbox[value="${pk}"]`);
+        if (tableCb) tableCb.checked = cb.checked;
+        updateBulkBar();
+    }
+
+    function toggleSelectAll(masterCb) {
+        document.querySelectorAll('.game-checkbox').forEach(cb => {
+            cb.checked = masterCb.checked;
+        });
+        document.querySelectorAll('.grid-game-checkbox').forEach(cb => {
+            cb.checked = masterCb.checked;
+        });
+        onCheckboxChange();
+    }
+
+    function clearSelection() {
+        selectedIds.clear();
+        document.querySelectorAll('.game-checkbox, .grid-game-checkbox').forEach(cb => cb.checked = false);
+        document.querySelectorAll('.game-row').forEach(tr => tr.classList.remove('table-danger'));
+        document.querySelectorAll('[id^="gridCard-"]').forEach(card => card.classList.remove('border-danger', 'border-2'));
+        const master = document.getElementById('selectAllCheckbox');
+        if (master) master.checked = false;
+        updateBulkBar();
+    }
+
+    function updateBulkBar() {
+        const bar = document.getElementById('bulkActionBar');
+        const label = document.getElementById('bulkCountLabel');
+        const count = selectedIds.size;
+        if (count > 0) {
+            bar.classList.remove('d-none');
+            label.textContent = `${count} zaznaczonych`;
+        } else {
+            bar.classList.add('d-none');
+        }
+        // Update master checkbox state
+        const master = document.getElementById('selectAllCheckbox');
+        if (master) {
+            const total = document.querySelectorAll('.game-checkbox').length;
+            master.indeterminate = count > 0 && count < total;
+            master.checked = total > 0 && count === total;
+        }
+    }
+
+    async function bulkDelete() {
+        const count = selectedIds.size;
+        if (count === 0) return;
+        if (!confirm(`Czy na pewno chcesz usunąć ${count} gier? Tej operacji nie można cofnąć.`)) return;
+
+        const ids = Array.from(selectedIds);
+        try {
+            const res = await fetch(`{% url 'digital_game_bulk_delete' %}`, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ ids })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                // Remove rows from DOM without full reload for speed
+                ids.forEach(pk => {
+                    const row = document.querySelector(`.game-row[data-pk="${pk}"]`);
+                    if (row) row.remove();
+                    const card = document.getElementById(`gridCard-${pk}`);
+                    if (card) card.closest('.col').remove();
+                });
+                selectedIds.clear();
+                updateBulkBar();
+            } else {
+                alert('Błąd podczas usuwania: ' + (data.error || 'nieznany błąd'));
+            }
+        } catch(e) {
+            alert('Błąd sieci: ' + e.message);
+        }
     }
 
     // =============================================

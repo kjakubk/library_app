@@ -1385,3 +1385,20 @@ def heroic_import(request):
         return JsonResponse({'status': 'ok'})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def digital_game_bulk_delete(request):
+    """Masowe usuwanie gier cyfrowych po liście ID."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST only'}, status=400)
+    try:
+        data = json.loads(request.body)
+        ids = data.get('ids', [])
+        if not ids:
+            return JsonResponse({'error': 'No IDs provided'}, status=400)
+        ids = [int(i) for i in ids if str(i).isdigit()]
+        deleted_count, _ = DigitalGame.objects.filter(pk__in=ids).delete()
+        return JsonResponse({'deleted': deleted_count})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
