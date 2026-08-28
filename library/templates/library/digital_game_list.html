@@ -965,6 +965,60 @@
         }
     });
 
+    function getBestCoverUrl(g) {
+        if (!g) return '';
+        // 1. Array of images (Epic keyImages / images in metadata or root)
+        const imageArrays = [
+            g.metadata?.keyImages,
+            g.keyImages,
+            g.metadata?.images,
+            g.images,
+            g.key_images
+        ];
+
+        const priorities = [
+            'DieselGameBoxTall', 'DieselGameBox', 'DieselStoreFrontTall', 
+            'OfferImageTall', 'Tall', 'VaultClosed', 'Thumbnail', 
+            'OfferImageWide', 'DieselGameBoxLogo', 'featuredMedia', 'hero', 'portrait'
+        ];
+
+        for (const arr of imageArrays) {
+            if (Array.isArray(arr) && arr.length > 0) {
+                // Try prioritized types
+                for (const prio of priorities) {
+                    const found = arr.find(img => img && (img.type === prio || img.type?.toLowerCase() === prio.toLowerCase()));
+                    if (found && (found.url || found.src || found.link)) {
+                        return (found.url || found.src || found.link).trim();
+                    }
+                }
+                // Fallback to any object with url
+                for (const img of arr) {
+                    if (img) {
+                        if (typeof img === 'string' && img.startsWith('http')) return img.trim();
+                        if (img.url || img.src || img.link) return (img.url || img.src || img.link).trim();
+                    }
+                }
+            }
+        }
+
+        // 2. Direct string fields
+        const directProps = [
+            g.art_cover, g.art_square, g.cover, g.cover_image, g.box_art, 
+            g.thumbnail, g.image, g.icon,
+            g.metadata?.art_cover, g.metadata?.cover, g.metadata?.thumbnail, g.metadata?.box_art
+        ];
+
+        for (let url of directProps) {
+            if (url && typeof url === 'string' && url.trim().length > 5) {
+                url = url.trim();
+                if (url.startsWith('//')) url = 'https:' + url;
+                return url;
+            }
+        }
+
+        return '';
+    }
+
     async function parseHeroicFile() {
         const fileInput = document.getElementById('heroicFileInput');
         const errorDiv = document.getElementById('heroicSetupError');
@@ -987,38 +1041,39 @@
             return;
         }
 
+        // Normalise games collection: array, object with key, or dictionary map
+        let gamesList = [];
+        if (Array.isArray(library)) {
+            gamesList = library;
+        } else if (library && typeof library === 'object') {
+            if (Array.isArray(library.games)) {
+                gamesList = library.games;
+            } else if (Array.isArray(library.library)) {
+                gamesList = library.library;
+            } else {
+                // Dictionary where values are game objects
+                gamesList = Object.values(library).filter(v => v && typeof v === 'object');
+            }
+        }
+
         heroicGamesToImport = [];
 
-        if (heroicCurrentPlatform === 'GOG') {
-            // gog_library.json: { "games": [ { "app_name", "title", "art_cover", "art_square", ... } ] }
-            const games = Array.isArray(library) ? library : (library.games || library.library || []);
-            for (const g of games) {
-                const title = g.title || g.app_title;
-                const appName = String(g.app_name || g.id || '');
-                if (!title) continue;
-                const coverUrl = g.art_cover || g.art_square || g.cover || '';
-                heroicGamesToImport.push({ title, app_name: appName, cover_url: coverUrl, platform: 'GOG' });
-            }
-        } else {
-            // legendary_library.json: array of { app_name, title, keyImages: [{type, url}] }
-            const games = Array.isArray(library) ? library : (library.library || library.games || []);
-            for (const g of games) {
-                const title = g.title || g.app_title;
-                const appName = g.app_name || '';
-                if (!title) continue;
+        for (const g of gamesList) {
+            const title = g.title || g.app_title || g.metadata?.title || g.metadata?.app_title || g.name;
+            const appName = String(g.app_name || g.appName || g.id || g.metadata?.app_name || '');
+            if (!title || typeof title !== 'string') continue;
 
-                // Priorytet okładek: pionowe formaty (3:4) są lepsze niż poziome
-                let coverUrl = '';
-                const images = g.keyImages || [];
-                const priorities = ['DieselGameBoxTall', 'DieselGameBox', 'DieselStoreFrontTall', 'OfferImageTall', 'Thumbnail', 'OfferImageWide'];
-                for (const prio of priorities) {
-                    const img = images.find(i => i.type === prio);
-                    if (img && img.url) { coverUrl = img.url; break; }
-                }
-                if (!coverUrl && images.length > 0) coverUrl = images[0].url || '';
-
-                heroicGamesToImport.push({ title, app_name: appName, cover_url: coverUrl, platform: 'Epic Games' });
+            let coverUrl = getBestCoverUrl(g);
+            if (coverUrl && coverUrl.startsWith('//')) {
+                coverUrl = 'https:' + coverUrl;
             }
+
+            heroicGamesToImport.push({
+                title: title.trim(),
+                app_name: appName,
+                cover_url: coverUrl,
+                platform: heroicCurrentPlatform
+            });
         }
 
         if (heroicGamesToImport.length === 0) {

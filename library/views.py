@@ -1344,17 +1344,21 @@ def heroic_import(request):
     try:
         data = json.loads(request.body)
         app_name = data.get('app_name', '')
-        title = data.get('title', '')
-        cover_url = data.get('cover_url', '')
+        title = data.get('title', '').strip()
+        cover_url = data.get('cover_url', '').strip()
         platform = data.get('platform', 'Epic Games')  # 'Epic Games' lub 'GOG'
 
         if not title:
             return JsonResponse({'error': 'Missing title'}, status=400)
 
-        if DigitalGame.objects.filter(platform=platform, title=title).exists():
+        existing_game = DigitalGame.objects.filter(platform=platform, title=title).first()
+
+        # If game already exists and has a cover, skip
+        if existing_game and existing_game.cover_image:
             return JsonResponse({'status': 'skipped'})
 
-        game = DigitalGame(
+        # Determine target game object
+        game = existing_game if existing_game else DigitalGame(
             title=title,
             platform=platform,
             is_finished=False
@@ -1363,22 +1367,21 @@ def heroic_import(request):
         if cover_url:
             try:
                 headers = {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.9',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                    'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9,pl;q=0.8',
                     'Referer': 'https://store.epicgames.com/' if platform == 'Epic Games' else 'https://www.gog.com/',
                 }
                 resp = requests.get(cover_url, timeout=15, headers=headers, allow_redirects=True)
-                if resp.status_code == 200 and len(resp.content) > 1000:
-                    safe_name = ''.join(c for c in app_name if c.isalnum() or c in '-_')[:60]
+                if resp.status_code == 200 and len(resp.content) > 500:
+                    safe_name = ''.join(c for c in app_name if c.isalnum() or c in '-_')[:50]
+                    if not safe_name:
+                        safe_name = ''.join(c for c in title if c.isalnum() or c in '-_')[:50]
                     prefix = 'epic' if platform == 'Epic Games' else 'gog'
-                    # Determine extension from content type or URL
                     content_type = resp.headers.get('Content-Type', 'image/jpeg')
-                    ext = 'jpg'
-                    if 'png' in content_type or cover_url.lower().endswith('.png'):
-                        ext = 'png'
+                    ext = 'png' if ('png' in content_type or cover_url.lower().endswith('.png')) else 'jpg'
                     game.cover_image.save(f'{prefix}_{safe_name}.{ext}', ContentFile(resp.content), save=False)
-            except Exception:
+            except Exception as img_err:
                 pass
 
         game.save()
