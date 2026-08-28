@@ -128,4 +128,112 @@
     </div>
 </div>
 {% endif %}
+
+<!-- Modal Croppera -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+
+<div class="modal fade" id="cropModal" tabindex="-1" aria-labelledby="cropModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header bg-body-secondary rounded-top-4">
+                <h5 class="modal-title fw-bold text-body" id="cropModalLabel">✂️ Przytnij zdjęcie</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center bg-dark p-0">
+                <div style="max-height: 65vh; overflow: hidden; display: flex; justify-content: center; align-items: center;">
+                    <img id="cropImage" src="" style="max-width: 100%; display: block;">
+                </div>
+            </div>
+            <div class="modal-footer border-0 justify-content-center pt-3 pb-4">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Anuluj</button>
+                <button type="button" class="btn btn-primary rounded-pill px-5 fw-bold shadow-sm" id="cropSaveBtn">Gotowe</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        let cropper = null;
+        let currentFileInput = null;
+        const cropModalElement = document.getElementById('cropModal');
+        const cropModal = new bootstrap.Modal(cropModalElement);
+        const cropImage = document.getElementById('cropImage');
+
+        // Nasłuchuj zmian na wszystkich inputach typu plik (zdjęcia gier)
+        document.querySelectorAll('input[type="file"]').forEach(input => {
+            input.addEventListener('change', function(e) {
+                if (e.target.files && e.target.files.length > 0) {
+                    const file = e.target.files[0];
+                    if (!file.type.startsWith('image/')) return;
+                    
+                    currentFileInput = e.target;
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        cropImage.src = event.target.result;
+                        cropModal.show();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        });
+
+        cropModalElement.addEventListener('shown.bs.modal', function() {
+            cropper = new Cropper(cropImage, {
+                viewMode: 2,
+                autoCropArea: 0.9,
+                background: false
+            });
+        });
+
+        cropModalElement.addEventListener('hidden.bs.modal', function() {
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+            cropImage.src = '';
+            currentFileInput = null;
+        });
+
+        document.getElementById('cropSaveBtn').addEventListener('click', function() {
+            if (!cropper || !currentFileInput) return;
+            
+            // Pobierz przycięty obraz, zmniejszając go max do 1600px by uniknąć wielkich plików
+            cropper.getCroppedCanvas({
+                maxWidth: 1600,
+                maxHeight: 1600
+            }).toBlob(function(blob) {
+                // Skonstruuj nowy plik na podstawie bloba
+                const originalFile = currentFileInput.files[0];
+                const croppedFile = new File([blob], originalFile.name, { type: 'image/jpeg', lastModified: new Date().getTime() });
+                
+                // Użyj DataTransfer by wstrzyknąć nowy plik do inputa
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(croppedFile);
+                currentFileInput.files = dataTransfer.files;
+                
+                // Zaktualizuj wizualny podgląd, jeśli istnieje
+                const parentDiv = currentFileInput.closest('.col-md-4');
+                if (parentDiv) {
+                    let previewDiv = parentDiv.querySelector('.bg-body-secondary');
+                    if (previewDiv) {
+                        const img = previewDiv.querySelector('img');
+                        if (img) img.src = URL.createObjectURL(blob);
+                    } else {
+                        const previewHTML = `
+                            <div class="mt-2 p-2 bg-body-secondary rounded-3 d-inline-block border">
+                                <img src="${URL.createObjectURL(blob)}" alt="Podgląd" class="rounded" style="height: 100px; object-fit: cover;">
+                            </div>
+                        `;
+                        currentFileInput.insertAdjacentHTML('afterend', previewHTML);
+                    }
+                }
+                
+                cropModal.hide();
+            }, 'image/jpeg', 0.85); // 0.85 to dobra kompresja jpeg
+        });
+    });
+</script>
 {% endblock %}
