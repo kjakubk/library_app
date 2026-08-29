@@ -52,16 +52,39 @@
 
                 <div class="col-12 mt-2">
                     <hr class="border-secondary border-opacity-25">
-                    <h6 class="fw-bold text-body mb-3">📸 Zdjęcie główne</h6>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold text-body mb-0">📸 Zdjęcie konsoli / akcesorium</h6>
+                        <span class="badge bg-body-secondary text-muted border px-2.5 py-1 rounded-pill small">Obsługa kamery na żywo i telefonu</span>
+                    </div>
                 </div>
 
-                <div class="col-md-6">
-                    {{ form.image }}
-                    {% if item and item.image %}
-                        <div class="mt-2 p-2 bg-body-secondary rounded-3 d-inline-block border">
-                            <img src="{{ item.image.url }}" alt="Zdjęcie" class="rounded" style="height: 100px; object-fit: cover;">
+                <div class="col-12">
+                    <div class="card bg-body-secondary border rounded-4 p-3 text-center mb-2" style="max-width: 480px; margin: 0 auto;">
+                        <!-- Podgląd zdjęcia -->
+                        <div id="preview_image_wrapper" class="mb-3 {% if not item or not item.image %}d-none{% endif %}">
+                            <div class="position-relative d-inline-block rounded-3 overflow-hidden shadow-sm border">
+                                <img id="preview_image" src="{% if item and item.image %}{{ item.image.url }}{% endif %}" alt="Zdjęcie sprzętu" class="img-fluid rounded" style="max-height: 220px; object-fit: contain;">
+                                <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 rounded-circle p-1" style="width: 26px; height: 26px; line-height: 1;" onclick="clearPhotoInput('id_image', 'preview_image_wrapper', 'empty_image_placeholder')" title="Usuń to zdjęcie">✕</button>
+                            </div>
                         </div>
-                    {% endif %}
+
+                        <!-- Puste miejsce / ikona -->
+                        <div id="empty_image_placeholder" class="py-4 text-muted {% if item and item.image %}d-none{% endif %}">
+                            <i class="bi bi-controller fs-1 d-block opacity-50 mb-1"></i>
+                            <span class="small d-block">Brak dodanego zdjęcia</span>
+                        </div>
+
+                        <!-- Przyciski akcji -->
+                        <div class="d-flex gap-2 justify-content-center flex-wrap mt-2">
+                            <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold shadow-sm d-flex align-items-center gap-1" onclick="openCameraModal('id_image', 'preview_image', 'preview_image_wrapper', 'empty_image_placeholder')">
+                                📸 Zrób zdjęcie kamerą
+                            </button>
+                            <label class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-medium d-flex align-items-center gap-1 mb-0" style="cursor: pointer;">
+                                📁 Z pliku
+                                <input type="file" name="image" id="id_image" accept="image/*" class="d-none" onchange="handleFileInputChange(this, 'preview_image', 'preview_image_wrapper', 'empty_image_placeholder')">
+                            </label>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="col-12 mt-5 d-flex justify-content-between border-top pt-4">
@@ -80,6 +103,68 @@
                     </div>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal przechwytywania zdjęcia z kamery -->
+<div class="modal fade" id="cameraCaptureModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-body border rounded-4 shadow overflow-hidden">
+            <div class="modal-header border-bottom py-3 px-4">
+                <h5 class="modal-title fw-bold text-body d-flex align-items-center gap-2">
+                    📸 Aparat fotograficzny
+                </h5>
+                <button type="button" class="btn-close shadow-none" onclick="closeCameraModal()" aria-label="Close"></button>
+            </div>
+            
+            <div class="modal-body p-0 text-center bg-black position-relative" style="min-height: 360px; max-height: 70vh; display: flex; align-items: center; justify-content: center;">
+                <!-- Strumień wideo z kamery -->
+                <video id="cameraVideo" autoplay playsinline muted class="w-100 h-100 object-fit-contain" style="max-height: 65vh;"></video>
+                
+                <!-- Zatrzymana klatka (podgląd zrobionego zdjęcia) -->
+                <div id="capturedPhotoContainer" class="d-none w-100 h-100 position-absolute top-0 start-0 d-flex align-items-center justify-content-center bg-black">
+                    <img id="capturedPhotoPreview" src="" alt="Zrobione zdjęcie" class="w-100 h-100 object-fit-contain" style="max-height: 65vh;">
+                </div>
+                
+                <!-- Niewidoczne płótno pomocnicze do renderingu klatki -->
+                <canvas id="cameraCanvas" class="d-none"></canvas>
+
+                <!-- Informacja o błędzie dostępu do kamery -->
+                <div id="cameraErrorMsg" class="d-none p-4 text-white text-center">
+                    <i class="bi bi-camera-video-off fs-1 text-danger d-block mb-2"></i>
+                    <p class="mb-0">Brak dostępu do kamery lub brak uprawnień w przeglądarce.</p>
+                </div>
+            </div>
+
+            <div class="modal-footer border-top p-3 d-flex justify-content-between align-items-center bg-body">
+                <div>
+                    <!-- Przełącznik kamery przód / tył -->
+                    <button type="button" id="switchCameraBtn" class="btn btn-outline-secondary rounded-pill px-3 btn-sm d-none" onclick="switchCamera()">
+                        🔄 Przełącz aparat
+                    </button>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <!-- Przyciski w trakcie podglądu na żywo -->
+                    <div id="captureControls" class="d-flex gap-2">
+                        <button type="button" class="btn btn-secondary rounded-pill px-4" onclick="closeCameraModal()">Anuluj</button>
+                        <button type="button" class="btn btn-primary rounded-pill px-4 fw-semibold shadow-sm" onclick="snapPhoto()">
+                            📸 Zrób zdjęcie
+                        </button>
+                    </div>
+
+                    <!-- Przyciski po zrobieniu zdjęcia (akceptacja / ponów) -->
+                    <div id="acceptControls" class="d-none d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary rounded-pill px-3" onclick="retakePhoto()">
+                            🔄 Zrób ponownie
+                        </button>
+                        <button type="button" class="btn btn-success rounded-pill px-4 fw-semibold shadow-sm" onclick="acceptCapturedPhoto()">
+                            ✅ Użyj tego zdjęcia
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -106,4 +191,163 @@
     </div>
 </div>
 {% endif %}
+
+<script>
+    let activeStream = null;
+    let targetInputId = null;
+    let targetPreviewImgId = null;
+    let targetWrapperId = null;
+    let targetPlaceholderId = null;
+    let currentFacingMode = 'environment';
+    let currentBlob = null;
+
+    function handleFileInputChange(input, previewImgId, wrapperId, placeholderId) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const previewImg = document.getElementById(previewImgId);
+                const wrapper = document.getElementById(wrapperId);
+                const placeholder = document.getElementById(placeholderId);
+                
+                if (previewImg) previewImg.src = e.target.result;
+                if (wrapper) wrapper.classList.remove('d-none');
+                if (placeholder) placeholder.classList.add('d-none');
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function clearPhotoInput(inputId, wrapperId, placeholderId) {
+        const input = document.getElementById(inputId);
+        const wrapper = document.getElementById(wrapperId);
+        const placeholder = document.getElementById(placeholderId);
+        if (input) input.value = '';
+        if (wrapper) wrapper.classList.add('d-none');
+        if (placeholder) placeholder.classList.remove('d-none');
+    }
+
+    async function openCameraModal(inputId, previewImgId, wrapperId, placeholderId) {
+        targetInputId = inputId;
+        targetPreviewImgId = previewImgId;
+        targetWrapperId = wrapperId;
+        targetPlaceholderId = placeholderId;
+        currentBlob = null;
+
+        document.getElementById('capturedPhotoContainer').classList.add('d-none');
+        document.getElementById('cameraVideo').classList.remove('d-none');
+        document.getElementById('captureControls').classList.remove('d-none');
+        document.getElementById('acceptControls').classList.add('d-none');
+        document.getElementById('cameraErrorMsg').classList.add('d-none');
+
+        const modal = new bootstrap.Modal(document.getElementById('cameraCaptureModal'));
+        modal.show();
+
+        await startCameraStream();
+    }
+
+    async function startCameraStream() {
+        stopCameraStream();
+        const video = document.getElementById('cameraVideo');
+        const errorDiv = document.getElementById('cameraErrorMsg');
+        const switchBtn = document.getElementById('switchCameraBtn');
+
+        try {
+            const constraints = {
+                video: {
+                    facingMode: currentFacingMode,
+                    width: { ideal: 1920 },
+                    height: { ideal: 1920 }
+                },
+                audio: false
+            };
+
+            activeStream = await navigator.mediaDevices.getUserMedia(constraints);
+            video.srcObject = activeStream;
+
+            if (navigator.mediaDevices.enumerateDevices) {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(d => d.kind === 'videoinput');
+                if (videoDevices.length > 1) {
+                    switchBtn.classList.remove('d-none');
+                }
+            }
+        } catch(err) {
+            console.error('Błąd dostępu do kamery:', err);
+            errorDiv.textContent = 'Nie udało się uzyskać dostępu do kamery: ' + (err.message || 'Brak uprawnień');
+            errorDiv.classList.remove('d-none');
+        }
+    }
+
+    function stopCameraStream() {
+        if (activeStream) {
+            activeStream.getTracks().forEach(track => track.stop());
+            activeStream = null;
+        }
+    }
+
+    async function switchCamera() {
+        currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
+        await startCameraStream();
+    }
+
+    function closeCameraModal() {
+        stopCameraStream();
+        const modalEl = document.getElementById('cameraCaptureModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+    }
+
+    function snapPhoto() {
+        const video = document.getElementById('cameraVideo');
+        const canvas = document.getElementById('cameraCanvas');
+        if (!video || !video.videoWidth) return;
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob(function(blob) {
+            currentBlob = blob;
+            const dataUrl = URL.createObjectURL(blob);
+            const previewImg = document.getElementById('capturedPhotoPreview');
+            previewImg.src = dataUrl;
+
+            document.getElementById('capturedPhotoContainer').classList.remove('d-none');
+            document.getElementById('captureControls').classList.add('d-none');
+            document.getElementById('acceptControls').classList.remove('d-none');
+        }, 'image/jpeg', 0.95);
+    }
+
+    function retakePhoto() {
+        currentBlob = null;
+        document.getElementById('capturedPhotoContainer').classList.add('d-none');
+        document.getElementById('captureControls').classList.remove('d-none');
+        document.getElementById('acceptControls').classList.add('d-none');
+    }
+
+    function acceptCapturedPhoto() {
+        if (!currentBlob || !targetInputId) return;
+
+        const fileName = `console_camera_${Date.now()}.jpg`;
+        const file = new File([currentBlob], fileName, { type: 'image/jpeg' });
+
+        const targetInput = document.getElementById(targetInputId);
+        if (targetInput) {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            targetInput.files = dt.files;
+        }
+
+        const previewImg = document.getElementById(targetPreviewImgId);
+        const wrapper = document.getElementById(targetWrapperId);
+        const placeholder = document.getElementById(targetPlaceholderId);
+
+        if (previewImg) previewImg.src = URL.createObjectURL(currentBlob);
+        if (wrapper) wrapper.classList.remove('d-none');
+        if (placeholder) placeholder.classList.add('d-none');
+
+        closeCameraModal();
+    }
+</script>
 {% endblock %}
