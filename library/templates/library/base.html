@@ -13,7 +13,7 @@
     <style>
         :root {
             --sidebar-width: 280px;
-            --bottom-nav-height: 64px;
+            --bottom-nav-height: 68px;
         }
 
         /* Kolory dostosowujące się do motywu (Jasny) */
@@ -26,7 +26,7 @@
             --active-item-bg: #ffffff;
             --active-item-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
             --sidebar-border: #e5e7eb;
-            --bottom-nav-bg: rgba(255, 255, 255, 0.88);
+            --bottom-nav-bg: rgba(255, 255, 255, 0.92);
             --bottom-nav-border: rgba(0, 0, 0, 0.08);
             --bottom-nav-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
             --card-glass-bg: rgba(255, 255, 255, 0.9);
@@ -42,7 +42,7 @@
             --active-item-bg: #1f2937;
             --active-item-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
             --sidebar-border: rgba(255, 255, 255, 0.08);
-            --bottom-nav-bg: rgba(17, 24, 39, 0.92);
+            --bottom-nav-bg: rgba(17, 24, 39, 0.95);
             --bottom-nav-border: rgba(255, 255, 255, 0.1);
             --bottom-nav-shadow: 0 -4px 25px rgba(0, 0, 0, 0.4);
             --card-glass-bg: rgba(31, 41, 55, 0.9);
@@ -55,6 +55,50 @@
             overflow-x: hidden;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             -webkit-tap-highlight-color: transparent;
+        }
+
+        /* =========================================
+           WSPÓLNE STYLE I ANIMACJE
+           ========================================= */
+        .transition-all {
+            transition: all 0.2s ease-in-out;
+        }
+        .transition-hover {
+            transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, background-color 0.18s ease;
+        }
+        .transition-hover:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08) !important;
+            background-color: var(--bs-tertiary-bg) !important;
+        }
+        .stat-progress-item {
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            border: 1px solid transparent;
+        }
+        .stat-progress-item:hover {
+            background-color: var(--bs-tertiary-bg) !important;
+            border-color: var(--bs-border-color) !important;
+            transform: translateX(4px);
+        }
+        .dot-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        .item-thumb-container {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .item-thumb-container:hover {
+            transform: scale(1.06);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15) !important;
+        }
+        .item-thumb-img {
+            transition: transform 0.3s ease;
+        }
+        .item-thumb-container:hover .item-thumb-img {
+            transform: scale(1.08);
         }
         
         /* =========================================
@@ -257,19 +301,21 @@
             justify-content: center;
             color: var(--text-muted);
             text-decoration: none;
-            font-size: 0.68rem;
+            font-size: 0.72rem;
             font-weight: 600;
-            padding: 6px 0;
+            padding: 8px 0;
+            min-height: 52px;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             background: none;
             border: none;
             outline: none;
+            position: relative;
         }
 
         .mobile-nav-item i {
-            font-size: 1.25rem;
-            margin-bottom: 2px;
-            transition: transform 0.2s ease;
+            font-size: 1.3rem;
+            margin-bottom: 3px;
+            transition: transform 0.2s ease, color 0.2s ease;
         }
 
         .mobile-nav-item:active i {
@@ -523,7 +569,7 @@
 
                 {% if user.is_authenticated %}
                     <div class="dropdown">
-                        <button class="btn btn-sm btn-light border rounded-pill d-flex align-items-center gap-2 px-2.5 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <button class="btn btn-sm btn-light border rounded-pill d-flex align-items-center gap-2 px-3 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 24px; height: 24px; font-size: 0.75rem;">
                                 {{ user.username|slice:":2"|upper }}
                             </div>
@@ -552,10 +598,10 @@
         {% if messages %}
             <div class="container-fluid px-3 px-md-4 pt-3">
                 {% for message in messages %}
-                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} alert-dismissible fade show rounded-4 shadow-sm py-2.5 px-3 mb-2" role="alert">
+                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} alert-dismissible fade show rounded-4 shadow-sm py-2 px-3 mb-2" role="alert">
                         <i class="bi {% if message.tags == 'success' %}bi-check-circle-fill text-success{% elif message.tags == 'error' %}bi-exclamation-triangle-fill text-danger{% else %}bi-info-circle-fill text-info{% endif %} me-2"></i>
                         {{ message }}
-                        <button type="button" class="btn-close py-2.5" data-bs-dismiss="alert" aria-label="Zamknij"></button>
+                        <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Zamknij"></button>
                     </div>
                 {% endfor %}
             </div>

@@ -5,52 +5,298 @@
 
 {% block content %}
 <div class="container-fluid px-2 px-md-4 py-4 mb-5">
+    
+    <!-- SEKCJA 1: GÓRNE KARTY KPI -->
+    <div class="row g-2 g-md-3 mb-3">
+        <!-- KPI 1: Łącznie antyków -->
+        <div class="col-6 col-lg-3">
+            <div class="card bg-body shadow-sm border rounded-4 p-3 h-100 position-relative overflow-hidden">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small fw-bold text-muted text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">Kolekcja</span>
+                    <span class="p-2 bg-primary bg-opacity-10 text-primary rounded-3 fs-6">🕰️</span>
+                </div>
+                <div class="fs-3 fw-bold text-body mb-0">{{ total_collection_count|default:"0" }} <span class="fs-6 fw-normal text-muted">szt.</span></div>
+                <div class="small text-muted mt-1" style="font-size: 0.76rem;">
+                    {% if total_count != total_collection_count %}Wyświetlane: <strong>{{ total_count }}</strong>{% else %}Wszystkie pozycje{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI 2: Materiały -->
+        <div class="col-6 col-lg-3">
+            <div class="card bg-body shadow-sm border rounded-4 p-3 h-100 position-relative overflow-hidden">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small fw-bold text-muted text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">Materiały</span>
+                    <span class="p-2 bg-success bg-opacity-10 text-success rounded-3 fs-6">🪵</span>
+                </div>
+                <div class="fs-3 fw-bold text-success mb-0">{{ total_materials_count|default:"0" }} <span class="fs-6 fw-normal text-muted">rodzajów</span></div>
+                <div class="small text-muted text-truncate mt-1" style="font-size: 0.76rem;" title="Lider: {{ top_material }}">
+                    Lider: <strong>{{ top_material|truncatechars:20 }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI 3: Style i Epoki -->
+        <div class="col-6 col-lg-3">
+            <div class="card bg-body shadow-sm border rounded-4 p-3 h-100 position-relative overflow-hidden">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small fw-bold text-muted text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">Style / Epoki</span>
+                    <span class="p-2 bg-warning bg-opacity-10 text-warning rounded-3 fs-6">🏛️</span>
+                </div>
+                <div class="fs-3 fw-bold text-warning mb-0">{{ total_styles_count|default:"0" }} <span class="fs-6 fw-normal text-muted">stylów</span></div>
+                <div class="small text-muted text-truncate mt-1" style="font-size: 0.76rem;" title="Główny: {{ top_style }}">
+                    Główny: <strong>{{ top_style|truncatechars:20 }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI 4: Foto-katalog -->
+        <div class="col-6 col-lg-3">
+            <div class="card bg-body shadow-sm border rounded-4 p-3 h-100 position-relative overflow-hidden">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small fw-bold text-muted text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">Katalog Foto</span>
+                    <span class="p-2 bg-info bg-opacity-10 text-info rounded-3 fs-6">📸</span>
+                </div>
+                <div class="fs-3 fw-bold text-info mb-0">{{ photo_coverage_pct|default:"0" }}%</div>
+                <div class="small text-muted mt-1" style="font-size: 0.76rem;">
+                    {{ items_with_covers }} z fotografią
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEKCJA 2: PASKI ROZKŁADU (MATERIAŁY vs STYLE) -->
+    <div class="row g-3 mb-3">
+        <!-- Panel Lewy: Materiały (Top 6) -->
+        <div class="col-12 col-lg-6">
+            <div class="card bg-body shadow-sm border rounded-4 p-3 p-md-4 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fs-5">🪵</span>
+                        <span class="fw-bold text-body small text-uppercase" style="letter-spacing: 0.5px;">Dominujące Materiały</span>
+                    </div>
+                    <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1 rounded-pill" style="font-size: 0.7rem;">Top 6</span>
+                </div>
+                
+                <div class="d-flex flex-column gap-2">
+                    {% for stat in material_stats %}
+                        <a href="?material={{ stat.material|urlencode }}" class="stat-progress-item text-decoration-none d-block p-2 rounded-3" title="Kliknij, aby przefiltrować: {{ stat.material }}">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-medium text-body small d-flex align-items-center gap-2">
+                                    <span class="dot-indicator bg-primary"></span>
+                                    <span>{{ stat.material }}</span>
+                                </span>
+                                <span class="badge bg-body-secondary text-body border fw-bold small">
+                                    {{ stat.count }} szt. <span class="text-muted fw-normal ms-1">({{ stat.pct }}%)</span>
+                                </span>
+                            </div>
+                            <div class="progress rounded-pill overflow-hidden" style="height: 6px; background-color: var(--bs-tertiary-bg);">
+                                <div class="progress-bar bg-primary bg-gradient rounded-pill" role="progressbar" style="width: {{ stat.pct }}%;" aria-valuenow="{{ stat.pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </a>
+                    {% empty %}
+                        <span class="text-muted small fst-italic py-3 text-center">Brak danych o materiałach.</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel Prawy: Style i Epoki (Top 6) -->
+        <div class="col-12 col-lg-6">
+            <div class="card bg-body shadow-sm border rounded-4 p-3 p-md-4 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fs-5">🏛️</span>
+                        <span class="fw-bold text-body small text-uppercase" style="letter-spacing: 0.5px;">Style i Epoki</span>
+                    </div>
+                    <span class="badge bg-secondary bg-opacity-10 text-body border px-2 py-1 rounded-pill" style="font-size: 0.7rem;">Top 6</span>
+                </div>
+                
+                <div class="d-flex flex-column gap-2">
+                    {% for stat in style_stats %}
+                        <a href="?style={{ stat.style|urlencode }}" class="stat-progress-item text-decoration-none d-block p-2 rounded-3" title="Kliknij, aby przefiltrować: {{ stat.style }}">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-medium text-body small text-truncate d-flex align-items-center gap-2" style="max-width: 65%;">
+                                    <span class="dot-indicator bg-warning"></span>
+                                    <span class="text-truncate">{{ stat.style }}</span>
+                                </span>
+                                <span class="badge bg-body-secondary text-body border fw-bold small flex-shrink-0">
+                                    {{ stat.count }} szt. <span class="text-muted fw-normal ms-1">({{ stat.pct }}%)</span>
+                                </span>
+                            </div>
+                            <div class="progress rounded-pill overflow-hidden" style="height: 6px; background-color: var(--bs-tertiary-bg);">
+                                <div class="progress-bar bg-warning bg-gradient rounded-pill" role="progressbar" style="width: {{ stat.pct }}%;" aria-valuenow="{{ stat.pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </a>
+                    {% empty %}
+                        <span class="text-muted small fst-italic py-3 text-center">Brak danych o stylach w bazie.</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEKCJA 3: PODSUMOWANIE KOLEKCJI -->
+    <div class="card bg-body shadow-sm border rounded-4 p-3 mb-4">
+        <div class="row align-items-center g-3">
+            <div class="col-12 col-md-6 d-flex align-items-center gap-3">
+                <div class="p-2 bg-warning bg-opacity-10 text-body rounded-circle fs-5 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;">
+                    🕰️
+                </div>
+                <div>
+                    <div class="fw-bold small text-body">Inne Antyki, Ozdoby & Pamiątki</div>
+                    <div class="text-muted small" style="font-size: 0.8rem;">
+                        W kolekcji skatalogowano <strong>{{ total_collection_count }} unikatowych antyków</strong> wykonanych z <strong>{{ total_materials_count }} różnych materiałów</strong>.
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 d-flex flex-wrap align-items-center justify-content-md-end gap-2">
+                <span class="badge bg-body-secondary border text-body px-3 py-2 rounded-pill small fw-medium">
+                    🪵 Materiał: <strong class="text-primary">{{ top_material|truncatechars:20 }}</strong>
+                </span>
+                <span class="badge bg-body-secondary border text-body px-3 py-2 rounded-pill small fw-medium">
+                    🏛️ Styl: <strong class="text-warning">{{ top_style }}</strong>
+                </span>
+                <span class="badge bg-success bg-opacity-10 border border-success border-opacity-25 text-success px-3 py-2 rounded-pill small fw-medium">
+                    📸 Foto: <strong>{{ photo_coverage_pct }}%</strong>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Górny panel akcji, wyszukiwarki i filtrów -->
+    <div class="bg-body px-3 py-3 px-md-4 rounded-4 shadow-sm border mb-4">
+        <form method="GET" action="" class="row g-3 align-items-center">
+            
+            <!-- Wyszukiwarka tekstowa -->
+            <div class="col-12 col-xl-4">
+                <div class="input-group input-group-sm bg-body-secondary rounded-pill border px-3 py-2 align-items-center">
+                    <span class="text-muted me-2">🔍</span>
+                    <input type="text" name="q" value="{{ request.GET.q|default:'' }}" class="form-control form-control-sm border-0 bg-transparent shadow-none text-body" placeholder="Szukaj nazwy, materiału...">
+                </div>
+            </div>
+
+            <!-- Filtr po materiale -->
+            <div class="col-12 col-sm-6 col-xl-3">
+                <select name="material" class="form-select form-select-sm bg-body-secondary rounded-pill border px-3 py-2 text-body shadow-none" onchange="this.form.submit()">
+                    <option value="">Wszystkie materiały</option>
+                    {% for m in available_materials %}
+                        <option value="{{ m }}" {% if selected_material == m %}selected{% endif %}>{{ m }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Filtr po stylu -->
+            <div class="col-12 col-sm-6 col-xl-3">
+                <select name="style" class="form-select form-select-sm bg-body-secondary rounded-pill border px-3 py-2 text-body shadow-none" onchange="this.form.submit()">
+                    <option value="">Wszystkie style / epoki</option>
+                    {% for s in available_styles %}
+                        <option value="{{ s }}" {% if selected_style == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Zachowanie sortowania -->
+            {% if request.GET.sort %}<input type="hidden" name="sort" value="{{ request.GET.sort }}">{% endif %}
+
+            <!-- Przyciski akcji -->
+            <div class="col-12 col-xl-2 d-flex gap-2 justify-content-xl-end">
+                <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3 py-2 fw-semibold w-100 shadow-sm">Filtruj</button>
+                {% if request.GET.q or request.GET.material or request.GET.style or request.GET.sort %}
+                    <a href="{% url 'antique_list' %}" class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-2 text-decoration-none d-flex align-items-center justify-content-center" title="Resetuj filtry">🔄</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Pasek podsumowania, przełącznika widoków i dodawania -->
     <div class="d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center bg-body px-3 py-3 px-md-4 rounded-4 shadow-sm border mb-4 gap-3">
         <div class="d-flex align-items-center gap-2">
-            <span class="fs-4">🕰️</span>
             <span class="badge bg-body-secondary border text-body px-3 py-2 rounded-pill fw-medium small">
-                Łącznie: <strong class="text-primary fs-6 ms-1">{{ total_count|default:"0" }}</strong>
+                Znaleziono antyków: <strong class="text-primary fs-6 ms-1">{{ total_count|default:"0" }}</strong>
             </span>
-            {% if request.GET.q %}
-                <a href="{% url 'antique_list' %}" class="btn btn-outline-secondary btn-sm rounded-pill px-2.5 py-1 text-decoration-none small" title="Wyczyść filtry">
+            {% if request.GET.q or request.GET.material or request.GET.style or request.GET.sort %}
+                <a href="{% url 'antique_list' %}" class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-1 text-decoration-none small" title="Wyczyść filtry">
                     ✕ Resetuj
                 </a>
             {% endif %}
         </div>
         
         <div class="d-flex align-items-center justify-content-between justify-content-sm-end gap-2">
-            <form method="GET" action="" class="d-flex m-0">
-                <input type="text" name="q" value="{{ request.GET.q|default:'' }}" class="form-control form-control-sm rounded-start-pill border-end-0 shadow-none" placeholder="Szukaj...">
-                <button type="submit" class="btn btn-outline-secondary btn-sm rounded-end-pill"><i class="bi bi-search"></i></button>
-            </form>
-            <a href="{% url 'antique_create' %}" class="btn btn-success btn-sm px-3 py-1.5 rounded-pill fw-semibold d-flex align-items-center gap-1 shadow-sm text-decoration-none text-nowrap">
+            <!-- Przełącznik: Tabela / Kafelki -->
+            <div class="btn-group btn-group-sm bg-body-secondary p-1 rounded-pill border" role="group" aria-label="Wybór widoku">
+                <button type="button" class="btn btn-sm rounded-pill px-3 py-1 fw-medium active btn-primary text-white" id="viewModeTableBtn" onclick="switchViewMode('table')">
+                    📑 Tabela
+                </button>
+                <button type="button" class="btn btn-sm rounded-pill px-3 py-1 fw-medium text-body" id="viewModeGridBtn" onclick="switchViewMode('grid')">
+                    🖼️ Kafelki
+                </button>
+            </div>
+
+            <!-- Dodaj antyk -->
+            <a href="{% url 'antique_create' %}" class="btn btn-success btn-sm px-3 py-2 rounded-pill fw-semibold d-flex align-items-center gap-1 shadow-sm text-decoration-none text-nowrap">
                 <i class="bi bi-plus-lg"></i> Dodaj antyk
             </a>
         </div>
     </div>
 
-    <!-- TABELA -->
-    <div class="card bg-body shadow-sm border rounded-4 overflow-hidden mb-4">
+    <!-- WIDOK 1: TABELA ANTYKÓW -->
+    <div id="antiqueTableView" class="card bg-body shadow-sm border rounded-4 overflow-hidden mb-4">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="bg-body-secondary border-bottom">
                     <tr class="small text-muted text-uppercase" style="letter-spacing: 0.5px; font-size: 0.74rem;">
                         <th class="ps-3 ps-md-4 py-3" style="width: 76px;">Zdjęcie</th>
-                        <th class="py-3">Nazwa przedmiotu</th>
-                        <th class="py-3 text-center">Materiał</th>
-                        <th class="py-3 text-center">Styl / Epoka</th>
-                        <th class="py-3 text-center">Wiek</th>
-                        <th class="py-3 text-center">Stan</th>
-                        <th class="pe-3 pe-md-4 py-3 text-end">Akcje</th>
+                        
+                        <th class="py-3" style="min-width: 180px;">
+                            <a href="?sort={% if current_sort == 'name' %}-name{% else %}name{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.material %}&material={{ request.GET.material }}{% endif %}{% if request.GET.style %}&style={{ request.GET.style }}{% endif %}" class="text-body text-decoration-none d-inline-flex align-items-center gap-1">
+                                Nazwa przedmiotu
+                                <span class="text-primary small">
+                                    {% if current_sort == 'name' %}▲{% elif current_sort == '-name' %}▼{% else %}<span class="opacity-50">↕</span>{% endif %}
+                                </span>
+                            </a>
+                        </th>
+
+                        <th class="py-3 text-center" style="min-width: 130px;">
+                            <a href="?sort={% if current_sort == 'material' %}-material{% else %}material{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.material %}&material={{ request.GET.material }}{% endif %}{% if request.GET.style %}&style={{ request.GET.style }}{% endif %}" class="text-body text-decoration-none d-inline-flex align-items-center gap-1 justify-content-center">
+                                Materiał
+                                <span class="text-primary small">
+                                    {% if current_sort == 'material' %}▲{% elif current_sort == '-material' %}▼{% else %}<span class="opacity-50">↕</span>{% endif %}
+                                </span>
+                            </a>
+                        </th>
+
+                        <th class="py-3 text-center" style="min-width: 130px;">
+                            <a href="?sort={% if current_sort == 'style' %}-style{% else %}style{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.material %}&material={{ request.GET.material }}{% endif %}{% if request.GET.style %}&style={{ request.GET.style }}{% endif %}" class="text-body text-decoration-none d-inline-flex align-items-center gap-1 justify-content-center">
+                                Styl / Epoka
+                                <span class="text-primary small">
+                                    {% if current_sort == 'style' %}▲{% elif current_sort == '-style' %}▼{% else %}<span class="opacity-50">↕</span>{% endif %}
+                                </span>
+                            </a>
+                        </th>
+
+                        <th class="py-3 text-center" style="min-width: 90px;">
+                            <a href="?sort={% if current_sort == 'year_of_origin' %}-year_of_origin{% else %}year_of_origin{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.material %}&material={{ request.GET.material }}{% endif %}{% if request.GET.style %}&style={{ request.GET.style }}{% endif %}" class="text-body text-decoration-none d-inline-flex align-items-center gap-1 justify-content-center">
+                                Wiek / Rok
+                                <span class="text-primary small">
+                                    {% if current_sort == 'year_of_origin' %}▲{% elif current_sort == '-year_of_origin' %}▼{% else %}<span class="opacity-50">↕</span>{% endif %}
+                                </span>
+                            </a>
+                        </th>
+
+                        <th class="py-3 text-center" style="min-width: 120px;">Stan</th>
+                        <th class="py-3 text-center" style="min-width: 90px;">Wartość</th>
+                        <th class="pe-3 pe-md-4 py-3 text-end" style="min-width: 110px;">Akcje</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in items %}
                         <tr class="align-middle">
+                            <!-- Miniatura zdjęcia -->
                             <td class="ps-3 ps-md-4 py-2.5">
-                                <div class="position-relative d-inline-block rounded-3 overflow-hidden shadow-sm border" style="width: 52px; height: 52px;">
+                                <div class="position-relative d-inline-block rounded-3 overflow-hidden shadow-sm border item-thumb-container" style="width: 52px; height: 52px; cursor: pointer;" onclick="openGalleryModal({{ item.pk }})" title="Kliknij, aby powiększyć zdjęcie">
                                     {% if item.image %}
-                                        <img src="{{ item.image.url }}" alt="{{ item.name }}" class="w-100 h-100 object-fit-cover">
+                                        <img src="{{ item.image.url }}" alt="{{ item.name }}" class="w-100 h-100 object-fit-cover item-thumb-img">
                                     {% else %}
                                         <div class="w-100 h-100 bg-body-secondary d-flex flex-column align-items-center justify-content-center text-muted" style="font-size: 0.62rem;">
                                             <i class="bi bi-image fs-6 opacity-50"></i>
@@ -58,37 +304,70 @@
                                         </div>
                                     {% endif %}
                                 </div>
+
+                                <!-- Ukryty kontener na dane zdjęcia dla modalu -->
+                                <div id="item-gallery-{{ item.pk }}" class="d-none" data-title="{{ item.name }}" data-images="[{% if item.image %}&quot;{{ item.image.url }}&quot;{% endif %}]"></div>
                             </td>
+
+                            <!-- Nazwa przedmiotu -->
                             <td>
                                 <div class="fw-bold text-body fs-6">{{ item.name }}</div>
                             </td>
+
+                            <!-- Materiał -->
                             <td class="text-center">
-                                <span class="badge bg-primary bg-opacity-10 text-primary px-2.5 py-1 rounded-pill small fw-medium">
-                                    {{ item.material|default:"—" }}
-                                </span>
+                                {% if item.material %}
+                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1 rounded-pill small fw-medium">
+                                        {{ item.material }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted small">—</span>
+                                {% endif %}
                             </td>
+
+                            <!-- Styl / Epoka -->
                             <td class="text-center text-muted small">
                                 {{ item.style|default:"—" }}
                             </td>
+
+                            <!-- Orientacyjny rok -->
                             <td class="text-center font-monospace small">
                                 {{ item.year_of_origin|default:"—" }}
                             </td>
+
+                            <!-- Stan -->
                             <td class="text-center">
-                                <span class="badge bg-success bg-opacity-10 text-success px-2.5 py-1 rounded-pill small fw-medium">
-                                    {{ item.condition|default:"—" }}
-                                </span>
+                                {% if item.condition %}
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1 rounded-pill small fw-medium">
+                                        {{ item.condition }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted small">—</span>
+                                {% endif %}
                             </td>
+
+                            <!-- Wartość -->
+                            <td class="text-center">
+                                {% if item.price %}
+                                    <span class="fw-bold text-success small">{{ item.price }} zł</span>
+                                {% else %}
+                                    <span class="text-muted small">—</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Akcje -->
                             <td class="text-end pe-3 pe-md-4">
-                                <a href="{% url 'antique_update' item.pk %}" class="btn btn-sm btn-outline-secondary border rounded-pill px-2.5 py-1" title="Edytuj">
+                                <a href="{% url 'antique_update' item.pk %}" class="btn btn-sm btn-outline-secondary border rounded-pill px-3 py-1" title="Edytuj">
                                     ✏️ Edytuj
                                 </a>
                             </td>
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="7" class="text-center py-5">
+                            <td colspan="8" class="text-center py-5">
                                 <span class="fs-1 d-block mb-2">🕰️</span>
-                                <p class="text-muted fw-medium mb-1">Brak antyków w kolekcji.</p>
+                                <p class="text-muted fw-medium mb-1">Brak antyków spełniających kryteria.</p>
+                                <a href="{% url 'antique_create' %}" class="btn btn-primary btn-sm rounded-pill mt-2">Dodaj pierwszy antyk</a>
                             </td>
                         </tr>
                     {% endfor %}
@@ -96,5 +375,131 @@
             </table>
         </div>
     </div>
+
+    <!-- WIDOK 2: SIATKA KAFELKÓW (GRID) -->
+    <div id="antiqueGridView" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-4 g-3 mb-4" style="display: none;">
+        {% for item in items %}
+            <div class="col">
+                <div class="card bg-body shadow-sm border rounded-4 overflow-hidden h-100 transition-hover">
+                    <div class="position-relative" style="height: 180px; background-color: var(--bs-tertiary-bg); cursor: pointer;" onclick="openGalleryModal({{ item.pk }})">
+                        {% if item.image %}
+                            <img src="{{ item.image.url }}" alt="{{ item.name }}" class="w-100 h-100 object-fit-cover" loading="lazy">
+                        {% else %}
+                            <div class="w-100 h-100 d-flex flex-column align-items-center justify-content-center text-muted">
+                                <i class="bi bi-image fs-1 opacity-50"></i>
+                                <span class="small mt-1">Brak zdjęcia</span>
+                            </div>
+                        {% endif %}
+                        {% if item.material %}
+                            <span class="position-absolute top-0 start-0 m-2 badge bg-dark bg-opacity-75 text-white rounded-pill px-2.5 py-1 small">
+                                {{ item.material }}
+                            </span>
+                        {% endif %}
+                        {% if item.price %}
+                            <span class="position-absolute bottom-0 end-0 m-2 badge bg-success rounded-pill px-2.5 py-1 small fw-bold shadow-sm">
+                                {{ item.price }} zł
+                            </span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body p-3 d-flex flex-column">
+                        <h6 class="fw-bold text-body mb-1 text-truncate" title="{{ item.name }}">{{ item.name }}</h6>
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="text-muted small">{{ item.style|default:"Antyk" }}</span>
+                            {% if item.year_of_origin %}
+                                <span class="text-muted small">• {{ item.year_of_origin }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="mt-auto d-flex align-items-center justify-content-between pt-2 border-top">
+                            <span class="badge bg-body-secondary text-body border small rounded-pill px-2 py-0.5">
+                                {{ item.condition|default:"Stan: —" }}
+                            </span>
+                            <a href="{% url 'antique_update' item.pk %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1">
+                                ✏️ Edytuj
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12 text-center py-5">
+                <span class="fs-1 d-block mb-2">🕰️</span>
+                <p class="text-muted fw-medium mb-1">Brak antyków w kolekcji.</p>
+            </div>
+        {% endfor %}
+    </div>
+
 </div>
+
+<!-- MODAL PODGLĄDU ZDJĘCIA -->
+<div class="modal fade" id="galleryModal" tabindex="-1" aria-labelledby="galleryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-body border rounded-4 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold text-body" id="galleryModalLabel">Podgląd antyku</h5>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <div class="d-flex justify-content-center align-items-center" style="min-height: 350px;">
+                    <img id="galleryModalImage" src="" alt="Zdjęcie antyku" class="img-fluid rounded-3 shadow-sm" style="max-height: 70vh; object-fit: contain;">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openGalleryModal(itemId) {
+        const dataElement = document.getElementById('item-gallery-' + itemId);
+        if (!dataElement) return;
+
+        const titleText = dataElement.getAttribute('data-title');
+        let images = [];
+        try {
+            images = JSON.parse(dataElement.getAttribute('data-images'));
+        } catch (e) {
+            images = [];
+        }
+
+        document.getElementById('galleryModalLabel').textContent = titleText;
+        if (images.length > 0 && images[0]) {
+            document.getElementById('galleryModalImage').src = images[0];
+            var myModal = new bootstrap.Modal(document.getElementById('galleryModal'));
+            myModal.show();
+        }
+    }
+
+    // Przełączanie widoku: Tabela vs Kafelki
+    function switchViewMode(mode) {
+        const tableView = document.getElementById('antiqueTableView');
+        const gridView = document.getElementById('antiqueGridView');
+        const tableBtn = document.getElementById('viewModeTableBtn');
+        const gridBtn = document.getElementById('viewModeGridBtn');
+
+        if (!tableView || !gridView || !tableBtn || !gridBtn) return;
+
+        if (mode === 'grid') {
+            tableView.style.display = 'none';
+            gridView.style.display = 'flex';
+            tableBtn.classList.remove('active', 'btn-primary', 'text-white');
+            tableBtn.classList.add('text-body');
+            gridBtn.classList.add('active', 'btn-primary', 'text-white');
+            gridBtn.classList.remove('text-body');
+            try { localStorage.setItem('antique_view_mode', 'grid'); } catch(e) {}
+        } else {
+            tableView.style.display = 'block';
+            gridView.style.display = 'none';
+            tableBtn.classList.add('active', 'btn-primary', 'text-white');
+            tableBtn.classList.remove('text-body');
+            gridBtn.classList.remove('active', 'btn-primary', 'text-white');
+            gridBtn.classList.add('text-body');
+            try { localStorage.setItem('antique_view_mode', 'table'); } catch(e) {}
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        let savedMode = 'table';
+        try { savedMode = localStorage.getItem('antique_view_mode') || 'table'; } catch(e) {}
+        switchViewMode(savedMode);
+    });
+</script>
 {% endblock %}

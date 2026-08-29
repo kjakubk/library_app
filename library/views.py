@@ -973,26 +973,83 @@ def toggle_book_read(request, pk):
 
 @login_required
 def console_list(request):
+    """Lista konsol i akcesoriów z filtrowaniem, sortowaniem i bogatymi statystykami."""
     query = request.GET.get('q', '').strip()
-    items = ConsoleHardware.objects.all()
+    sort_by = request.GET.get('sort', 'name')
+    selected_manufacturer = request.GET.get('manufacturer', '').strip()
+    selected_category = request.GET.get('category', '').strip()
+
+    all_items = ConsoleHardware.objects.all()
+    items = all_items
+
     if query:
         items = items.filter(
             Q(name__icontains=query) |
             Q(manufacturer__icontains=query) |
             Q(category__icontains=query)
         )
-    items = items.order_by('name')
 
-    aggregates = ConsoleHardware.objects.aggregate(
-        total_count=Count('id'),
-        with_image=Count('id', filter=~Q(image__isnull=True) & ~Q(image__exact=''))
-    )
-    
+    if selected_manufacturer:
+        items = items.filter(manufacturer=selected_manufacturer)
+
+    if selected_category:
+        items = items.filter(category=selected_category)
+
+    sort_mapping = {
+        'name': 'name', '-name': '-name',
+        'manufacturer': 'manufacturer', '-manufacturer': '-manufacturer',
+        'category': 'category', '-category': '-category',
+        'release_year': 'release_year', '-release_year': '-release_year',
+        'condition': 'condition', '-condition': '-condition',
+        'price': 'price', '-price': '-price',
+    }
+
+    if sort_by in sort_mapping:
+        items = items.order_by(sort_mapping[sort_by])
+
+    total_collection_count = all_items.count()
+    available_manufacturers = ConsoleHardware.objects.exclude(manufacturer__isnull=True).exclude(manufacturer__exact='').values_list('manufacturer', flat=True).distinct().order_by('manufacturer')
+    available_categories = ConsoleHardware.objects.exclude(category__isnull=True).exclude(category__exact='').values_list('category', flat=True).distinct().order_by('category')
+
+    total_manufacturers_count = available_manufacturers.count()
+    total_categories_count = available_categories.count()
+    items_with_covers = all_items.filter(Q(image__isnull=False) & ~Q(image='')).count()
+    photo_coverage_pct = round((items_with_covers / total_collection_count) * 100, 1) if total_collection_count else 0
+
+    raw_mfg_stats = ConsoleHardware.objects.exclude(manufacturer__isnull=True).exclude(manufacturer__exact='').values('manufacturer').annotate(count=Count('id')).order_by('-count')[:6]
+    manufacturer_stats = []
+    for s in raw_mfg_stats:
+        pct = round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0
+        manufacturer_stats.append({'manufacturer': s['manufacturer'], 'count': s['count'], 'pct': pct})
+
+    raw_cat_stats = ConsoleHardware.objects.exclude(category__isnull=True).exclude(category__exact='').values('category').annotate(count=Count('id')).order_by('-count')[:6]
+    category_stats = []
+    for s in raw_cat_stats:
+        pct = round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0
+        category_stats.append({'category': s['category'], 'count': s['count'], 'pct': pct})
+
+    top_manufacturer = manufacturer_stats[0]['manufacturer'] if manufacturer_stats else '—'
+    top_category = category_stats[0]['category'] if category_stats else '—'
+    total_count = items.count()
+
     context = {
         'items': items,
         'query': query,
-        'total_count': aggregates['total_count'],
-        'with_image': aggregates['with_image'],
+        'total_count': total_count,
+        'total_collection_count': total_collection_count,
+        'total_manufacturers_count': total_manufacturers_count,
+        'total_categories_count': total_categories_count,
+        'photo_coverage_pct': photo_coverage_pct,
+        'items_with_covers': items_with_covers,
+        'available_manufacturers': available_manufacturers,
+        'available_categories': available_categories,
+        'selected_manufacturer': selected_manufacturer,
+        'selected_category': selected_category,
+        'manufacturer_stats': manufacturer_stats,
+        'category_stats': category_stats,
+        'top_manufacturer': top_manufacturer,
+        'top_category': top_category,
+        'current_sort': sort_by,
     }
     return render(request, 'library/console_list.html', context)
 
@@ -1037,26 +1094,83 @@ def console_delete(request, pk):
 
 @login_required
 def antique_list(request):
+    """Lista antyków z filtrowaniem, sortowaniem i bogatymi statystykami."""
     query = request.GET.get('q', '').strip()
-    items = Antique.objects.all()
+    sort_by = request.GET.get('sort', 'name')
+    selected_material = request.GET.get('material', '').strip()
+    selected_style = request.GET.get('style', '').strip()
+
+    all_items = Antique.objects.all()
+    items = all_items
+
     if query:
         items = items.filter(
             Q(name__icontains=query) |
             Q(material__icontains=query) |
             Q(style__icontains=query)
         )
-    items = items.order_by('name')
 
-    aggregates = Antique.objects.aggregate(
-        total_count=Count('id'),
-        with_image=Count('id', filter=~Q(image__isnull=True) & ~Q(image__exact=''))
-    )
+    if selected_material:
+        items = items.filter(material=selected_material)
+
+    if selected_style:
+        items = items.filter(style=selected_style)
+
+    sort_mapping = {
+        'name': 'name', '-name': '-name',
+        'material': 'material', '-material': '-material',
+        'style': 'style', '-style': '-style',
+        'year_of_origin': 'year_of_origin', '-year_of_origin': '-year_of_origin',
+        'condition': 'condition', '-condition': '-condition',
+        'price': 'price', '-price': '-price',
+    }
+
+    if sort_by in sort_mapping:
+        items = items.order_by(sort_mapping[sort_by])
+
+    total_collection_count = all_items.count()
+    available_materials = Antique.objects.exclude(material__isnull=True).exclude(material__exact='').values_list('material', flat=True).distinct().order_by('material')
+    available_styles = Antique.objects.exclude(style__isnull=True).exclude(style__exact='').values_list('style', flat=True).distinct().order_by('style')
+
+    total_materials_count = available_materials.count()
+    total_styles_count = available_styles.count()
+    items_with_covers = all_items.filter(Q(image__isnull=False) & ~Q(image='')).count()
+    photo_coverage_pct = round((items_with_covers / total_collection_count) * 100, 1) if total_collection_count else 0
+
+    raw_mat_stats = Antique.objects.exclude(material__isnull=True).exclude(material__exact='').values('material').annotate(count=Count('id')).order_by('-count')[:6]
+    material_stats = []
+    for s in raw_mat_stats:
+        pct = round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0
+        material_stats.append({'material': s['material'], 'count': s['count'], 'pct': pct})
+
+    raw_style_stats = Antique.objects.exclude(style__isnull=True).exclude(style__exact='').values('style').annotate(count=Count('id')).order_by('-count')[:6]
+    style_stats = []
+    for s in raw_style_stats:
+        pct = round((s['count'] / total_collection_count) * 100, 1) if total_collection_count else 0
+        style_stats.append({'style': s['style'], 'count': s['count'], 'pct': pct})
+
+    top_material = material_stats[0]['material'] if material_stats else '—'
+    top_style = style_stats[0]['style'] if style_stats else '—'
+    total_count = items.count()
 
     context = {
         'items': items,
         'query': query,
-        'total_count': aggregates['total_count'],
-        'with_image': aggregates['with_image'],
+        'total_count': total_count,
+        'total_collection_count': total_collection_count,
+        'total_materials_count': total_materials_count,
+        'total_styles_count': total_styles_count,
+        'photo_coverage_pct': photo_coverage_pct,
+        'items_with_covers': items_with_covers,
+        'available_materials': available_materials,
+        'available_styles': available_styles,
+        'selected_material': selected_material,
+        'selected_style': selected_style,
+        'material_stats': material_stats,
+        'style_stats': style_stats,
+        'top_material': top_material,
+        'top_style': top_style,
+        'current_sort': sort_by,
     }
     return render(request, 'library/antique_list.html', context)
 

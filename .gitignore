@@ -9,3 +9,6 @@ db.sqlite3
 media/
 !media/.gitkeep
 staticfiles/
+scratch/
+*.local.py
+share.py

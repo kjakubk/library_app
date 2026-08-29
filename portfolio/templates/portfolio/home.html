@@ -1,134 +1,341 @@
 {% extends 'library/base.html' %}
+{% load static %}
 
 {% block title %}Kolekcjoner - Strona Główna{% endblock %}
 
 {% block content %}
-<div class="px-2 px-md-3 py-3 py-md-5 my-2 my-md-4 text-center">
-    <div class="d-inline-flex align-items-center gap-2 px-3 py-1.5 rounded-pill bg-primary bg-opacity-10 text-primary small fw-semibold mb-3">
-        <i class="bi bi-collection"></i> Panel Kolekcjonera
-    </div>
-    <h1 class="fs-2 fs-md-1 fw-bold mb-3" style="color: var(--text-main);">Witaj w Twoim systemie kolekcji!</h1>
-    <div class="col-lg-7 mx-auto">
-        <p class="lead mb-4 fs-6 fs-md-5" style="color: var(--text-muted);">
-            Oto Twoje centrum zarządzania domowymi zbiorami. Przeglądaj, zarządzaj i powiększaj swoje unikatowe zbiory: od klasycznych powieści, poprzez rzadką porcelanę, aż po stare płyty winylowe i gry.
-        </p>
-        <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center mt-3 mt-md-4">
-            <a href="{% url 'book_list' %}" class="btn btn-primary px-4 py-2.5 rounded-3 shadow-sm fw-semibold d-flex align-items-center justify-content-center">
-                <i class="bi bi-journal-bookmark-fill me-2"></i> Przejdź do Biblioteki
-            </a>
-            <a href="{% url 'cv_view' %}" class="btn btn-outline-primary px-4 py-2.5 rounded-3 shadow-sm fw-semibold d-flex align-items-center justify-content-center">
-                <i class="bi bi-file-earmark-person-fill me-2"></i> Moje CV
-            </a>
-            <a href="{% url 'porcelain_list' %}" class="btn btn-outline-secondary px-4 py-2.5 rounded-3 fw-semibold d-flex align-items-center justify-content-center">
-                <i class="bi bi-cup-hot-fill me-2"></i> Porcelana
-            </a>
+<style>
+    .home-hero-card {
+        background: radial-gradient(circle at 10% 20%, rgba(var(--bs-primary-rgb), 0.08) 0%, transparent 60%),
+                    radial-gradient(circle at 90% 80%, rgba(var(--bs-info-rgb), 0.06) 0%, transparent 50%),
+                    var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color);
+        border-radius: 1.5rem;
+    }
+    
+    .collection-tile {
+        text-decoration: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 1.25rem 1rem;
+        border-radius: 1.25rem;
+        background-color: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+        transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, border-color 0.22s ease;
+        height: 100%;
+        color: var(--bs-body-color);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .collection-tile:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        border-color: var(--bs-primary);
+        color: var(--bs-body-color);
+    }
+    
+    .collection-tile .tile-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 0.85rem;
+        transition: transform 0.25s ease;
+    }
+    
+    .collection-tile:hover .tile-icon {
+        transform: scale(1.12);
+    }
+
+    .recent-scroll-container {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        padding-bottom: 0.75rem;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .recent-scroll-container::-webkit-scrollbar {
+        height: 5px;
+    }
+    .recent-scroll-container::-webkit-scrollbar-thumb {
+        background-color: var(--tree-line, #d1d5db);
+        border-radius: 10px;
+    }
+
+    .recent-item-card {
+        flex: 0 0 240px;
+        scroll-snap-align: start;
+        text-decoration: none;
+        color: var(--bs-body-color);
+        background-color: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color);
+        border-radius: 1rem;
+        overflow: hidden;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .recent-item-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+        color: var(--bs-body-color);
+        border-color: var(--bs-primary);
+    }
+
+    .recent-thumb {
+        width: 100%;
+        height: 140px;
+        object-fit: cover;
+        background-color: var(--bs-tertiary-bg);
+    }
+
+    .recent-placeholder {
+        width: 100%;
+        height: 140px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--bs-tertiary-bg);
+        font-size: 2.2rem;
+    }
+</style>
+
+<!-- =========================================
+     SEKCJA 1: HERO & WITAJ
+     ========================================= -->
+<div class="home-hero-card shadow-sm p-4 p-md-5 mb-4 text-center text-md-start">
+    <div class="row align-items-center g-4">
+        <div class="col-12 col-md-8">
+            <div class="d-inline-flex align-items-center gap-2 px-3 py-1.5 rounded-pill bg-primary bg-opacity-10 text-primary small fw-semibold mb-3">
+                <i class="bi bi-collection"></i> Panel Główny
+                <span class="badge bg-primary rounded-pill px-2 ms-1">{{ total_items }} szt.</span>
+            </div>
+            <h1 class="display-6 fw-bold mb-3 text-body">
+                Witaj w Twoim systemie kolekcji!
+            </h1>
+            <p class="text-muted lead fs-6 mb-4" style="max-width: 680px;">
+                Centrum zarządzania domowymi zbiorami. Przeglądaj, kataloguj i rozwijaj swoje unikatowe zbiory: od rzadkich wydań książek i płyt winylowych, przez porcelanę i antyki, aż po gry i sprzęt retro.
+            </p>
+            <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start">
+                <a href="{% url 'book_list' %}" class="btn btn-primary px-4 py-2 rounded-pill shadow-sm fw-semibold d-inline-flex align-items-center gap-2">
+                    <i class="bi bi-journal-bookmark-fill"></i> Biblioteka
+                </a>
+                <a href="{% url 'cv_view' %}" class="btn btn-outline-primary px-4 py-2 rounded-pill shadow-sm fw-semibold d-inline-flex align-items-center gap-2">
+                    <i class="bi bi-file-earmark-person-fill"></i> Moje CV
+                </a>
+                <a href="{% url 'portfolio_gallery' %}" class="btn btn-outline-secondary px-4 py-2 rounded-pill fw-semibold d-inline-flex align-items-center gap-2">
+                    <i class="bi bi-camera-fill"></i> Galeria Foto
+                </a>
+            </div>
+        </div>
+        <div class="col-12 col-md-4 text-center d-none d-md-block">
+            <div class="p-4 bg-body rounded-4 border shadow-sm d-inline-flex flex-column align-items-center justify-content-center" style="width: 190px; height: 190px;">
+                <span class="display-4 fw-bold text-primary mb-0">{{ total_items }}</span>
+                <span class="small fw-semibold text-muted text-uppercase" style="letter-spacing: 0.5px;">Wszystkich pozycji</span>
+                <div class="mt-2 d-flex gap-1 text-muted small opacity-75">
+                    <span>📖</span><span>☕</span><span>🎵</span><span>🎮</span><span>🕹️</span>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Sekcja CV / Profilu Zawodowego -->
+<!-- =========================================
+     SEKCJA 2: PROFIL ZAWODOWY / CV (Opcjonalnie)
+     ========================================= -->
 {% if profile %}
-<div class="card bg-body shadow-sm border rounded-4 overflow-hidden mb-4 p-4 p-md-4">
+<div class="card bg-body shadow-sm border rounded-4 overflow-hidden mb-4 p-3 p-md-4">
     <div class="row align-items-center g-3">
         <div class="col-auto">
             {% if profile.avatar %}
-                <img src="{{ profile.avatar.url }}" alt="{{ profile.full_name }}" class="rounded-circle shadow-sm border object-fit-cover" style="width: 72px; height: 72px;">
+                <img src="{{ profile.avatar.url }}" alt="{{ profile.full_name }}" class="rounded-circle shadow-sm border object-fit-cover" style="width: 64px; height: 64px;">
             {% else %}
-                <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center shadow-sm border" style="width: 72px; height: 72px;">
+                <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center shadow-sm border" style="width: 64px; height: 64px;">
                     <i class="bi bi-person-fill fs-2"></i>
                 </div>
             {% endif %}
         </div>
         <div class="col">
             <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
-                <h4 class="mb-0 fw-bold text-body">{{ profile.full_name }}</h4>
+                <h5 class="mb-0 fw-bold text-body">{{ profile.full_name }}</h5>
                 <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 small px-2.5 py-1 rounded-pill">{{ profile.title }}</span>
             </div>
-            <p class="text-muted small mb-0 text-truncate" style="max-width: 600px;">
+            <p class="text-muted small mb-0 text-truncate" style="max-width: 640px;">
                 {{ profile.summary|default:"Profesjonalny profil zawodowy, doświadczenie i edukacja." }}
             </p>
         </div>
         <div class="col-12 col-md-auto d-flex gap-2">
-            <a href="{% url 'cv_view' %}" class="btn btn-primary btn-sm rounded-pill px-4 py-2 fw-semibold shadow-sm w-100 w-md-auto d-flex align-items-center justify-content-center gap-1">
-                <i class="bi bi-pencil-square"></i> Otwórz i edytuj CV
+            <a href="{% url 'cv_view' %}" class="btn btn-primary btn-sm rounded-pill px-4 py-2 fw-semibold shadow-sm w-100 w-md-auto d-flex align-items-center justify-content-center gap-2">
+                <i class="bi bi-pencil-square"></i> Otwórz CV
             </a>
         </div>
     </div>
 </div>
 {% endif %}
 
-<!-- Kafelki ze statystykami kolekcji -->
-<div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3 text-center mt-2 mt-md-4">
-    <div class="col">
-        <div class="p-3 p-md-4 border-0 rounded-4 shadow-sm h-100" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
-            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 48px; height: 48px;">
-                <i class="bi bi-book fs-4"></i>
+<!-- =========================================
+     SEKCJA 3: OSTATNIO DODANE POZYCJE
+     ========================================= -->
+{% if recent_items %}
+<div class="mb-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="d-flex align-items-center gap-2">
+            <div class="bg-primary bg-opacity-10 text-primary rounded-3 p-1.5 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                <i class="bi bi-clock-history fs-5"></i>
             </div>
-            <h5 class="fw-bold mb-1">{{ book_count }}</h5>
-            <p class="small text-muted mb-0">Książek</p>
+            <h5 class="fw-bold mb-0 text-body">Ostatnio dodane do zbiorów</h5>
         </div>
+        <span class="small text-muted d-none d-sm-inline">Najnowsze wpisy w bazie</span>
     </div>
-    <div class="col">
-        <div class="p-3 p-md-4 border-0 rounded-4 shadow-sm h-100" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
-            <div class="bg-info bg-opacity-10 text-info rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 48px; height: 48px;">
-                <i class="bi bi-cup-hot fs-4"></i>
+
+    <div class="recent-scroll-container">
+        {% for item in recent_items %}
+            <a href="{% url item.category_url %}" class="recent-item-card shadow-sm">
+                {% if item.image_url %}
+                    <img src="{{ item.image_url }}" alt="{{ item.title }}" class="recent-thumb" loading="lazy">
+                {% else %}
+                    <div class="recent-placeholder">
+                        <span>{{ item.category_icon }}</span>
+                    </div>
+                {% endif %}
+                <div class="p-3 d-flex flex-column flex-grow-1">
+                    <div class="d-flex align-items-center justify-content-between mb-1.5">
+                        <span class="badge {{ item.badge_class }} bg-opacity-10 text-body border small rounded-pill px-2 py-0.5" style="font-size: 0.68rem;">
+                            {{ item.category_icon }} {{ item.category }}
+                        </span>
+                        {% if item.date %}
+                            <span class="text-muted small" style="font-size: 0.68rem;">{{ item.date|date:"d.m.Y" }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="fw-bold text-body text-truncate small mb-0.5" title="{{ item.title }}">{{ item.title }}</div>
+                    <div class="text-muted small text-truncate" style="font-size: 0.76rem;" title="{{ item.subtitle }}">{{ item.subtitle }}</div>
+                </div>
+            </a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- =========================================
+     SEKCJA 4: INTERAKTYWNE KAFELKI KOLEKCJI
+     ========================================= -->
+<div class="mb-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="d-flex align-items-center gap-2">
+            <div class="bg-warning bg-opacity-10 text-warning rounded-3 p-1.5 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                <i class="bi bi-grid-fill fs-5"></i>
             </div>
-            <h5 class="fw-bold mb-1">{{ porcelain_count }}</h5>
-            <p class="small text-muted mb-0">Porcelany</p>
+            <h5 class="fw-bold mb-0 text-body">Przeglądaj kolekcje</h5>
         </div>
+        <span class="small text-muted">8 kategorii</span>
     </div>
-    <div class="col">
-        <div class="p-3 p-md-4 border-0 rounded-4 shadow-sm h-100" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
-            <div class="bg-success bg-opacity-10 text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 48px; height: 48px;">
-                <i class="bi bi-vinyl fs-4"></i>
-            </div>
-            <h5 class="fw-bold mb-1">{{ vinyl_count }}</h5>
-            <p class="small text-muted mb-0">Winylowych Płyt</p>
+
+    <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3 text-center">
+        <!-- 1. Książki -->
+        <div class="col">
+            <a href="{% url 'book_list' %}" class="collection-tile">
+                <div class="tile-icon bg-primary bg-opacity-10 text-primary">
+                    <i class="bi bi-book"></i>
+                </div>
+                <h4 class="fw-bold mb-0 text-body">{{ book_count }}</h4>
+                <div class="small fw-semibold text-body mb-1">Książki</div>
+                <div class="small text-muted mt-auto" style="font-size: 0.72rem;">Katalog & okładki</div>
+            </a>
         </div>
-    </div>
-    <div class="col">
-        <div class="p-3 p-md-4 border-0 rounded-4 shadow-sm h-100" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
-            <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 48px; height: 48px;">
-                <i class="bi bi-controller fs-4"></i>
-            </div>
-            <h5 class="fw-bold mb-1">{{ video_game_count }}</h5>
-            <p class="small text-muted mb-0">Gier Wideo</p>
+
+        <!-- 2. Porcelana -->
+        <div class="col">
+            <a href="{% url 'porcelain_list' %}" class="collection-tile">
+                <div class="tile-icon bg-info bg-opacity-10 text-info">
+                    <i class="bi bi-cup-hot"></i>
+                </div>
+                <h4 class="fw-bold mb-0 text-body">{{ porcelain_count }}</h4>
+                <div class="small fw-semibold text-body mb-1">Porcelana</div>
+                <div class="small text-muted mt-auto" style="font-size: 0.72rem;">Sygnatury & stan</div>
+            </a>
         </div>
-    </div>
-    <div class="col">
-        <div class="p-3 p-md-4 border-0 rounded-4 shadow-sm h-100" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
-            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 48px; height: 48px;">
-                <i class="bi bi-cloud-arrow-down fs-4"></i>
-            </div>
-            <h5 class="fw-bold mb-1">{{ digital_games_count }}</h5>
-            <p class="small text-muted mb-0">Gier Cyfrowych</p>
+
+        <!-- 3. Płyty Winylowe -->
+        <div class="col">
+            <a href="{% url 'vinyl_list' %}" class="collection-tile">
+                <div class="tile-icon bg-success bg-opacity-10 text-success">
+                    <i class="bi bi-vinyl"></i>
+                </div>
+                <h4 class="fw-bold mb-0 text-body">{{ vinyl_count }}</h4>
+                <div class="small fw-semibold text-body mb-1">Płyty Winylowe</div>
+                <div class="small text-muted mt-auto" style="font-size: 0.72rem;">Wydania & gatunki</div>
+            </a>
         </div>
-    </div>
-    <div class="col">
-        <div class="p-3 p-md-4 border-0 rounded-4 shadow-sm h-100" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
-            <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 48px; height: 48px;">
-                <i class="bi bi-dice-5 fs-4"></i>
-            </div>
-            <h5 class="fw-bold mb-1">{{ board_game_count }}</h5>
-            <p class="small text-muted mb-0">Gier Planszowych</p>
+
+        <!-- 4. Gry Wideo -->
+        <div class="col">
+            <a href="{% url 'video_game_list' %}" class="collection-tile">
+                <div class="tile-icon bg-warning bg-opacity-10 text-warning">
+                    <i class="bi bi-controller"></i>
+                </div>
+                <h4 class="fw-bold mb-0 text-body">{{ video_game_count }}</h4>
+                <div class="small fw-semibold text-body mb-1">Gry Wideo</div>
+                <div class="small text-muted mt-auto" style="font-size: 0.72rem;">Pudełkowe & nośniki</div>
+            </a>
         </div>
-    </div>
-    <div class="col">
-        <div class="p-3 p-md-4 border-0 rounded-4 shadow-sm h-100" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
-            <div class="bg-secondary bg-opacity-10 text-secondary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 48px; height: 48px;">
-                <i class="bi bi-joystick fs-4"></i>
-            </div>
-            <h5 class="fw-bold mb-1">{{ console_count }}</h5>
-            <p class="small text-muted mb-0">Sprzęt & Konsole</p>
+
+        <!-- 5. Gry Cyfrowe -->
+        <div class="col">
+            <a href="{% url 'digital_game_list' %}" class="collection-tile">
+                <div class="tile-icon bg-primary bg-opacity-10 text-primary">
+                    <i class="bi bi-cloud-arrow-down"></i>
+                </div>
+                <h4 class="fw-bold mb-0 text-body">{{ digital_games_count }}</h4>
+                <div class="small fw-semibold text-body mb-1">Gry Cyfrowe</div>
+                <div class="small text-muted mt-auto" style="font-size: 0.72rem;">Steam, Epic & inne</div>
+            </a>
         </div>
-    </div>
-    <div class="col">
-        <div class="p-3 p-md-4 border-0 rounded-4 shadow-sm h-100" style="background-color: var(--bs-card-bg, var(--bs-body-bg));">
-            <div class="bg-dark bg-opacity-10 text-dark rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 48px; height: 48px;">
-                <i class="bi bi-lamp fs-4"></i>
-            </div>
-            <h5 class="fw-bold mb-1">{{ antique_count }}</h5>
-            <p class="small text-muted mb-0">Inne Antyki</p>
+
+        <!-- 6. Gry Planszowe -->
+        <div class="col">
+            <a href="{% url 'board_game_list' %}" class="collection-tile">
+                <div class="tile-icon bg-danger bg-opacity-10 text-danger">
+                    <i class="bi bi-dice-5"></i>
+                </div>
+                <h4 class="fw-bold mb-0 text-body">{{ board_game_count }}</h4>
+                <div class="small fw-semibold text-body mb-1">Gry Planszowe</div>
+                <div class="small text-muted mt-auto" style="font-size: 0.72rem;">Plansze & karcianki</div>
+            </a>
+        </div>
+
+        <!-- 7. Konsole i Akcesoria -->
+        <div class="col">
+            <a href="{% url 'console_list' %}" class="collection-tile">
+                <div class="tile-icon bg-secondary bg-opacity-10 text-secondary">
+                    <i class="bi bi-joystick"></i>
+                </div>
+                <h4 class="fw-bold mb-0 text-body">{{ console_count }}</h4>
+                <div class="small fw-semibold text-body mb-1">Konsole & Sprzęt</div>
+                <div class="small text-muted mt-auto" style="font-size: 0.72rem;">Sprzęt & Akcesoria</div>
+            </a>
+        </div>
+
+        <!-- 8. Inne Antyki (poprawiony styl w dark mode) -->
+        <div class="col">
+            <a href="{% url 'antique_list' %}" class="collection-tile">
+                <div class="tile-icon bg-warning bg-opacity-10 text-body">
+                    <i class="bi bi-lamp"></i>
+                </div>
+                <h4 class="fw-bold mb-0 text-body">{{ antique_count }}</h4>
+                <div class="small fw-semibold text-body mb-1">Inne Antyki</div>
+                <div class="small text-muted mt-auto" style="font-size: 0.72rem;">Zabytki & ozdoby</div>
+            </a>
         </div>
     </div>
 </div>

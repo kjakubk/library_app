@@ -27,8 +27,14 @@
         border-radius: 12px;
         overflow: hidden;
         cursor: zoom-in;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
     
+    .masonry-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.12) !important;
+    }
+
     @media (min-width: 768px) {
         .masonry-item {
             margin-bottom: 1.25rem;
@@ -58,6 +64,35 @@
     #lightboxModal .btn-close {
         filter: invert(1);
     }
+
+    .lb-nav-btn {
+        width: 48px;
+        height: 48px;
+        background: rgba(255, 255, 255, 0.15);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        transition: all 0.2s ease;
+        backdrop-filter: blur(8px);
+        cursor: pointer;
+        z-index: 1060;
+    }
+    .lb-nav-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        color: white;
+        transform: scale(1.08);
+    }
+    @media (max-width: 576px) {
+        .lb-nav-btn {
+            width: 40px;
+            height: 40px;
+            font-size: 1rem;
+        }
+    }
 </style>
 
 <div class="container-fluid px-2 px-md-4 py-3 py-md-4 mb-5">
@@ -79,9 +114,9 @@
     <!-- Siatka Masonry -->
     <div class="masonry-grid">
         {% for photo in photos %}
-            <div class="masonry-item shadow-sm border" onclick="openLightbox('{{ photo.image.url }}', '{{ photo.title|escapejs }}', '{{ photo.camera|default:''|escapejs }}', '{{ photo.focal_length|default:''|escapejs }}', '{{ photo.iso|default:''|escapejs }}')">
+            <div class="masonry-item shadow-sm border" onclick="openLightboxByIndex({{ forloop.counter0 }})">
                 
-                <img src="{{ photo.image.url }}" class="w-100 d-block" alt="{{ photo.title|default:'Zdjęcie' }}">
+                <img src="{{ photo.image.url }}" class="w-100 d-block" alt="{{ photo.title|default:'Zdjęcie' }}" loading="lazy">
                 
                 <div class="masonry-overlay d-flex justify-content-between align-items-end w-100">
                     <div>
@@ -109,17 +144,34 @@
     </div>
 </div>
 
-<!-- Modal / Lightbox -->
+<!-- Modal / Lightbox z pełną nawigacją -->
 <div class="modal fade" id="lightboxModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-fullscreen">
         <div class="modal-content" style="background: rgba(0,0,0,0.95);">
-            <div class="modal-header border-0 position-absolute top-0 end-0 z-3">
-                <button type="button" class="btn-close fs-4 p-3 shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            <!-- Nagłówek: licznik i przycisk zamknięcia -->
+            <div class="modal-header border-0 position-absolute top-0 start-0 end-0 z-3 d-flex justify-content-between align-items-center p-3">
+                <span id="lbCounter" class="badge bg-white bg-opacity-20 text-white rounded-pill px-3 py-1.5 small fw-semibold">1 / 1</span>
+                <button type="button" class="btn-close fs-4 p-2 shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body d-flex flex-column align-items-center justify-content-center p-0 h-100">
-                <img id="lbImage" src="" class="img-fluid" style="max-height: 85vh; object-fit: contain; box-shadow: 0 0 40px rgba(0,0,0,0.5);">
-                <div class="text-center text-white mt-4 px-3">
-                    <h4 id="lbTitle" class="fw-bold mb-1"></h4>
+
+            <!-- Ciało modalu z nawigacją i zdjęciem -->
+            <div class="modal-body d-flex flex-column align-items-center justify-content-center p-0 h-100 position-relative">
+                <!-- Przycisk poprzedni -->
+                <button type="button" class="lb-nav-btn position-absolute top-50 start-0 translate-middle-y ms-3 ms-md-4" onclick="navigateLightbox(-1)" title="Poprzednie zdjęcie (←)">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+
+                <!-- Obrazek -->
+                <img id="lbImage" src="" class="img-fluid" style="max-height: 80vh; max-width: 90vw; object-fit: contain; box-shadow: 0 0 40px rgba(0,0,0,0.5); border-radius: 8px; transition: opacity 0.2s ease;">
+
+                <!-- Przycisk następny -->
+                <button type="button" class="lb-nav-btn position-absolute top-50 end-0 translate-middle-y me-3 me-md-4" onclick="navigateLightbox(1)" title="Następne zdjęcie (→)">
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+
+                <!-- Podpisy -->
+                <div class="text-center text-white mt-3 px-3">
+                    <h4 id="lbTitle" class="fw-bold mb-1 fs-5 fs-md-4"></h4>
                     <p id="lbExif" class="text-white-50 small mb-0"></p>
                 </div>
             </div>
@@ -150,29 +202,110 @@
 </div>
 
 <script>
-    function openLightbox(url, title, camera, focal, iso) {
-        document.getElementById('lbImage').src = url;
-        document.getElementById('lbTitle').textContent = title !== 'None' && title !== '' ? title : '';
+    // Tablica wszystkich zdjęć do nawigacji w lightboxie
+    const galleryItems = [
+        {% for photo in photos %}
+        {
+            url: "{{ photo.image.url|escapejs }}",
+            title: "{{ photo.title|default:''|escapejs }}",
+            camera: "{{ photo.camera|default:''|escapejs }}",
+            focal: "{{ photo.focal_length|default:''|escapejs }}",
+            iso: "{{ photo.iso|default:''|escapejs }}"
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    let currentLbIndex = 0;
+    let lbModalInstance = null;
+
+    function openLightboxByIndex(index) {
+        if (index < 0 || index >= galleryItems.length) return;
+        currentLbIndex = index;
+        renderLightboxItem();
+
+        if (!lbModalInstance) {
+            lbModalInstance = new bootstrap.Modal(document.getElementById('lightboxModal'));
+        }
+        lbModalInstance.show();
+    }
+
+    function navigateLightbox(direction) {
+        if (galleryItems.length <= 1) return;
+        currentLbIndex += direction;
+        if (currentLbIndex < 0) {
+            currentLbIndex = galleryItems.length - 1;
+        } else if (currentLbIndex >= galleryItems.length) {
+            currentLbIndex = 0;
+        }
+        renderLightboxItem();
+    }
+
+    function renderLightboxItem() {
+        const item = galleryItems[currentLbIndex];
+        if (!item) return;
+
+        const imgEl = document.getElementById('lbImage');
+        imgEl.style.opacity = '0.4';
+        imgEl.src = item.url;
+        imgEl.onload = () => { imgEl.style.opacity = '1'; };
+
+        document.getElementById('lbTitle').textContent = item.title !== 'None' && item.title !== '' ? item.title : '';
         
         let exifText = '';
-        if(camera !== 'None' && camera !== '') exifText += '📷 ' + camera + ' ';
-        if(focal !== 'None' && focal !== '') exifText += ' • ' + focal;
-        if(iso !== 'None' && iso !== '') exifText += ' • ISO ' + iso;
+        if (item.camera && item.camera !== 'None' && item.camera !== '') exifText += '📷 ' + item.camera + ' ';
+        if (item.focal && item.focal !== 'None' && item.focal !== '') exifText += ' • ' + item.focal;
+        if (item.iso && item.iso !== 'None' && item.iso !== '') exifText += ' • ISO ' + item.iso;
         
         document.getElementById('lbExif').textContent = exifText;
-        
-        new bootstrap.Modal(document.getElementById('lightboxModal')).show();
+        document.getElementById('lbCounter').textContent = `${currentLbIndex + 1} / ${galleryItems.length}`;
     }
 
     function openDeleteModal(event, deleteUrl) {
-        // Zatrzymujemy kliknięcie, żeby nie otworzył się Lightbox
         event.stopPropagation();
-        
-        // Podpinamy adres usuwania pod formularz
         document.getElementById('deletePhotoForm').action = deleteUrl;
-        
-        // Wyświetlamy okienko
         new bootstrap.Modal(document.getElementById('deletePhotoModal')).show();
+    }
+
+    // Obsługa klawiatury w lightboxie (Strzałki lewo/prawo)
+    document.addEventListener('keydown', function(e) {
+        const modal = document.getElementById('lightboxModal');
+        if (modal && modal.classList.contains('show')) {
+            if (e.key === 'ArrowLeft') {
+                navigateLightbox(-1);
+            } else if (e.key === 'ArrowRight') {
+                navigateLightbox(1);
+            }
+        }
+    });
+
+    // Obsługa gestów dotykowych (Swipe) na telefonie
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    const lbModalEl = document.getElementById('lightboxModal');
+    if (lbModalEl) {
+        lbModalEl.addEventListener('touchstart', function(e) {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        lbModalEl.addEventListener('touchend', function(e) {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }, { passive: true });
+    }
+
+    function handleSwipe() {
+        const diffX = touchEndX - touchStartX;
+        const threshold = 45; // minimalny dystans przesunięcia w px
+        if (Math.abs(diffX) > threshold) {
+            if (diffX > 0) {
+                // Swipe w prawo -> Poprzednie
+                navigateLightbox(-1);
+            } else {
+                // Swipe w lewo -> Następne
+                navigateLightbox(1);
+            }
+        }
     }
 </script>
 {% endblock %}

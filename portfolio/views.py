@@ -11,7 +11,7 @@ from django.contrib.auth.models import User
 from django.conf import settings
 from django.core.management import call_command
 from django.http import HttpResponse
-from .models import Photo, Album, Experience
+from .models import Photo, Album, Experience, CVProfile
 from .forms import PhotoForm, AlbumForm, LoginForm, UserAdminCreateForm, UserAdminPasswordChangeForm
 
 from library.models import Book, Porcelain, VinylRecord, VideoGame, BoardGame, ConsoleHardware, Antique, DigitalGame
@@ -19,16 +19,140 @@ from library.models import Book, Porcelain, VinylRecord, VideoGame, BoardGame, C
 def home_view(request):
     """Strona główna witryny / powitanie (wymaga zalogowania przez middleware)."""
     profile = CVProfile.objects.first()
+    
+    book_count = Book.objects.count()
+    porcelain_count = Porcelain.objects.count()
+    vinyl_count = VinylRecord.objects.count()
+    video_game_count = VideoGame.objects.count()
+    digital_games_count = DigitalGame.objects.count()
+    board_game_count = BoardGame.objects.count()
+    console_count = ConsoleHardware.objects.count()
+    antique_count = Antique.objects.count()
+    
+    total_items = (
+        book_count + porcelain_count + vinyl_count + video_game_count +
+        digital_games_count + board_game_count + console_count + antique_count
+    )
+
+    # Zbieranie ostatnio dodanych elementów ze wszystkich kolekcji
+    recent_items = []
+
+    for b in Book.objects.order_by('-date_added')[:5]:
+        recent_items.append({
+            'title': b.title or 'Bez tytułu',
+            'subtitle': b.authors or 'Nieznany autor',
+            'category': 'Książki',
+            'category_icon': '📖',
+            'category_url': 'book_list',
+            'badge_class': 'bg-primary',
+            'image_url': b.image.url if b.image else None,
+            'date': b.date_added,
+        })
+
+    for p in Porcelain.objects.order_by('-created_at')[:5]:
+        img = p.image_1.url if p.image_1 else (p.signature_image.url if p.signature_image else None)
+        recent_items.append({
+            'title': p.name,
+            'subtitle': p.signature or p.style or 'Porcelana',
+            'category': 'Porcelana',
+            'category_icon': '☕',
+            'category_url': 'porcelain_list',
+            'badge_class': 'bg-info',
+            'image_url': img,
+            'date': p.created_at,
+        })
+
+    for v in VinylRecord.objects.order_by('-created_at')[:5]:
+        img = v.front_cover.url if v.front_cover else (v.back_cover.url if v.back_cover else None)
+        recent_items.append({
+            'title': v.title,
+            'subtitle': v.artist,
+            'category': 'Płyty winylowe',
+            'category_icon': '🎵',
+            'category_url': 'vinyl_list',
+            'badge_class': 'bg-success',
+            'image_url': img,
+            'date': v.created_at,
+        })
+
+    for vg in VideoGame.objects.order_by('-created_at')[:5]:
+        recent_items.append({
+            'title': vg.title,
+            'subtitle': vg.platform or 'Gra wideo',
+            'category': 'Gry wideo',
+            'category_icon': '🎮',
+            'category_url': 'video_game_list',
+            'badge_class': 'bg-warning text-dark',
+            'image_url': vg.cover_image.url if vg.cover_image else None,
+            'date': vg.created_at,
+        })
+
+    for dg in DigitalGame.objects.order_by('-created_at')[:5]:
+        img = dg.cover_image.url if dg.cover_image else None
+        recent_items.append({
+            'title': dg.title,
+            'subtitle': dg.platform or 'Gra cyfrowa',
+            'category': 'Gry cyfrowe',
+            'category_icon': '☁️',
+            'category_url': 'digital_game_list',
+            'badge_class': 'bg-primary',
+            'image_url': img,
+            'date': dg.created_at,
+        })
+
+    for bg in BoardGame.objects.order_by('-created_at')[:5]:
+        img = bg.box_image.url if bg.box_image else (bg.board_image.url if bg.board_image else None)
+        recent_items.append({
+            'title': bg.title,
+            'subtitle': bg.publisher or bg.category or 'Gra planszowa',
+            'category': 'Gry planszowe',
+            'category_icon': '🎲',
+            'category_url': 'board_game_list',
+            'badge_class': 'bg-danger',
+            'image_url': img,
+            'date': bg.created_at,
+        })
+
+    for c in ConsoleHardware.objects.order_by('-created_at')[:5]:
+        recent_items.append({
+            'title': c.name,
+            'subtitle': c.manufacturer or c.category or 'Sprzęt',
+            'category': 'Konsole',
+            'category_icon': '🕹️',
+            'category_url': 'console_list',
+            'badge_class': 'bg-secondary',
+            'image_url': c.image.url if c.image else None,
+            'date': c.created_at,
+        })
+
+    for a in Antique.objects.order_by('-created_at')[:5]:
+        recent_items.append({
+            'title': a.name,
+            'subtitle': a.material or a.style or 'Antyk',
+            'category': 'Inne Antyki',
+            'category_icon': '🕰️',
+            'category_url': 'antique_list',
+            'badge_class': 'bg-secondary',
+            'image_url': a.image.url if a.image else None,
+            'date': a.created_at,
+        })
+
+    # Sortowanie po dacie malejąco i wybór 8 najnowszych
+    recent_items.sort(key=lambda x: x['date'] if x['date'] else datetime.min, reverse=True)
+    recent_items = recent_items[:8]
+
     context = {
         'profile': profile,
-        'book_count': Book.objects.count(),
-        'porcelain_count': Porcelain.objects.count(),
-        'vinyl_count': VinylRecord.objects.count(),
-        'video_game_count': VideoGame.objects.count(),
-        'digital_games_count': DigitalGame.objects.count(),
-        'board_game_count': BoardGame.objects.count(),
-        'console_count': ConsoleHardware.objects.count(),
-        'antique_count': Antique.objects.count(),
+        'total_items': total_items,
+        'recent_items': recent_items,
+        'book_count': book_count,
+        'porcelain_count': porcelain_count,
+        'vinyl_count': vinyl_count,
+        'video_game_count': video_game_count,
+        'digital_games_count': digital_games_count,
+        'board_game_count': board_game_count,
+        'console_count': console_count,
+        'antique_count': antique_count,
     }
     return render(request, 'portfolio/home.html', context)
 
