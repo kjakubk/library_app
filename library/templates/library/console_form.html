@@ -77,10 +77,13 @@
                         <!-- Przyciski akcji -->
                         <div class="d-flex gap-2 justify-content-center flex-wrap mt-2">
                             <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold shadow-sm d-flex align-items-center gap-1" onclick="openCameraModal('id_image', 'preview_image', 'preview_image_wrapper', 'empty_image_placeholder')">
-                                📸 Zrób zdjęcie kamerą
+                                📸 Zrób zdjęcie aparatem
                             </button>
+                            <!-- Natywny aparat mobilny (fallback dla połączeń HTTP / telefonów) -->
+                            <input type="file" name="image_camera_capture" id="id_image_camera" accept="image/*" capture="environment" class="d-none" onchange="handleFileInputChange(this, 'preview_image', 'preview_image_wrapper', 'empty_image_placeholder', 'id_image')">
+                            
                             <label class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-medium d-flex align-items-center gap-1 mb-0" style="cursor: pointer;">
-                                📁 Z pliku
+                                📁 Z galerii / pliku
                                 <input type="file" name="image" id="id_image" accept="image/*" class="d-none" onchange="handleFileInputChange(this, 'preview_image', 'preview_image_wrapper', 'empty_image_placeholder')">
                             </label>
                         </div>
@@ -201,8 +204,24 @@
     let currentFacingMode = 'environment';
     let currentBlob = null;
 
-    function handleFileInputChange(input, previewImgId, wrapperId, placeholderId) {
+    function handleFileInputChange(input, previewImgId, wrapperId, placeholderId, syncInputId = null) {
         if (input.files && input.files[0]) {
+            const file = input.files[0];
+            
+            // Jeśli wybrano z natywnego aparatu, przepisz plik do głównego inputu formularza
+            if (syncInputId) {
+                const mainInput = document.getElementById(syncInputId);
+                if (mainInput) {
+                    try {
+                        const dt = new DataTransfer();
+                        dt.items.add(file);
+                        mainInput.files = dt.files;
+                    } catch (e) {
+                        console.warn('DataTransfer sync fallback:', e);
+                    }
+                }
+            }
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 const previewImg = document.getElementById(previewImgId);
@@ -213,15 +232,17 @@
                 if (wrapper) wrapper.classList.remove('d-none');
                 if (placeholder) placeholder.classList.add('d-none');
             };
-            reader.readAsDataURL(input.files[0]);
+            reader.readAsDataURL(file);
         }
     }
 
     function clearPhotoInput(inputId, wrapperId, placeholderId) {
         const input = document.getElementById(inputId);
+        const cameraInput = document.getElementById(inputId + '_camera');
         const wrapper = document.getElementById(wrapperId);
         const placeholder = document.getElementById(placeholderId);
         if (input) input.value = '';
+        if (cameraInput) cameraInput.value = '';
         if (wrapper) wrapper.classList.add('d-none');
         if (placeholder) placeholder.classList.remove('d-none');
     }
@@ -231,6 +252,16 @@
         targetPreviewImgId = previewImgId;
         targetWrapperId = wrapperId;
         targetPlaceholderId = placeholderId;
+
+        // Jeśli przeglądarka blokuje WebRTC (np. brak HTTPS w sieci lokalnej lub na telefonie)
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            const nativeCameraInput = document.getElementById(inputId + '_camera') || document.getElementById(inputId);
+            if (nativeCameraInput) {
+                nativeCameraInput.click();
+                return;
+            }
+        }
+
         currentBlob = null;
 
         document.getElementById('capturedPhotoContainer').classList.add('d-none');
@@ -250,6 +281,12 @@
         const video = document.getElementById('cameraVideo');
         const errorDiv = document.getElementById('cameraErrorMsg');
         const switchBtn = document.getElementById('switchCameraBtn');
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            errorDiv.innerHTML = 'Przeglądarka wymaga połączenia szyfrowanego (HTTPS) do podglądu wideo na żywo.<br><br><button type="button" class="btn btn-warning rounded-pill px-3 btn-sm" onclick="closeCameraModal(); document.getElementById(\'' + targetInputId + '_camera\').click();">📸 Uruchom aparat telefonu</button>';
+            errorDiv.classList.remove('d-none');
+            return;
+        }
 
         try {
             const constraints = {
@@ -273,7 +310,7 @@
             }
         } catch(err) {
             console.error('Błąd dostępu do kamery:', err);
-            errorDiv.textContent = 'Nie udało się uzyskać dostępu do kamery: ' + (err.message || 'Brak uprawnień');
+            errorDiv.innerHTML = 'Nie udało się uzyskać dostępu do kamery: ' + (err.message || 'Brak uprawnień') + '<br><br><button type="button" class="btn btn-warning rounded-pill px-3 btn-sm" onclick="closeCameraModal(); document.getElementById(\'' + targetInputId + '_camera\').click();">📸 Uruchom aparat telefonu</button>';
             errorDiv.classList.remove('d-none');
         }
     }
