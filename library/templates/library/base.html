@@ -538,19 +538,19 @@
                     <!-- SEKCJA 1: GŁÓWNE -->
                     <li class="sidebar-section-label">GŁÓWNE</li>
                     <li class="menu-item">
-                        <a href="{% url 'home' %}" class="sidebar-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+                        <a href="{% url 'home' %}" class="sidebar-link {% if request.path == '/' %}active{% endif %}">
                             <i class="bi bi-grid-1x2 sidebar-icon"></i>
                             <span>Strona Główna</span>
                         </a>
                     </li>
                     <li class="menu-item">
-                        <a href="{% url 'cv_view' %}" class="sidebar-link {% if request.resolver_match.url_name == 'cv_view' %}active{% endif %}">
+                        <a href="{% url 'cv_view' %}" class="sidebar-link {% if '/cv/' in request.path %}active{% endif %}">
                             <i class="bi bi-file-earmark-person sidebar-icon"></i>
                             <span>Moje CV</span>
                         </a>
                     </li>
                     <li class="menu-item">
-                        <a href="{% url 'portfolio_gallery' %}" class="sidebar-link {% if request.resolver_match.url_name == 'portfolio_gallery' %}active{% endif %}">
+                        <a href="{% url 'portfolio_gallery' %}" class="sidebar-link {% if '/galeria/' in request.path %}active{% endif %}">
                             <i class="bi bi-camera sidebar-icon"></i>
                             <span>Portfolio Foto</span>
                         </a>
@@ -562,59 +562,59 @@
                         <span class="badge rounded-pill" style="background: var(--badge-bg); color: var(--badge-color); font-size: 0.65rem;">8</span>
                     </li>
                     <li class="menu-item">
-                        <a href="#kolekcjeCollapse" class="sidebar-link {% if 'kolekcje' in request.path %}active-parent{% endif %}" data-bs-toggle="collapse" aria-expanded="{% if 'kolekcje' in request.path %}true{% else %}true{% endif %}">
+                        <a href="#kolekcjeCollapse" class="sidebar-link {% if '/kolekcje/' in request.path %}active-parent{% endif %}" data-bs-toggle="collapse" aria-expanded="true">
                             <i class="bi bi-collection sidebar-icon"></i>
                             <span>Zbiory & Archiwa</span>
                             <i class="bi bi-chevron-down sidebar-chevron"></i>
                         </a>
                         
-                        <!-- Nowoczesne podmenu z mini-ikonami -->
+                        <!-- Nowoczesne podmenu z mini-ikonami (aktywne na wszystkich podstronach) -->
                         <div class="collapse show" id="kolekcjeCollapse">
                             <ul class="sidebar-submenu">
                                 <li>
-                                    <a href="{% url 'book_list' %}" class="sidebar-sublink {% if request.resolver_match.url_name == 'book_list' %}active{% endif %}">
+                                    <a href="{% url 'book_list' %}" class="sidebar-sublink {% if 'ksiazki' in request.path %}active{% endif %}">
                                         <span class="sublink-icon">📖</span>
                                         <span>Książki</span>
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="{% url 'vinyl_list' %}" class="sidebar-sublink {% if request.resolver_match.url_name == 'vinyl_list' %}active{% endif %}">
+                                    <a href="{% url 'vinyl_list' %}" class="sidebar-sublink {% if 'winyle' in request.path %}active{% endif %}">
                                         <span class="sublink-icon">🎵</span>
                                         <span>Płyty winylowe</span>
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="{% url 'porcelain_list' %}" class="sidebar-sublink {% if request.resolver_match.url_name == 'porcelain_list' %}active{% endif %}">
+                                    <a href="{% url 'porcelain_list' %}" class="sidebar-sublink {% if 'porcelana' in request.path %}active{% endif %}">
                                         <span class="sublink-icon">☕</span>
                                         <span>Porcelana</span>
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="{% url 'video_game_list' %}" class="sidebar-sublink {% if request.resolver_match.url_name == 'video_game_list' %}active{% endif %}">
+                                    <a href="{% url 'video_game_list' %}" class="sidebar-sublink {% if 'gry-wideo' in request.path %}active{% endif %}">
                                         <span class="sublink-icon">🎮</span>
                                         <span>Gry wideo</span>
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="{% url 'digital_game_list' %}" class="sidebar-sublink {% if request.resolver_match.url_name == 'digital_game_list' %}active{% endif %}">
+                                    <a href="{% url 'digital_game_list' %}" class="sidebar-sublink {% if 'gry-cyfrowe' in request.path %}active{% endif %}">
                                         <span class="sublink-icon">☁️</span>
                                         <span>Gry cyfrowe</span>
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="{% url 'board_game_list' %}" class="sidebar-sublink {% if request.resolver_match.url_name == 'board_game_list' %}active{% endif %}">
+                                    <a href="{% url 'board_game_list' %}" class="sidebar-sublink {% if 'planszowki' in request.path %}active{% endif %}">
                                         <span class="sublink-icon">🎲</span>
                                         <span>Gry planszowe</span>
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="{% url 'console_list' %}" class="sidebar-sublink {% if request.resolver_match.url_name == 'console_list' %}active{% endif %}">
+                                    <a href="{% url 'console_list' %}" class="sidebar-sublink {% if 'konsole' in request.path %}active{% endif %}">
                                         <span class="sublink-icon">🕹️</span>
                                         <span>Konsole i Akcesoria</span>
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="{% url 'antique_list' %}" class="sidebar-sublink {% if request.resolver_match.url_name == 'antique_list' %}active{% endif %}">
+                                    <a href="{% url 'antique_list' %}" class="sidebar-sublink {% if 'antyki' in request.path %}active{% endif %}">
                                         <span class="sublink-icon">🕰️</span>
                                         <span>Inne Antyki</span>
                                     </a>
@@ -791,13 +791,16 @@
         </nav>
 
         <!-- Wysuwany Dolny Panel Kolekcji (Bottom Sheet) -->
-        <div class="offcanvas offcanvas-bottom rounded-top-4 border-0 shadow-lg" tabindex="-1" id="mobileCollectionsSheet" aria-labelledby="mobileCollectionsSheetLabel" style="max-height: 70vh;">
-            <div class="offcanvas-header pb-2 border-bottom">
+        <div class="offcanvas offcanvas-bottom rounded-top-4 border-0 shadow-lg" tabindex="-1" id="mobileCollectionsSheet" aria-labelledby="mobileCollectionsSheetLabel" style="max-height: 75vh; background-color: var(--sidebar-bg);">
+            <div class="offcanvas-header pb-2 border-bottom" style="border-color: var(--sidebar-border) !important;">
                 <div class="d-flex align-items-center gap-2">
-                    <div class="bg-warning bg-opacity-10 text-warning rounded-3 p-2 d-flex align-items-center justify-content-center">
-                        <i class="bi bi-collection-fill fs-5"></i>
+                    <div class="rounded-3 p-2 d-flex align-items-center justify-content-center text-white" style="width: 32px; height: 32px; background: linear-gradient(135deg, #0284c7, #2563eb);">
+                        <i class="bi bi-collection-fill fs-6"></i>
                     </div>
-                    <h5 class="offcanvas-title fw-bold text-body fs-6" id="mobileCollectionsSheetLabel">Przeglądaj Kolekcje</h5>
+                    <div>
+                        <h5 class="offcanvas-title fw-bold text-body fs-6 mb-0" id="mobileCollectionsSheetLabel">Kolekcje i Zbiory</h5>
+                        <span class="text-muted" style="font-size: 0.70rem;">Wszystkie 8 kategorii zbiorów</span>
+                    </div>
                 </div>
                 <button type="button" class="btn-close text-reset shadow-none" data-bs-dismiss="offcanvas" aria-label="Zamknij"></button>
             </div>
@@ -805,69 +808,82 @@
                 <div class="row g-2">
                     <!-- Książki -->
                     <div class="col-6">
-                        <a href="{% url 'book_list' %}" class="d-flex flex-column align-items-center justify-content-center p-3 rounded-4 border bg-body text-decoration-none text-body shadow-sm h-100 transition-all">
-                            <span class="fs-2 mb-1">📖</span>
-                            <span class="fw-bold small">Książki</span>
-                            <span class="text-muted" style="font-size: 0.72rem;">Katalog & okładki</span>
+                        <a href="{% url 'book_list' %}" class="d-flex align-items-center gap-2 p-2.5 rounded-3 border bg-body text-decoration-none text-body shadow-sm h-100 transition-all {% if 'ksiazki' in request.path %}border-primary{% endif %}">
+                            <span class="fs-4">📖</span>
+                            <div class="overflow-hidden">
+                                <span class="fw-bold small d-block text-truncate">Książki</span>
+                                <span class="text-muted text-truncate d-block" style="font-size: 0.68rem;">Katalog & okładki</span>
+                            </div>
                         </a>
                     </div>
                     <!-- Płyty Winylowe -->
                     <div class="col-6">
-                        <a href="{% url 'vinyl_list' %}" class="d-flex flex-column align-items-center justify-content-center p-3 rounded-4 border bg-body text-decoration-none text-body shadow-sm h-100 transition-all">
-                            <span class="fs-2 mb-1">🎵</span>
-                            <span class="fw-bold small">Płyty Winylowe</span>
-                            <span class="text-muted" style="font-size: 0.72rem;">Muzyka & wydania</span>
+                        <a href="{% url 'vinyl_list' %}" class="d-flex align-items-center gap-2 p-2.5 rounded-3 border bg-body text-decoration-none text-body shadow-sm h-100 transition-all {% if 'winyle' in request.path %}border-primary{% endif %}">
+                            <span class="fs-4">🎵</span>
+                            <div class="overflow-hidden">
+                                <span class="fw-bold small d-block text-truncate">Winyle</span>
+                                <span class="text-muted text-truncate d-block" style="font-size: 0.68rem;">Muzyka & wydania</span>
+                            </div>
                         </a>
                     </div>
                     <!-- Porcelana -->
                     <div class="col-6">
-                        <a href="{% url 'porcelain_list' %}" class="d-flex flex-column align-items-center justify-content-center p-3 rounded-4 border bg-body text-decoration-none text-body shadow-sm h-100 transition-all">
-                            <span class="fs-2 mb-1">☕</span>
-                            <span class="fw-bold small">Porcelana</span>
-                            <span class="text-muted" style="font-size: 0.72rem;">Sygnatury & stan</span>
+                        <a href="{% url 'porcelain_list' %}" class="d-flex align-items-center gap-2 p-2.5 rounded-3 border bg-body text-decoration-none text-body shadow-sm h-100 transition-all {% if 'porcelana' in request.path %}border-primary{% endif %}">
+                            <span class="fs-4">☕</span>
+                            <div class="overflow-hidden">
+                                <span class="fw-bold small d-block text-truncate">Porcelana</span>
+                                <span class="text-muted text-truncate d-block" style="font-size: 0.68rem;">Sygnatury & stan</span>
+                            </div>
                         </a>
                     </div>
                     <!-- Gry Wideo -->
                     <div class="col-6">
-                        <a href="{% url 'video_game_list' %}" class="d-flex flex-column align-items-center justify-content-center p-3 rounded-4 border bg-body text-decoration-none text-body shadow-sm h-100 transition-all">
-                            <span class="fs-2 mb-1">🎮</span>
-                            <span class="fw-bold small">Gry Wideo</span>
-                            <span class="text-muted" style="font-size: 0.72rem;">Platformy & nośniki</span>
+                        <a href="{% url 'video_game_list' %}" class="d-flex align-items-center gap-2 p-2.5 rounded-3 border bg-body text-decoration-none text-body shadow-sm h-100 transition-all {% if 'gry-wideo' in request.path %}border-primary{% endif %}">
+                            <span class="fs-4">🎮</span>
+                            <div class="overflow-hidden">
+                                <span class="fw-bold small d-block text-truncate">Gry Wideo</span>
+                                <span class="text-muted text-truncate d-block" style="font-size: 0.68rem;">Pudełkowe</span>
+                            </div>
                         </a>
                     </div>
                     <!-- Gry Cyfrowe -->
                     <div class="col-6">
-                        <a href="{% url 'digital_game_list' %}" class="d-flex flex-column align-items-center justify-content-center p-3 rounded-4 border bg-body text-decoration-none text-body shadow-sm h-100 transition-all">
-                            <span class="fs-2 mb-1">☁️</span>
-                            <span class="fw-bold small">Gry Cyfrowe</span>
-                            <span class="text-muted" style="font-size: 0.72rem;">Steam, Epic & inne</span>
+                        <a href="{% url 'digital_game_list' %}" class="d-flex align-items-center gap-2 p-2.5 rounded-3 border bg-body text-decoration-none text-body shadow-sm h-100 transition-all {% if 'gry-cyfrowe' in request.path %}border-primary{% endif %}">
+                            <span class="fs-4">☁️</span>
+                            <div class="overflow-hidden">
+                                <span class="fw-bold small d-block text-truncate">Gry Cyfrowe</span>
+                                <span class="text-muted text-truncate d-block" style="font-size: 0.68rem;">Steam & inne</span>
+                            </div>
                         </a>
                     </div>
                     <!-- Gry Planszowe -->
                     <div class="col-6">
-                        <a href="{% url 'board_game_list' %}" class="d-flex flex-column align-items-center justify-content-center p-3 rounded-4 border bg-body text-decoration-none text-body shadow-sm h-100 transition-all">
-                            <span class="fs-2 mb-1">🎲</span>
-                            <span class="fw-bold small text-center">Gry Planszowe</span>
-                            <span class="text-muted text-center" style="font-size: 0.72rem;">Karcianki & plansze</span>
+                        <a href="{% url 'board_game_list' %}" class="d-flex align-items-center gap-2 p-2.5 rounded-3 border bg-body text-decoration-none text-body shadow-sm h-100 transition-all {% if 'planszowki' in request.path %}border-primary{% endif %}">
+                            <span class="fs-4">🎲</span>
+                            <div class="overflow-hidden">
+                                <span class="fw-bold small d-block text-truncate">Planszówki</span>
+                                <span class="text-muted text-truncate d-block" style="font-size: 0.68rem;">Karciane & plansze</span>
+                            </div>
                         </a>
                     </div>
                     <!-- Konsole i Akcesoria -->
                     <div class="col-6">
-                        <a href="{% url 'console_list' %}" class="d-flex flex-column align-items-center justify-content-center p-3 rounded-4 border bg-body text-decoration-none text-body shadow-sm h-100 transition-all">
-                            <span class="fs-2 mb-1">🕹️</span>
-                            <span class="fw-bold small text-center">Konsole</span>
-                            <span class="text-muted text-center" style="font-size: 0.72rem;">Sprzęt & Akcesoria</span>
+                        <a href="{% url 'console_list' %}" class="d-flex align-items-center gap-2 p-2.5 rounded-3 border bg-body text-decoration-none text-body shadow-sm h-100 transition-all {% if 'konsole' in request.path %}border-primary{% endif %}">
+                            <span class="fs-4">🕹️</span>
+                            <div class="overflow-hidden">
+                                <span class="fw-bold small d-block text-truncate">Konsole</span>
+                                <span class="text-muted text-truncate d-block" style="font-size: 0.68rem;">Sprzęt & retro</span>
+                            </div>
                         </a>
                     </div>
                     <!-- Inne Antyki -->
-                    <div class="col-12">
-                        <a href="{% url 'antique_list' %}" class="d-flex align-items-center gap-3 p-3 rounded-4 border bg-body text-decoration-none text-body shadow-sm transition-all">
-                            <span class="fs-2">🕰️</span>
-                            <div>
-                                <span class="fw-bold d-block small">Inne Antyki</span>
-                                <span class="text-muted" style="font-size: 0.72rem;">Lampy, świeczniki, ramki i inne ozdoby</span>
+                    <div class="col-6">
+                        <a href="{% url 'antique_list' %}" class="d-flex align-items-center gap-2 p-2.5 rounded-3 border bg-body text-decoration-none text-body shadow-sm h-100 transition-all {% if 'antyki' in request.path %}border-primary{% endif %}">
+                            <span class="fs-4">🕰️</span>
+                            <div class="overflow-hidden">
+                                <span class="fw-bold small d-block text-truncate">Antyki</span>
+                                <span class="text-muted text-truncate d-block" style="font-size: 0.68rem;">Ozdoby & meble</span>
                             </div>
-                            <i class="bi bi-chevron-right ms-auto text-muted"></i>
                         </a>
                     </div>
                 </div>
