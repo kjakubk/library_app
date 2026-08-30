@@ -5,187 +5,350 @@
 
 {% block content %}
 <style>
-    /* Magia kaskadowej siatki (Masonry) w czystym CSS! */
-    .masonry-grid {
-        column-count: 2;
-        column-gap: 0.75rem;
-    }
-    @media (max-width: 480px) {
-        .masonry-grid {
-            column-count: 1;
-            column-gap: 0.5rem;
-        }
-    }
-    @media (min-width: 768px) { .masonry-grid { column-count: 2; column-gap: 1rem; } }
-    @media (min-width: 992px) { .masonry-grid { column-count: 3; column-gap: 1.25rem; } }
+    /* ===== KPI CARDS ===== */
+    .gallery-kpi { background: var(--bs-body-bg); border: 1px solid var(--bs-border-color); border-radius: 14px; padding: 1rem 1.2rem; text-align: center; }
+    .gallery-kpi .kpi-value { font-size: 1.8rem; font-weight: 700; line-height: 1; }
+    .gallery-kpi .kpi-label { font-size: 0.72rem; opacity: .65; margin-top: .25rem; text-transform: uppercase; letter-spacing: .04em; }
+
+    /* ===== MASONRY ===== */
+    .masonry-grid { column-count: 2; column-gap: 0.75rem; }
+    @media (max-width: 480px) { .masonry-grid { column-count: 1; } }
+    @media (min-width: 768px)  { .masonry-grid { column-count: 2; column-gap: 1rem; } }
+    @media (min-width: 992px)  { .masonry-grid { column-count: 3; column-gap: 1.25rem; } }
     @media (min-width: 1400px) { .masonry-grid { column-count: 4; column-gap: 1.5rem; } }
-    
     .masonry-item {
-        break-inside: avoid;
-        margin-bottom: 0.75rem;
-        position: relative;
-        border-radius: 12px;
-        overflow: hidden;
-        cursor: zoom-in;
+        break-inside: avoid; margin-bottom: 0.75rem; position: relative;
+        border-radius: 12px; overflow: hidden; cursor: zoom-in;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    
-    .masonry-item:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.12) !important;
-    }
+    .masonry-item:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.14) !important; }
+    @media (min-width: 768px) { .masonry-item { margin-bottom: 1.25rem; } }
 
-    @media (min-width: 768px) {
-        .masonry-item {
-            margin-bottom: 1.25rem;
-        }
+    /* ===== GRID SQUARE ===== */
+    .square-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+    @media (min-width: 576px) { .square-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 992px) { .square-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 1400px){ .square-grid { grid-template-columns: repeat(5, 1fr); } }
+    .square-item {
+        position: relative; border-radius: 12px; overflow: hidden; cursor: zoom-in;
+        aspect-ratio: 1; transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    
-    /* Ciemny pasek, który pojawia się po najechaniu myszką */
-    .masonry-overlay {
-        position: absolute;
-        bottom: 0; left: 0; right: 0;
+    .square-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .square-item:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.14) !important; }
+
+    /* ===== SHARED OVERLAY ===== */
+    .photo-overlay {
+        position: absolute; bottom: 0; left: 0; right: 0;
         background: linear-gradient(to top, rgba(0,0,0,0.85), transparent);
-        padding: 15px 12px 10px 12px;
-        color: white;
-        opacity: 0;
-        transition: opacity 0.3s ease;
+        padding: 15px 12px 10px 12px; color: white;
+        opacity: 0; transition: opacity 0.3s ease;
     }
-    .masonry-item:hover .masonry-overlay,
-    .masonry-item:active .masonry-overlay {
-        opacity: 1;
+    .masonry-item:hover .photo-overlay, .masonry-item:active .photo-overlay,
+    .square-item:hover .photo-overlay,   .square-item:active .photo-overlay { opacity: 1; }
+
+    .is-featured-badge {
+        position: absolute; top: 8px; left: 8px;
+        background: rgba(255,193,7,0.95); color: #000;
+        border-radius: 20px; padding: 2px 8px; font-size: 0.68rem; font-weight: 700;
+        backdrop-filter: blur(4px); z-index: 5;
     }
 
-    /* Modal (Lightbox) - Ciemne Tło */
-    #lightboxModal .modal-content {
-        background-color: transparent;
-        border: none;
-    }
-    #lightboxModal .btn-close {
-        filter: invert(1);
-    }
+    /* ===== LIGHTBOX ===== */
+    #lightboxModal .modal-content { background: rgba(0,0,0,0.97); border: none; }
+    #lightboxModal .btn-close { filter: invert(1); }
 
     .lb-nav-btn {
-        width: 48px;
-        height: 48px;
-        background: rgba(255, 255, 255, 0.15);
-        color: white;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.25rem;
-        transition: all 0.2s ease;
-        backdrop-filter: blur(8px);
-        cursor: pointer;
-        z-index: 1060;
+        width: 48px; height: 48px;
+        background: rgba(255,255,255,0.15); color: white;
+        border: 1px solid rgba(255,255,255,0.2); border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.25rem; transition: all 0.2s ease;
+        backdrop-filter: blur(8px); cursor: pointer; z-index: 1060;
     }
-    .lb-nav-btn:hover {
-        background: rgba(255, 255, 255, 0.3);
-        color: white;
-        transform: scale(1.08);
+    .lb-nav-btn:hover { background: rgba(255,255,255,0.3); transform: scale(1.08); }
+    @media (max-width: 576px) { .lb-nav-btn { width: 40px; height: 40px; font-size: 1rem; } }
+
+    /* Thumbnail strip */
+    .lb-thumbs {
+        display: flex; gap: 6px; overflow-x: auto; padding: 6px 8px;
+        scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.3) transparent;
+        max-width: 100%;
     }
-    @media (max-width: 576px) {
-        .lb-nav-btn {
-            width: 40px;
-            height: 40px;
-            font-size: 1rem;
-        }
+    .lb-thumb {
+        width: 52px; height: 52px; object-fit: cover; border-radius: 6px; flex-shrink: 0;
+        cursor: pointer; opacity: 0.5; transition: opacity .2s, transform .2s;
+        border: 2px solid transparent;
     }
+    .lb-thumb:hover  { opacity: 0.85; transform: scale(1.05); }
+    .lb-thumb.active { opacity: 1; border-color: #fff; transform: scale(1.05); }
+
+    /* EXIF panel */
+    .lb-exif-panel {
+        background: rgba(255,255,255,0.07); border-radius: 12px;
+        padding: .5rem 1rem; font-size: 0.75rem; color: rgba(255,255,255,.75);
+        display: flex; flex-wrap: wrap; gap: .3rem .8rem; justify-content: center;
+    }
+    .lb-exif-panel span::before { margin-right: 3px; }
+
+    /* Drag handle */
+    .drag-handle { cursor: grab; position: absolute; top: 8px; right: 8px; z-index: 10;
+        background: rgba(0,0,0,.45); color: #fff; border-radius: 6px; padding: 2px 6px; font-size: 0.8rem;
+        display: none;
+    }
+    .sort-mode .drag-handle { display: flex; }
+    .sort-mode .masonry-item, .sort-mode .square-item { cursor: grab !important; }
+
+    /* Tag chips */
+    .tag-chip { background: var(--bs-secondary-bg); border-radius: 20px; padding: 3px 10px;
+        font-size: 0.75rem; cursor: pointer; border: 1px solid var(--bs-border-color);
+        transition: all .15s; text-decoration: none; color: var(--bs-body-color);
+    }
+    .tag-chip:hover, .tag-chip.active { background: var(--bs-primary); color: #fff; border-color: var(--bs-primary); }
+
+    /* Featured strip */
+    .featured-strip { display: flex; gap: .75rem; overflow-x: auto; padding-bottom: .5rem;
+        scrollbar-width: thin; -webkit-overflow-scrolling: touch;
+    }
+    .featured-card { flex-shrink: 0; width: 180px; border-radius: 12px; overflow: hidden; cursor: zoom-in;
+        position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transition: transform .2s; aspect-ratio: 3/2;
+    }
+    @media (max-width: 576px) { .featured-card { width: 140px; } }
+    .featured-card:hover { transform: translateY(-2px); }
+    .featured-card img { width: 100%; height: 100%; object-fit: cover; }
 </style>
 
 <div class="container-fluid px-2 px-md-4 py-3 py-md-4 mb-5">
-    
-    <!-- Filtry / Kategorie (Płynny scroll na telefonie) -->
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center mb-3 mb-md-4 gap-3">
-        <div class="d-flex gap-2 overflow-auto py-1 flex-grow-1" style="white-space: nowrap; -webkit-overflow-scrolling: touch;">
-            <a href="{% url 'portfolio_gallery' %}" class="btn btn-sm rounded-pill px-3 {% if not selected_album %}btn-primary{% else %}btn-outline-secondary{% endif %}">Wszystkie</a>
-            {% for album in albums %}
-                <a href="?album={{ album.id }}" class="btn btn-sm rounded-pill px-3 {% if selected_album == album.id %}btn-primary{% else %}btn-outline-secondary{% endif %}">{{ album.name }}</a>
+
+    <!-- ===== KPI BAR ===== -->
+    <div class="row g-2 mb-3 mb-md-4">
+        <div class="col-6 col-md-3">
+            <div class="gallery-kpi shadow-sm">
+                <div class="kpi-value text-primary">{{ total_photos }}</div>
+                <div class="kpi-label">📷 Zdjęć</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="gallery-kpi shadow-sm">
+                <div class="kpi-value text-success">{{ total_albums }}</div>
+                <div class="kpi-label">📁 Albumów</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="gallery-kpi shadow-sm">
+                <div class="kpi-value text-warning">{{ featured_count }}</div>
+                <div class="kpi-label">⭐ Wyróżnionych</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="gallery-kpi shadow-sm">
+                <div class="kpi-value text-info">{{ with_location }}</div>
+                <div class="kpi-label">📍 Z lokalizacją</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== WYRÓŻNIONE ===== -->
+    {% if featured_photos %}
+    <div class="mb-3">
+        <h6 class="fw-semibold mb-2 text-warning"><i class="bi bi-star-fill me-1"></i>Wyróżnione zdjęcia</h6>
+        <div class="featured-strip">
+            {% for photo in featured_photos %}
+            <div class="featured-card shadow-sm" onclick="openLightboxByIndex({{ photo.id }}, true)">
+                <img src="{{ photo.image.url }}" alt="{{ photo.title|default:'Zdjęcie' }}" loading="lazy">
+                {% if photo.title %}
+                <div class="photo-overlay" style="opacity:1; padding: 8px 10px 6px;">
+                    <div style="font-size:.75rem; font-weight:600;">{{ photo.title }}</div>
+                </div>
+                {% endif %}
+            </div>
             {% endfor %}
         </div>
-        <div class="d-flex gap-2 justify-content-end">
-            <a href="{% url 'add_album' %}" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm">+ Album</a>
-            <a href="{% url 'add_photo' %}" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">+ Zdjęcie</a>
+    </div>
+    {% endif %}
+
+    <!-- ===== ALBUMY + TAGI + SORTOWANIE + PRZYCISKI ===== -->
+    <div class="d-flex flex-column gap-2 mb-3">
+        <!-- Albumy -->
+        <div class="d-flex gap-2 overflow-auto py-1 flex-wrap" style="-webkit-overflow-scrolling: touch;">
+            <a href="{% url 'portfolio_gallery' %}{% if selected_tag %}?tag={{ selected_tag }}{% endif %}"
+               class="btn btn-sm rounded-pill px-3 {% if not selected_album %}btn-primary{% else %}btn-outline-secondary{% endif %}">Wszystkie</a>
+            {% for album in albums %}
+                <a href="?album={{ album.id }}{% if selected_tag %}&tag={{ selected_tag }}{% endif %}"
+                   class="btn btn-sm rounded-pill px-3 {% if selected_album == album.id %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                   title="{{ album.photo_count }} zdjęć">
+                    {{ album.name }}
+                    <span class="badge bg-white bg-opacity-25 ms-1" style="font-size:.65rem;">{{ album.photo_count }}</span>
+                </a>
+            {% endfor %}
+        </div>
+
+        <!-- Tagi -->
+        {% if all_tags %}
+        <div class="d-flex gap-1 flex-wrap">
+            {% for tag in all_tags %}
+            <a href="?{% if selected_album %}album={{ selected_album }}&{% endif %}tag={{ tag }}&sort={{ sort_by }}"
+               class="tag-chip {% if selected_tag == tag %}active{% endif %}"># {{ tag }}</a>
+            {% endfor %}
+            {% if selected_tag %}
+            <a href="?{% if selected_album %}album={{ selected_album }}&{% endif %}sort={{ sort_by }}" class="tag-chip text-danger" style="border-color: var(--bs-danger);">✕ wyczyść tag</a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Akcje (sortowanie + widok + przyciski) -->
+        <div class="d-flex gap-2 flex-wrap align-items-center justify-content-between">
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+                <span class="text-muted small">Sortuj:</span>
+                <a href="?{% if selected_album %}album={{ selected_album }}&{% endif %}{% if selected_tag %}tag={{ selected_tag }}&{% endif %}sort=order"
+                   class="btn btn-sm rounded-pill {% if sort_by == 'order' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Ręcznie</a>
+                <a href="?{% if selected_album %}album={{ selected_album }}&{% endif %}{% if selected_tag %}tag={{ selected_tag }}&{% endif %}sort=newest"
+                   class="btn btn-sm rounded-pill {% if sort_by == 'newest' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Najnowsze</a>
+                <a href="?{% if selected_album %}album={{ selected_album }}&{% endif %}{% if selected_tag %}tag={{ selected_tag }}&{% endif %}sort=title"
+                   class="btn btn-sm rounded-pill {% if sort_by == 'title' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Tytuł A-Z</a>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <!-- Przełącznik widoku -->
+                <div class="btn-group btn-group-sm" role="group">
+                    <button id="btnMasonry" class="btn btn-primary" onclick="setView('masonry')" title="Siatka kaskadowa">
+                        <i class="bi bi-grid-3x2-gap"></i>
+                    </button>
+                    <button id="btnSquare" class="btn btn-outline-secondary" onclick="setView('square')" title="Siatka kwadratowa">
+                        <i class="bi bi-grid-3x3-gap-fill"></i>
+                    </button>
+                </div>
+                <button id="btnSort" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="toggleSortMode()" title="Tryb układania">
+                    ↕️ Układaj
+                </button>
+                <a href="{% url 'add_album' %}" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm">+ Album</a>
+                <a href="{% url 'add_photo' %}" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">+ Zdjęcie</a>
+            </div>
         </div>
     </div>
 
-    <!-- Siatka Masonry -->
-    <div class="masonry-grid">
+    <!-- ===== SIATKA ZDJĘĆ ===== -->
+    <!-- Masonry -->
+    <div id="masonryGrid" class="masonry-grid" id="sortableGrid">
         {% for photo in photos %}
-            <div class="masonry-item shadow-sm border" onclick="openLightboxByIndex({{ forloop.counter0 }})">
-                
-                <img src="{{ photo.image.url }}" class="w-100 d-block" alt="{{ photo.title|default:'Zdjęcie' }}" loading="lazy">
-                
-                <div class="masonry-overlay d-flex justify-content-between align-items-end w-100">
-                    <div>
-                        <h6 class="mb-1 fw-bold text-white">{{ photo.title|default:"Bez tytułu" }}</h6>
-                        {% if photo.camera %}
-                            <div class="small opacity-75 d-flex align-items-center gap-2" style="font-size: 0.75rem;">
-                                <span>📷 {{ photo.camera }}</span>
-                                {% if photo.focal_length %}<span>• {{ photo.focal_length }}</span>{% endif %}
-                                {% if photo.iso %}<span>• ISO {{ photo.iso }}</span>{% endif %}
-                            </div>
-                        {% endif %}
+        <div class="masonry-item shadow-sm border sortable-item" data-id="{{ photo.id }}" onclick="openLightboxByIndex({{ forloop.counter0 }})">
+            {% if photo.is_featured %}<div class="is-featured-badge">⭐ Wyróżnione</div>{% endif %}
+            <div class="drag-handle">⠿</div>
+            <img src="{{ photo.image.url }}" class="w-100 d-block" alt="{{ photo.title|default:'Zdjęcie' }}" loading="lazy">
+            <div class="photo-overlay d-flex justify-content-between align-items-end w-100">
+                <div style="min-width:0;">
+                    {% if photo.title %}<h6 class="mb-1 fw-bold text-white text-truncate" style="max-width:200px;">{{ photo.title }}</h6>{% endif %}
+                    <div class="d-flex flex-wrap gap-1 align-items-center" style="font-size: 0.72rem; opacity:.8;">
+                        {% if photo.location %}<span>📍 {{ photo.location }}</span>{% endif %}
+                        {% if photo.camera %}<span>📷 {{ photo.camera }}</span>{% endif %}
                     </div>
-                    <!-- Guzik usuwania (kliknięcie nie wywołuje podglądu dzięki funkcji JS) -->
-                    <button type="button" class="btn btn-sm btn-outline-danger border-0 p-1 mb-1 ms-2" onclick="openDeleteModal(event, '{% url 'delete_photo' photo.id %}')" title="Usuń zdjęcie">
-                        🗑️
-                    </button>
                 </div>
-
+                <div class="d-flex gap-1 ms-2">
+                    <button type="button" class="btn btn-sm btn-outline-light border-0 p-1" onclick="event.stopPropagation(); openEditModal({{ photo.id }})" title="Edytuj">✏️</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger border-0 p-1" onclick="openDeleteModal(event, '{% url 'delete_photo' photo.id %}')" title="Usuń">🗑️</button>
+                </div>
             </div>
+        </div>
         {% empty %}
-            <div class="col-12 text-center py-5">
-                <p class="text-muted">Jeszcze nic tu nie ma. Czas wrzucić pierwsze kadry!</p>
-            </div>
+        <div class="text-center py-5 text-muted" style="column-span: all;">
+            <div style="font-size:3rem;">📷</div>
+            <p class="mt-2">Jeszcze nic tu nie ma. Czas wrzucić pierwsze kadry!</p>
+            <a href="{% url 'add_photo' %}" class="btn btn-primary rounded-pill px-4">Dodaj pierwsze zdjęcie</a>
+        </div>
         {% endfor %}
     </div>
+
+    <!-- Square grid (hidden by default) -->
+    <div id="squareGrid" class="square-grid d-none">
+        {% for photo in photos %}
+        <div class="square-item shadow-sm border sortable-item" data-id="{{ photo.id }}" onclick="openLightboxByIndex({{ forloop.counter0 }})">
+            {% if photo.is_featured %}<div class="is-featured-badge">⭐</div>{% endif %}
+            <div class="drag-handle">⠿</div>
+            <img src="{{ photo.image.url }}" alt="{{ photo.title|default:'Zdjęcie' }}" loading="lazy">
+            <div class="photo-overlay d-flex justify-content-between align-items-end w-100">
+                <div style="min-width:0; font-size:.72rem;">{% if photo.title %}<div class="fw-bold text-truncate">{{ photo.title }}</div>{% endif %}</div>
+                <div class="d-flex gap-1 ms-1">
+                    <button type="button" class="btn btn-sm btn-outline-light border-0 p-0" onclick="event.stopPropagation(); openEditModal({{ photo.id }})" title="Edytuj">✏️</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger border-0 p-0" onclick="openDeleteModal(event, '{% url 'delete_photo' photo.id %}')" title="Usuń">🗑️</button>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-5 text-muted" style="grid-column: 1 / -1;">
+            <p>Brak zdjęć w tej kategorii.</p>
+        </div>
+        {% endfor %}
+    </div>
+
 </div>
 
-<!-- Modal / Lightbox z pełną nawigacją -->
+<!-- ===== LIGHTBOX ===== -->
 <div class="modal fade" id="lightboxModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-fullscreen">
-        <div class="modal-content" style="background: rgba(0,0,0,0.95);">
-            <!-- Nagłówek: licznik i przycisk zamknięcia -->
+        <div class="modal-content" style="background: rgba(0,0,0,0.97);">
+            <!-- Nagłówek -->
             <div class="modal-header border-0 position-absolute top-0 start-0 end-0 z-3 d-flex justify-content-between align-items-center p-3">
-                <span id="lbCounter" class="badge bg-white bg-opacity-20 text-white rounded-pill px-3 py-1.5 small fw-semibold">1 / 1</span>
-                <button type="button" class="btn-close fs-4 p-2 shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+                <span id="lbCounter" class="badge bg-white bg-opacity-20 text-white rounded-pill px-3 py-2 small fw-semibold">1 / 1</span>
+                <div class="d-flex gap-2">
+                    <button id="lbFullscreenBtn" class="lb-nav-btn" onclick="toggleFullscreen()" title="Pełny ekran">⛶</button>
+                    <a id="lbDownload" href="#" download class="lb-nav-btn text-decoration-none d-flex align-items-center justify-content-center" title="Pobierz zdjęcie">💾</a>
+                    <button type="button" class="lb-nav-btn" data-bs-dismiss="modal" aria-label="Zamknij">✕</button>
+                </div>
             </div>
 
-            <!-- Ciało modalu z nawigacją i zdjęciem -->
-            <div class="modal-body d-flex flex-column align-items-center justify-content-center p-0 h-100 position-relative">
-                <!-- Przycisk poprzedni -->
-                <button type="button" class="lb-nav-btn position-absolute top-50 start-0 translate-middle-y ms-3 ms-md-4" onclick="navigateLightbox(-1)" title="Poprzednie zdjęcie (←)">
+            <!-- Ciało: nawigacja + zdjęcie + info -->
+            <div class="modal-body d-flex flex-column align-items-center justify-content-center p-0 h-100 position-relative" style="padding-top: 60px !important; padding-bottom: 0 !important;">
+                <!-- Poprzednie -->
+                <button type="button" class="lb-nav-btn position-absolute top-50 start-0 translate-middle-y ms-3" onclick="navigateLightbox(-1)" title="Poprzednie (←)">
                     <i class="bi bi-chevron-left"></i>
                 </button>
 
-                <!-- Obrazek -->
-                <img id="lbImage" src="" class="img-fluid" style="max-height: 80vh; max-width: 90vw; object-fit: contain; box-shadow: 0 0 40px rgba(0,0,0,0.5); border-radius: 8px; transition: opacity 0.2s ease;">
+                <!-- Zdjęcie -->
+                <div class="flex-grow-1 d-flex align-items-center justify-content-center px-5 w-100" style="min-height:0;">
+                    <img id="lbImage" src="" class="img-fluid"
+                         style="max-height: 68vh; max-width: 90vw; object-fit: contain; box-shadow: 0 0 40px rgba(0,0,0,0.6); border-radius: 8px; transition: opacity 0.2s ease;">
+                </div>
 
-                <!-- Przycisk następny -->
-                <button type="button" class="lb-nav-btn position-absolute top-50 end-0 translate-middle-y me-3 me-md-4" onclick="navigateLightbox(1)" title="Następne zdjęcie (→)">
+                <!-- Następne -->
+                <button type="button" class="lb-nav-btn position-absolute top-50 end-0 translate-middle-y me-3" onclick="navigateLightbox(1)" title="Następne (→)">
                     <i class="bi bi-chevron-right"></i>
                 </button>
 
-                <!-- Podpisy -->
-                <div class="text-center text-white mt-3 px-3">
-                    <h4 id="lbTitle" class="fw-bold mb-1 fs-5 fs-md-4"></h4>
-                    <p id="lbExif" class="text-white-50 small mb-0"></p>
+                <!-- Info + EXIF -->
+                <div class="w-100 px-3 pb-2" style="max-width: 900px; margin: 0 auto;">
+                    <div class="text-center text-white mb-2">
+                        <h5 id="lbTitle" class="fw-bold mb-1 fs-6 fs-md-5"></h5>
+                        <div id="lbMeta" class="text-white-50 small mb-1"></div>
+                        <div id="lbDescription" class="text-white-75 small fst-italic mb-2" style="font-size:.8rem; max-width:600px; margin: 0 auto;"></div>
+                    </div>
+                    <!-- Panel EXIF (toggleable) -->
+                    <div id="lbExifWrap" class="mb-2" style="display:none;">
+                        <div id="lbExifPanel" class="lb-exif-panel"></div>
+                    </div>
+                    <div class="text-center mb-1">
+                        <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="toggleExif()" id="lbExifToggle" style="font-size:.72rem; color:rgba(255,255,255,.5); border-color:rgba(255,255,255,.2);">
+                            📊 Dane EXIF
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pasek miniatur -->
+                <div class="w-100 border-top border-white border-opacity-10 pt-2 pb-3">
+                    <div id="lbThumbStrip" class="lb-thumbs justify-content-center">
+                        <!-- wypełniane przez JS -->
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal Usuwania -->
+<!-- ===== MODAL USUWANIA ===== -->
 <div class="modal fade" id="deletePhotoModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
             <div class="modal-header bg-danger text-white rounded-top-4">
                 <h5 class="modal-title fw-bold">Potwierdzenie usunięcia</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4 text-center">
                 <p class="mb-0 fs-5">Czy na pewno chcesz bezpowrotnie usunąć to zdjęcie?</p>
@@ -201,111 +364,292 @@
     </div>
 </div>
 
+<!-- ===== MODAL EDYCJI ===== -->
+<div class="modal fade" id="editPhotoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold">✏️ Edytuj zdjęcie</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="editPhotoPreview" class="text-center mb-3">
+                    <img id="editPreviewImg" src="" class="img-fluid rounded-3" style="max-height: 200px; object-fit: contain;">
+                </div>
+                <form id="editPhotoForm" method="POST" action="">
+                    {% csrf_token %}
+                    <div id="editPhotoFields"></div>
+                    <div class="d-flex justify-content-end gap-2 mt-3">
+                        <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Anuluj</button>
+                        <button type="submit" class="btn btn-primary rounded-pill px-5 fw-semibold">Zapisz</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== DANE DLA JS ===== -->
+<script id="galleryData" type="application/json">
+[{% for photo in photos %}{"id":{{ photo.id }},"url":"{{ photo.image.url|escapejs }}","title":"{{ photo.title|default:''|escapejs }}","description":"{{ photo.description|default:''|escapejs }}","location":"{{ photo.location|default:''|escapejs }}","taken_at":"{{ photo.taken_at|default:''|escapejs }}","camera":"{{ photo.camera|default:''|escapejs }}","lens":"{{ photo.lens|default:''|escapejs }}","focal":"{{ photo.focal_length|default:''|escapejs }}","aperture":"{{ photo.aperture|default:''|escapejs }}","shutter":"{{ photo.shutter_speed|default:''|escapejs }}","iso":"{{ photo.iso|default:''|escapejs }}","featured":{{ photo.is_featured|yesno:"true,false" }},"edit_url":"{% url 'edit_photo' photo.id %}"}{% if not forloop.last %},{% endif %}{% endfor %}]
+</script>
+
 <script>
-    // Tablica wszystkich zdjęć do nawigacji w lightboxie
-    const galleryItems = [
-        {% for photo in photos %}
-        {
-            url: "{{ photo.image.url|escapejs }}",
-            title: "{{ photo.title|default:''|escapejs }}",
-            camera: "{{ photo.camera|default:''|escapejs }}",
-            focal: "{{ photo.focal_length|default:''|escapejs }}",
-            iso: "{{ photo.iso|default:''|escapejs }}"
-        }{% if not forloop.last %},{% endif %}
-        {% endfor %}
-    ];
+// ===== DANE =====
+const galleryItems = JSON.parse(document.getElementById('galleryData').textContent);
+let currentLbIndex = 0;
+let lbModalInstance = null;
+let sortableInstance = null;
+let sortModeActive = false;
+let exifVisible = false;
 
-    let currentLbIndex = 0;
-    let lbModalInstance = null;
-
-    function openLightboxByIndex(index) {
-        if (index < 0 || index >= galleryItems.length) return;
-        currentLbIndex = index;
-        renderLightboxItem();
-
-        if (!lbModalInstance) {
-            lbModalInstance = new bootstrap.Modal(document.getElementById('lightboxModal'));
-        }
-        lbModalInstance.show();
+// ===== WIDOK: MASONRY vs SQUARE =====
+function setView(mode) {
+    const masonryGrid = document.getElementById('masonryGrid');
+    const squareGrid  = document.getElementById('squareGrid');
+    const btnM = document.getElementById('btnMasonry');
+    const btnS = document.getElementById('btnSquare');
+    if (mode === 'square') {
+        masonryGrid.classList.add('d-none');
+        squareGrid.classList.remove('d-none');
+        btnM.className = 'btn btn-sm btn-outline-secondary';
+        btnS.className = 'btn btn-sm btn-primary';
+    } else {
+        squareGrid.classList.add('d-none');
+        masonryGrid.classList.remove('d-none');
+        btnM.className = 'btn btn-sm btn-primary';
+        btnS.className = 'btn btn-sm btn-outline-secondary';
     }
+    localStorage.setItem('gallery_view_mode', mode);
+}
 
-    function navigateLightbox(direction) {
-        if (galleryItems.length <= 1) return;
-        currentLbIndex += direction;
-        if (currentLbIndex < 0) {
-            currentLbIndex = galleryItems.length - 1;
-        } else if (currentLbIndex >= galleryItems.length) {
-            currentLbIndex = 0;
-        }
-        renderLightboxItem();
+// Przywróć ostatni widok
+(function() {
+    const saved = localStorage.getItem('gallery_view_mode') || 'masonry';
+    if (saved === 'square') setView('square');
+})();
+
+// ===== LIGHTBOX =====
+function openLightboxByIndex(indexOrId, byId = false) {
+    let idx = indexOrId;
+    if (byId) {
+        idx = galleryItems.findIndex(i => i.id === indexOrId);
+        if (idx === -1) return;
     }
+    if (idx < 0 || idx >= galleryItems.length) return;
+    currentLbIndex = idx;
+    renderLightboxItem();
 
-    function renderLightboxItem() {
-        const item = galleryItems[currentLbIndex];
-        if (!item) return;
-
-        const imgEl = document.getElementById('lbImage');
-        imgEl.style.opacity = '0.4';
-        imgEl.src = item.url;
-        imgEl.onload = () => { imgEl.style.opacity = '1'; };
-
-        document.getElementById('lbTitle').textContent = item.title !== 'None' && item.title !== '' ? item.title : '';
-        
-        let exifText = '';
-        if (item.camera && item.camera !== 'None' && item.camera !== '') exifText += '📷 ' + item.camera + ' ';
-        if (item.focal && item.focal !== 'None' && item.focal !== '') exifText += ' • ' + item.focal;
-        if (item.iso && item.iso !== 'None' && item.iso !== '') exifText += ' • ISO ' + item.iso;
-        
-        document.getElementById('lbExif').textContent = exifText;
-        document.getElementById('lbCounter').textContent = `${currentLbIndex + 1} / ${galleryItems.length}`;
+    if (!lbModalInstance) {
+        lbModalInstance = new bootstrap.Modal(document.getElementById('lightboxModal'));
     }
+    lbModalInstance.show();
+}
 
-    function openDeleteModal(event, deleteUrl) {
-        event.stopPropagation();
-        document.getElementById('deletePhotoForm').action = deleteUrl;
-        new bootstrap.Modal(document.getElementById('deletePhotoModal')).show();
+function navigateLightbox(direction) {
+    if (galleryItems.length <= 1) return;
+    currentLbIndex = (currentLbIndex + direction + galleryItems.length) % galleryItems.length;
+    renderLightboxItem();
+}
+
+function renderLightboxItem() {
+    const item = galleryItems[currentLbIndex];
+    if (!item) return;
+
+    // Zdjęcie
+    const imgEl = document.getElementById('lbImage');
+    imgEl.style.opacity = '0.3';
+    imgEl.src = item.url;
+    imgEl.onload = () => { imgEl.style.opacity = '1'; };
+
+    // Pobieranie
+    const dlBtn = document.getElementById('lbDownload');
+    dlBtn.href = item.url;
+    dlBtn.download = item.title || 'zdjecie';
+
+    // Tytuł + meta
+    document.getElementById('lbTitle').textContent = item.title || '';
+    let meta = [];
+    if (item.location) meta.push('📍 ' + item.location);
+    if (item.taken_at) meta.push('📅 ' + item.taken_at);
+    document.getElementById('lbMeta').textContent = meta.join('  ·  ');
+    document.getElementById('lbDescription').textContent = item.description || '';
+
+    // EXIF panel
+    let exifParts = [];
+    if (item.camera)  exifParts.push(`📷 ${item.camera}`);
+    if (item.lens)    exifParts.push(`🔭 ${item.lens}`);
+    if (item.focal)   exifParts.push(`🎯 ${item.focal}`);
+    if (item.aperture) exifParts.push(`⊙ ${item.aperture}`);
+    if (item.shutter) exifParts.push(`⏱ ${item.shutter}`);
+    if (item.iso)     exifParts.push(`ISO ${item.iso}`);
+    const exifPanel = document.getElementById('lbExifPanel');
+    exifPanel.innerHTML = exifParts.map(p => `<span>${p}</span>`).join('');
+    document.getElementById('lbExifToggle').style.display = exifParts.length ? '' : 'none';
+
+    // Licznik
+    document.getElementById('lbCounter').textContent = `${currentLbIndex + 1} / ${galleryItems.length}`;
+
+    // Miniatury
+    renderThumbs();
+}
+
+function renderThumbs() {
+    const strip = document.getElementById('lbThumbStrip');
+    if (galleryItems.length <= 1) { strip.innerHTML = ''; return; }
+    strip.innerHTML = galleryItems.map((item, i) =>
+        `<img src="${item.url}" class="lb-thumb ${i === currentLbIndex ? 'active' : ''}"
+              alt="${item.title || ''}" loading="lazy"
+              onclick="jumpToThumb(${i})">`
+    ).join('');
+    // Przewiń aktywną miniaturę do środka
+    const activeThumb = strip.querySelectorAll('.lb-thumb')[currentLbIndex];
+    if (activeThumb) {
+        activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     }
+}
 
-    // Obsługa klawiatury w lightboxie (Strzałki lewo/prawo)
-    document.addEventListener('keydown', function(e) {
-        const modal = document.getElementById('lightboxModal');
-        if (modal && modal.classList.contains('show')) {
-            if (e.key === 'ArrowLeft') {
-                navigateLightbox(-1);
-            } else if (e.key === 'ArrowRight') {
-                navigateLightbox(1);
-            }
+function jumpToThumb(idx) {
+    currentLbIndex = idx;
+    renderLightboxItem();
+}
+
+function toggleExif() {
+    exifVisible = !exifVisible;
+    const wrap = document.getElementById('lbExifWrap');
+    wrap.style.display = exifVisible ? '' : 'none';
+    document.getElementById('lbExifToggle').textContent = exifVisible ? '▲ Ukryj EXIF' : '📊 Dane EXIF';
+}
+
+function toggleFullscreen() {
+    const el = document.getElementById('lightboxModal');
+    if (!document.fullscreenElement) {
+        el.requestFullscreen && el.requestFullscreen();
+    } else {
+        document.exitFullscreen && document.exitFullscreen();
+    }
+}
+
+// Klawiatura
+document.addEventListener('keydown', function(e) {
+    const modal = document.getElementById('lightboxModal');
+    if (modal && modal.classList.contains('show')) {
+        if (e.key === 'ArrowLeft')  navigateLightbox(-1);
+        if (e.key === 'ArrowRight') navigateLightbox(1);
+        if (e.key === 'Escape') {} // Bootstrap sam zamyka
+    }
+});
+
+// Swipe
+let touchStartX = 0;
+const lbModalEl = document.getElementById('lightboxModal');
+if (lbModalEl) {
+    lbModalEl.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
+    lbModalEl.addEventListener('touchend',   e => {
+        const diff = e.changedTouches[0].screenX - touchStartX;
+        if (Math.abs(diff) > 45) navigateLightbox(diff > 0 ? -1 : 1);
+    }, { passive: true });
+}
+
+// ===== USUWANIE =====
+function openDeleteModal(event, deleteUrl) {
+    event.stopPropagation();
+    document.getElementById('deletePhotoForm').action = deleteUrl;
+    new bootstrap.Modal(document.getElementById('deletePhotoModal')).show();
+}
+
+// ===== EDYCJA (redirect do strony edycji) =====
+function openEditModal(photoId) {
+    const item = galleryItems.find(i => i.id === photoId);
+    if (!item) return;
+    window.location.href = item.edit_url;
+}
+
+// ===== TRYB SORTOWANIA =====
+function toggleSortMode() {
+    sortModeActive = !sortModeActive;
+    const btn = document.getElementById('btnSort');
+    const grids = [document.getElementById('masonryGrid'), document.getElementById('squareGrid')];
+
+    grids.forEach(g => {
+        if (sortModeActive) {
+            g.classList.add('sort-mode');
+        } else {
+            g.classList.remove('sort-mode');
         }
     });
 
-    // Obsługa gestów dotykowych (Swipe) na telefonie
-    let touchStartX = 0;
-    let touchEndX = 0;
-
-    const lbModalEl = document.getElementById('lightboxModal');
-    if (lbModalEl) {
-        lbModalEl.addEventListener('touchstart', function(e) {
-            touchStartX = e.changedTouches[0].screenX;
-        }, { passive: true });
-
-        lbModalEl.addEventListener('touchend', function(e) {
-            touchEndX = e.changedTouches[0].screenX;
-            handleSwipe();
-        }, { passive: true });
+    if (sortModeActive) {
+        btn.className = 'btn btn-sm btn-warning rounded-pill';
+        btn.textContent = '✅ Zapisz kolejność';
+        initSortable();
+    } else {
+        btn.className = 'btn btn-sm btn-outline-secondary rounded-pill';
+        btn.textContent = '↕️ Układaj';
+        saveSortOrder();
     }
+}
 
-    function handleSwipe() {
-        const diffX = touchEndX - touchStartX;
-        const threshold = 45; // minimalny dystans przesunięcia w px
-        if (Math.abs(diffX) > threshold) {
-            if (diffX > 0) {
-                // Swipe w prawo -> Poprzednie
-                navigateLightbox(-1);
-            } else {
-                // Swipe w lewo -> Następne
-                navigateLightbox(1);
-            }
+function initSortable() {
+    // Używamy SortableJS z CDN
+    const activeGrid = document.getElementById('masonryGrid').classList.contains('d-none')
+        ? document.getElementById('squareGrid')
+        : document.getElementById('masonryGrid');
+
+    if (window.Sortable) {
+        sortableInstance = new Sortable(activeGrid, {
+            animation: 150,
+            handle: '.drag-handle',
+            ghostClass: 'opacity-50',
+        });
+    }
+}
+
+function saveSortOrder() {
+    const activeGrid = document.getElementById('masonryGrid').classList.contains('d-none')
+        ? document.getElementById('squareGrid')
+        : document.getElementById('masonryGrid');
+
+    const items = activeGrid.querySelectorAll('.sortable-item');
+    const order = [];
+    items.forEach((el, idx) => {
+        order.push({ id: parseInt(el.dataset.id), order: idx });
+    });
+
+    fetch("{% url 'update_photo_order' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken'),
+        },
+        body: JSON.stringify({ order }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            showToast('✅ Kolejność zapisana!');
         }
-    }
+    })
+    .catch(() => showToast('❌ Błąd zapisu kolejności'));
+}
+
+function getCookie(name) {
+    const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return m ? m.pop() : '';
+}
+
+function showToast(msg) {
+    const t = document.createElement('div');
+    t.className = 'position-fixed bottom-0 start-50 translate-middle-x mb-5 alert alert-dark rounded-pill px-4 py-2 shadow';
+    t.style.cssText = 'z-index:9999; animation: fadeIn .2s ease; font-size:.85rem;';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2500);
+}
 </script>
+
+<!-- SortableJS CDN (lekka biblioteka drag&drop) -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 {% endblock %}
+
+

@@ -6,6 +6,13 @@ from PIL.ExifTags import TAGS
 class Album(models.Model):
     name = models.CharField(max_length=200, verbose_name="Nazwa albumu (Kategoria)")
     description = models.TextField(blank=True, null=True, verbose_name="Krótki opis")
+    cover_photo = models.ForeignKey(
+        'Photo',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='cover_for_albums',
+        verbose_name="Zdjęcie okładki"
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Data utworzenia")
 
     class Meta:
@@ -16,22 +23,42 @@ class Album(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def photo_count(self):
+        return self.photos.count()
+
+    @property
+    def cover_url(self):
+        if self.cover_photo and self.cover_photo.image:
+            return self.cover_photo.image.url
+        first = self.photos.order_by('sort_order', '-uploaded_at').first()
+        return first.image.url if first and first.image else None
+
 
 class Photo(models.Model):
     album = models.ForeignKey(
-        Album, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
+        Album,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='photos',
         verbose_name="Album"
     )
     image = models.ImageField(upload_to='portfolio/photos/', verbose_name="Zdjęcie")
     title = models.CharField(max_length=200, blank=True, null=True, verbose_name="Tytuł / Podpis")
-    
+    description = models.TextField(blank=True, null=True, verbose_name="Opis / Historia zdjęcia")
+    location = models.CharField(max_length=200, blank=True, null=True, verbose_name="Miejsce wykonania")
+    taken_at = models.DateField(blank=True, null=True, verbose_name="Data wykonania")
+    tags = models.CharField(max_length=300, blank=True, null=True, verbose_name="Tagi (oddzielone przecinkami)")
+    is_featured = models.BooleanField(default=False, verbose_name="Wyróżnione (na stronie głównej)")
+    sort_order = models.IntegerField(default=0, verbose_name="Kolejność w albumie")
+
     # Parametry EXIF (uzupełniane automatycznie)
     camera = models.CharField(max_length=100, blank=True, null=True, verbose_name="Aparat")
+    lens = models.CharField(max_length=150, blank=True, null=True, verbose_name="Obiektyw")
     focal_length = models.CharField(max_length=50, blank=True, null=True, verbose_name="Ogniskowa")
+    aperture = models.CharField(max_length=50, blank=True, null=True, verbose_name="Przysłona")
+    shutter_speed = models.CharField(max_length=50, blank=True, null=True, verbose_name="Czas naświetlania")
     iso = models.CharField(max_length=50, blank=True, null=True, verbose_name="ISO")
 
     uploaded_at = models.DateTimeField(auto_now_add=True, verbose_name="Data dodania")
@@ -39,36 +66,79 @@ class Photo(models.Model):
     class Meta:
         verbose_name = "Zdjęcie"
         verbose_name_plural = "Zdjęcia"
-        ordering = ['-uploaded_at']
+        ordering = ['sort_order', '-uploaded_at']
         indexes = [
-            models.Index(fields=['album', '-uploaded_at']),
+            models.Index(fields=['album', 'sort_order', '-uploaded_at']),
             models.Index(fields=['-uploaded_at']),
+            models.Index(fields=['is_featured']),
         ]
 
     def __str__(self):
         return self.title if self.title else f"Zdjęcie #{self.id}"
 
+    @property
+    def tag_list(self):
+        if not self.tags:
+            return []
+        return [t.strip() for t in self.tags.split(',') if t.strip()]
+
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        
-        # Ekstrakcja danych EXIF
+
+        # Ekstrakcja danych EXIF (tylko przy pierwszym zapisie gdy brakuje danych)
         if self.image and not self.camera:
             try:
+                from fractions import Fraction
                 img = Image.open(self.image.path)
                 exif_data = img.getexif()
                 if exif_data:
+                    update_fields = []
                     for tag_id in exif_data:
                         tag = TAGS.get(tag_id, tag_id)
                         data = exif_data.get(tag_id)
-                        
-                        if tag == 'Model':
+
+                        if tag == 'Model' and not self.camera:
                             self.camera = str(data).strip()
-                        elif tag == 'ISOSpeedRatings':
+                            update_fields.append('camera')
+                        elif tag == 'LensModel' and not self.lens:
+                            self.lens = str(data).strip()
+                            update_fields.append('lens')
+                        elif tag == 'ISOSpeedRatings' and not self.iso:
                             self.iso = str(data)
-                        elif tag == 'FocalLength':
-                            self.focal_length = f"{int(data)}mm"
-                            
-                    super().save(update_fields=['camera', 'iso', 'focal_length'])
+                            update_fields.append('iso')
+                        elif tag == 'FocalLength' and not self.focal_length:
+                            try:
+                                self.focal_length = f"{int(float(data))}mm"
+                            except Exception:
+                                self.focal_length = str(data)
+                            update_fields.append('focal_length')
+                        elif tag == 'FNumber' and not self.aperture:
+                            try:
+                                self.aperture = f"f/{float(data):.1f}"
+                            except Exception:
+                                self.aperture = str(data)
+                            update_fields.append('aperture')
+                        elif tag == 'ExposureTime' and not self.shutter_speed:
+                            try:
+                                frac = Fraction(data).limit_denominator(10000)
+                                if frac.numerator == 1:
+                                    self.shutter_speed = f"1/{frac.denominator}s"
+                                else:
+                                    self.shutter_speed = f"{frac}s"
+                            except Exception:
+                                self.shutter_speed = str(data)
+                            update_fields.append('shutter_speed')
+                        elif tag == 'DateTimeOriginal' and not self.taken_at:
+                            try:
+                                from datetime import datetime as dt
+                                parsed = dt.strptime(str(data), '%Y:%m:%d %H:%M:%S')
+                                self.taken_at = parsed.date()
+                                update_fields.append('taken_at')
+                            except Exception:
+                                pass
+
+                    if update_fields:
+                        super().save(update_fields=update_fields)
             except Exception:
                 pass
 

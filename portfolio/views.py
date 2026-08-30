@@ -1,5 +1,6 @@
 import os
 import io
+import json
 import zipfile
 from datetime import datetime
 
@@ -10,9 +11,10 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.conf import settings
 from django.core.management import call_command
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
+from django.views.decorators.http import require_POST
 from .models import Photo, Album, Experience, CVProfile
-from .forms import PhotoForm, AlbumForm, LoginForm, UserAdminCreateForm, UserAdminPasswordChangeForm
+from .forms import PhotoForm, PhotoEditForm, AlbumForm, LoginForm, UserAdminCreateForm, UserAdminPasswordChangeForm
 
 from library.models import Book, Porcelain, VinylRecord, VideoGame, BoardGame, ConsoleHardware, Antique, DigitalGame
 
@@ -157,19 +159,58 @@ def home_view(request):
     return render(request, 'portfolio/home.html', context)
 
 def portfolio_gallery(request):
-    """Galeria zdjęć z filtrowaniem po albumach."""
+    """Galeria zdjęć z filtrowaniem, tagami i sekcją wyróżnionych."""
     selected_album = request.GET.get('album', '')
+    selected_tag = request.GET.get('tag', '')
+    sort_by = request.GET.get('sort', 'order')  # order | newest | oldest | title
+
     albums = Album.objects.all()
-    
+
+    photos_qs = Photo.objects.select_related('album')
     if selected_album:
-        photos = Photo.objects.filter(album__id=selected_album).order_by('-uploaded_at')
-    else:
-        photos = Photo.objects.all().order_by('-uploaded_at')
+        photos_qs = photos_qs.filter(album__id=selected_album)
+    if selected_tag:
+        photos_qs = photos_qs.filter(tags__icontains=selected_tag)
+
+    if sort_by == 'newest':
+        photos_qs = photos_qs.order_by('-uploaded_at')
+    elif sort_by == 'oldest':
+        photos_qs = photos_qs.order_by('uploaded_at')
+    elif sort_by == 'title':
+        photos_qs = photos_qs.order_by('title')
+    else:  # order (default)
+        photos_qs = photos_qs.order_by('sort_order', '-uploaded_at')
+
+    photos = list(photos_qs)
+    featured_photos = Photo.objects.filter(is_featured=True).order_by('sort_order', '-uploaded_at') if not selected_album and not selected_tag else []
+
+    # Zbierz wszystkie tagi ze wszystkich zdjęć
+    all_tags = set()
+    for p in Photo.objects.exclude(tags__isnull=True).exclude(tags='').values_list('tags', flat=True):
+        for t in p.split(','):
+            t = t.strip()
+            if t:
+                all_tags.add(t)
+    all_tags = sorted(all_tags)
+
+    # Statystyki
+    total_photos = Photo.objects.count()
+    total_albums = albums.count()
+    featured_count = Photo.objects.filter(is_featured=True).count()
+    with_location = Photo.objects.exclude(location__isnull=True).exclude(location='').count()
 
     context = {
         'photos': photos,
         'albums': albums,
         'selected_album': int(selected_album) if selected_album and selected_album.isdigit() else '',
+        'selected_tag': selected_tag,
+        'sort_by': sort_by,
+        'all_tags': all_tags,
+        'featured_photos': featured_photos,
+        'total_photos': total_photos,
+        'total_albums': total_albums,
+        'featured_count': featured_count,
+        'with_location': with_location,
     }
     return render(request, 'portfolio/gallery.html', context)
 
@@ -185,8 +226,24 @@ def add_photo(request):
             return redirect('portfolio_gallery')
     else:
         form = PhotoForm()
-    
+
     return render(request, 'portfolio/add_photo.html', {'form': form})
+
+
+@login_required
+def edit_photo(request, pk):
+    """Edycja istniejącego zdjęcia."""
+    photo = get_object_or_404(Photo, pk=pk)
+    if request.method == 'POST':
+        form = PhotoEditForm(request.POST, instance=photo)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Zdjęcie zostało zaktualizowane.')
+            return redirect('portfolio_gallery')
+    else:
+        form = PhotoEditForm(instance=photo)
+
+    return render(request, 'portfolio/edit_photo.html', {'form': form, 'photo': photo})
 
 
 @login_required
@@ -200,8 +257,35 @@ def add_album(request):
             return redirect('portfolio_gallery')
     else:
         form = AlbumForm()
-    
+
     return render(request, 'portfolio/add_album.html', {'form': form})
+
+
+@login_required
+def edit_album(request, pk):
+    """Edycja albumu."""
+    album = get_object_or_404(Album, pk=pk)
+    if request.method == 'POST':
+        form = AlbumForm(request.POST, instance=album)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Album „{album.name}" zaktualizowany.')
+            return redirect('portfolio_gallery')
+    else:
+        form = AlbumForm(instance=album)
+    return render(request, 'portfolio/add_album.html', {'form': form, 'album': album})
+
+
+@login_required
+def delete_album(request, pk):
+    """Usuwanie albumu (zdjęcia pozostają, album = NULL)."""
+    album = get_object_or_404(Album, pk=pk)
+    if request.method == 'POST':
+        name = album.name
+        album.delete()
+        messages.success(request, f'Album „{name}" został usunięty.')
+        return redirect('portfolio_gallery')
+    return redirect('portfolio_gallery')
 
 
 @login_required
@@ -215,9 +299,21 @@ def delete_photo(request, pk):
     return redirect('portfolio_gallery')
 
 
-# ==========================================
-# WIDOKI AUTORYZACJI Z WHITELISTĄ
-# ==========================================
+@login_required
+@require_POST
+def update_photo_order(request):
+    """AJAX: aktualizacja sort_order zdjęć po przeciągnięciu."""
+    try:
+        data = json.loads(request.body)
+        order_list = data.get('order', [])  # [{id: 5, order: 0}, ...]
+        for item in order_list:
+            Photo.objects.filter(pk=item['id']).update(sort_order=item['order'])
+        return JsonResponse({'status': 'ok'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+
+
 
 def login_view(request):
     """Widok logowania użytkownika z weryfikacją whitelisty."""

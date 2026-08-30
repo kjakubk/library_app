@@ -1,0 +1,41 @@
+﻿{% extends 'library/base.html' %}
+{% load static %}
+{% block title %}Edytuj zdjecie - Portfolio{% endblock %}
+{% block content %}
+<div class="container-fluid px-2 px-md-4 py-4 mb-5 d-flex justify-content-center">
+<div class="card bg-body shadow-sm border rounded-4 overflow-hidden w-100" style="max-width:750px;">
+<div class="card-header bg-body border-bottom px-4 py-3 d-flex align-items-center justify-content-between">
+<h4 class="mb-0 fw-bold">✏️ Edytuj zdjęcie</h4>
+<a href="{% url 'portfolio_gallery' %}" class="btn btn-sm btn-outline-secondary rounded-pill">← Galeria</a>
+</div>
+<div class="card-body p-4">
+<div class="text-center mb-4">
+<img src="{{ photo.image.url }}" class="img-fluid rounded-3 shadow-sm" style="max-height:280px;object-fit:contain;">
+<div class="text-muted small mt-2">Dodano: {{ photo.uploaded_at|date:"d.m.Y" }}</div>
+</div>
+<form method="POST" class="row g-3">
+{% csrf_token %}
+<div class="col-12"><label class="form-label fw-medium">✏️ Tytuł / Podpis</label>{{ form.title }}</div>
+<div class="col-12"><label class="form-label fw-medium">📝 Opis</label>{{ form.description }}</div>
+<div class="col-12 col-md-6"><label class="form-label fw-medium">📁 Album</label>{{ form.album }}</div>
+<div class="col-12 col-md-6"><label class="form-label fw-medium">📍 Miejsce wykonania</label>{{ form.location }}</div>
+<div class="col-12 col-md-6"><label class="form-label fw-medium">📅 Data wykonania</label>{{ form.taken_at }}</div>
+<div class="col-12 col-md-6"><label class="form-label fw-medium">🏷️ Tagi</label>{{ form.tags }}<div class="form-text small text-muted">Oddziel przecinkami</div></div>
+<div class="col-12 col-md-6 d-flex align-items-center"><div class="form-check">{{ form.is_featured }}<label class="form-check-label fw-medium ms-1">⭐ Wyróżnione zdjęcie</label></div></div>
+<div class="col-12 col-md-6"><label class="form-label fw-medium">↕️ Kolejność (0 = pierwsze)</label>{{ form.sort_order }}</div>
+<div class="col-12"><hr class="my-1"><h6 class="fw-semibold text-muted">📷 Dane EXIF (edytuj ręcznie)</h6></div>
+<div class="col-12 col-md-6"><label class="form-label fw-medium">Aparat</label>{{ form.camera }}</div>
+<div class="col-12 col-md-6"><label class="form-label fw-medium">Obiektyw</label>{{ form.lens }}</div>
+<div class="col-6 col-md-3"><label class="form-label fw-medium">Ogniskowa</label>{{ form.focal_length }}</div>
+<div class="col-6 col-md-3"><label class="form-label fw-medium">Przysłona</label>{{ form.aperture }}</div>
+<div class="col-6 col-md-3"><label class="form-label fw-medium">Czas nasw.</label>{{ form.shutter_speed }}</div>
+<div class="col-6 col-md-3"><label class="form-label fw-medium">ISO</label>{{ form.iso }}</div>
+<div class="col-12 mt-3 d-flex justify-content-end gap-2 border-top pt-3">
+<a href="{% url 'portfolio_gallery' %}" class="btn btn-outline-secondary rounded-pill px-4">Anuluj</a>
+<button type="submit" class="btn btn-primary rounded-pill px-5 fw-semibold shadow-sm">💾 Zapisz zmiany</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+{% endblock %}

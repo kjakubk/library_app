@@ -5,43 +5,81 @@
 
 {% block content %}
 <div class="container-fluid px-2 px-md-4 py-4 mb-5 d-flex justify-content-center">
-    
-    <div class="card bg-body shadow-sm border rounded-4 overflow-hidden w-100" style="max-width: 650px;">
+
+    <div class="card bg-body shadow-sm border rounded-4 overflow-hidden w-100" style="max-width: 700px;">
         <div class="card-header bg-body border-bottom px-4 py-3">
             <h4 class="mb-0 fw-bold text-body d-flex align-items-center gap-2">
                 📸 Dodaj nowe zdjęcie do Portfolio
             </h4>
         </div>
-        
-        <div class="card-body p-4 p-md-5">
-            <!-- enctype="multipart/form-data" jest kluczowe dla przesyłania plików! -->
-            <form method="POST" enctype="multipart/form-data" class="row g-4">
+
+        <div class="card-body p-4">
+            <form method="POST" enctype="multipart/form-data" class="row g-3">
                 {% csrf_token %}
-                
+
+                <!-- Plik zdjęcia + podgląd -->
                 <div class="col-12">
-                    <label class="form-label fw-medium text-body">Tytuł / Podpis (opcjonalnie)</label>
-                    {{ form.title }}
-                </div>
-                
-                <div class="col-12">
-                    <label class="form-label fw-medium text-body">Album (Kategoria)</label>
-                    {{ form.album }}
-                </div>
-                
-                <div class="col-12 mt-4">
-                    <label class="form-label fw-medium text-body">Wybierz zdjęcie</label>
+                    <label class="form-label fw-medium">📁 Wybierz zdjęcie <span class="text-danger">*</span></label>
                     {{ form.image }}
-                    
-                    <div class="form-text mt-2 text-muted">
-                        <small>💡 <strong>Wskazówka:</strong> System automatycznie odczyta model aparatu, ogniskową i ISO (dane EXIF) z oryginalnych plików JPG.</small>
+                    <div class="form-text text-muted small">💡 EXIF (aparat, ogniskowa, ISO, przysłona) zostanie odczytany automatycznie z pliku JPG.</div>
+                    <div id="imagePreviewWrap" class="mt-2 text-center d-none">
+                        <img id="imagePreview" src="" class="img-fluid rounded-3 shadow-sm" style="max-height: 220px; object-fit: contain;">
                     </div>
                 </div>
 
-                <!-- Przyciski akcji -->
-                <div class="col-12 mt-5 d-flex justify-content-end gap-2 border-top pt-4">
+                <hr class="my-1">
+
+                <!-- Tytuł -->
+                <div class="col-12">
+                    <label class="form-label fw-medium">✏️ Tytuł / Podpis</label>
+                    {{ form.title }}
+                </div>
+
+                <!-- Opis -->
+                <div class="col-12">
+                    <label class="form-label fw-medium">📝 Opis / Historia zdjęcia</label>
+                    {{ form.description }}
+                </div>
+
+                <!-- Album + Lokalizacja -->
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-medium">📁 Album (Kategoria)</label>
+                    {{ form.album }}
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-medium">📍 Miejsce wykonania</label>
+                    {{ form.location }}
+                </div>
+
+                <!-- Data + Tagi -->
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-medium">📅 Data wykonania</label>
+                    {{ form.taken_at }}
+                    <div class="form-text text-muted small">Zostanie odczytana automatycznie z EXIF.</div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-medium">🏷️ Tagi</label>
+                    {{ form.tags }}
+                    <div class="form-text text-muted small">Oddziel przecinkami: krajobraz, góry, zachód słońca</div>
+                </div>
+
+                <!-- Wyróżnione + Kolejność -->
+                <div class="col-12 col-md-6 d-flex align-items-center gap-3 mt-1">
+                    <div class="form-check">
+                        {{ form.is_featured }}
+                        <label class="form-check-label fw-medium ms-1">⭐ Wyróżnione zdjęcie</label>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-medium">↕️ Kolejność (0 = pierwsze)</label>
+                    {{ form.sort_order }}
+                </div>
+
+                <!-- Przyciski -->
+                <div class="col-12 mt-4 d-flex justify-content-end gap-2 border-top pt-4">
                     <a href="{% url 'portfolio_gallery' %}" class="btn btn-outline-secondary rounded-pill px-4">Anuluj</a>
                     <button type="submit" class="btn btn-primary rounded-pill px-5 fw-semibold shadow-sm">
-                        Wyślij zdjęcie
+                        📤 Wyślij zdjęcie
                     </button>
                 </div>
             </form>
@@ -49,4 +87,19 @@
     </div>
 
 </div>
-{% endblock %}
+
+<script>
+// Podgląd wybranego zdjęcia przed wysłaniem
+document.querySelector('input[type="file"]').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            document.getElementById('imagePreview').src = ev.target.result;
+            document.getElementById('imagePreviewWrap').classList.remove('d-none');
+        };
+        reader.readAsDataURL(file);
+    }
+});
+</script>
+{% endblock %}
