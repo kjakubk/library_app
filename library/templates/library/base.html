@@ -12,40 +12,46 @@
     
     <style>
         :root {
-            --sidebar-width: 280px;
+            --sidebar-width: 272px;
             --bottom-nav-height: 68px;
         }
 
-        /* Kolory dostosowujące się do motywu (Jasny) */
+        /* Kolory dostosowujące się do motywu (Jasny) - Nowoczesny Slate/Zinc */
         [data-bs-theme="light"] {
-            --sidebar-bg: #f9fafb;
-            --text-main: #111827;
-            --text-muted: #6b7280;
-            --tree-line: #d1d5db;
-            --hover-bg: rgba(0, 0, 0, 0.05);
+            --sidebar-bg: #f8fafc;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --section-header: #94a3b8;
+            --hover-bg: #f1f5f9;
             --active-item-bg: #ffffff;
-            --active-item-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            --sidebar-border: #e5e7eb;
-            --bottom-nav-bg: rgba(255, 255, 255, 0.92);
+            --active-item-color: #0284c7;
+            --active-item-shadow: 0 1px 3px rgba(0, 0, 0, 0.07), 0 1px 2px rgba(0, 0, 0, 0.04);
+            --sidebar-border: #e2e8f0;
+            --badge-bg: #e2e8f0;
+            --badge-color: #475569;
+            --bottom-nav-bg: rgba(255, 255, 255, 0.94);
             --bottom-nav-border: rgba(0, 0, 0, 0.08);
             --bottom-nav-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
             --card-glass-bg: rgba(255, 255, 255, 0.9);
         }
 
-        /* Kolory dostosowujące się do motywu (Ciemny) */
+        /* Kolory dostosowujące się do motywu (Ciemny) - Głęboki Aksamitny Slate */
         [data-bs-theme="dark"] {
-            --sidebar-bg: #111827;
-            --text-main: #f9fafb;
-            --text-muted: #9ca3af;
-            --tree-line: #374151;
-            --hover-bg: rgba(255, 255, 255, 0.05);
-            --active-item-bg: #1f2937;
-            --active-item-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
-            --sidebar-border: rgba(255, 255, 255, 0.08);
-            --bottom-nav-bg: rgba(17, 24, 39, 0.95);
-            --bottom-nav-border: rgba(255, 255, 255, 0.1);
-            --bottom-nav-shadow: 0 -4px 25px rgba(0, 0, 0, 0.4);
-            --card-glass-bg: rgba(31, 41, 55, 0.9);
+            --sidebar-bg: #0b1120;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --section-header: #64748b;
+            --hover-bg: #1e293b;
+            --active-item-bg: #1e293b;
+            --active-item-color: #38bdf8;
+            --active-item-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            --sidebar-border: #1e293b;
+            --badge-bg: #334155;
+            --badge-color: #cbd5e1;
+            --bottom-nav-bg: rgba(11, 17, 32, 0.95);
+            --bottom-nav-border: rgba(255, 255, 255, 0.08);
+            --bottom-nav-shadow: 0 -4px 25px rgba(0, 0, 0, 0.5);
+            --card-glass-bg: rgba(30, 41, 59, 0.9);
         }
 
         body {
@@ -102,7 +108,7 @@
         }
         
         /* =========================================
-           SIDEBAR (Desktop & Offcanvas)
+           NOWOCZESNY SIDEBAR (Linear SaaS Style)
            ========================================= */
         .sidebar {
             width: var(--sidebar-width);
@@ -116,49 +122,96 @@
             display: flex;
             flex-direction: column;
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            padding: 1.25rem 1rem;
-            border-top-right-radius: 20px;
+            padding: 0;
+        }
+
+        .sidebar-header {
+            padding: 1.15rem 1.25rem 1rem 1.25rem;
+            border-bottom: 1px solid var(--sidebar-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
         .sidebar-brand {
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            padding: 0 0.5rem 1rem 0.5rem;
-            color: var(--text-main);
-            font-weight: 700;
-            font-size: 1.15rem;
-            margin-bottom: 0.5rem;
-            border-bottom: 1px solid var(--sidebar-border);
             text-decoration: none;
+        }
+
+        .sidebar-brand-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+            flex-shrink: 0;
+        }
+
+        .brand-title {
+            font-weight: 700;
+            font-size: 1.02rem;
+            color: var(--text-main);
+            display: block;
+            line-height: 1.15;
+        }
+
+        .brand-subtitle {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            display: block;
+        }
+
+        .sidebar-scrollable {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 0.75rem 0.85rem;
+        }
+
+        .sidebar-scrollable::-webkit-scrollbar {
+            width: 4px;
+        }
+        .sidebar-scrollable::-webkit-scrollbar-thumb {
+            background-color: var(--section-header);
+            border-radius: 4px;
         }
 
         .sidebar-menu {
             list-style: none;
             padding: 0;
             margin: 0;
-            overflow-y: auto;
-            flex-grow: 1;
         }
-        
-        .sidebar-menu::-webkit-scrollbar {
-            width: 4px;
-        }
-        .sidebar-menu::-webkit-scrollbar-thumb {
-            background-color: var(--tree-line);
-            border-radius: 4px;
+
+        .sidebar-section-label {
+            list-style: none;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--section-header);
+            padding: 0.6rem 0.6rem 0.25rem;
+            margin-top: 0.4rem;
         }
 
         .sidebar-link {
             display: flex;
             align-items: center;
-            padding: 10px 14px;
+            gap: 0.65rem;
+            padding: 0.55rem 0.75rem;
             color: var(--text-muted);
             text-decoration: none;
-            font-weight: 600;
-            font-size: 0.95rem;
-            border-radius: 12px;
-            transition: all 0.2s ease;
+            font-weight: 500;
+            font-size: 0.88rem;
+            border-radius: 9px;
+            transition: all 0.15s ease;
+            margin-bottom: 2px;
         }
 
         .sidebar-link:hover {
@@ -168,83 +221,156 @@
 
         .sidebar-link.active {
             background-color: var(--active-item-bg);
-            color: var(--text-main);
+            color: var(--active-item-color);
+            font-weight: 600;
             box-shadow: var(--active-item-shadow);
         }
 
         .sidebar-icon {
-            font-size: 1.25rem;
-            margin-right: 14px;
+            font-size: 1.1rem;
+            width: 20px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            color: currentColor;
+            opacity: 0.85;
         }
 
         .sidebar-chevron {
             margin-left: auto;
-            font-size: 0.8rem;
-            transition: transform 0.3s ease;
+            font-size: 0.75rem;
+            transition: transform 0.25s ease;
+            opacity: 0.6;
         }
 
         .sidebar-link[aria-expanded="true"] .sidebar-chevron {
             transform: rotate(180deg);
         }
 
-        /* --- LINIE DRZEWKA (Tree Submenu) --- */
-        .tree-submenu {
+        /* --- NOWOCZESNE PODMENU (Submenu bez kresek) --- */
+        .sidebar-submenu {
             list-style: none;
-            padding-left: 0;
-            margin-left: 22px;
-            margin-top: 4px;
-            position: relative;
+            padding: 0 0 0 0.5rem;
+            margin: 2px 0 6px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            border-left: 1.5px solid var(--sidebar-border);
+            margin-left: 1.25rem;
         }
 
-        .tree-submenu::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            bottom: 20px;
-            left: 0;
-            width: 2px;
-            background-color: var(--tree-line);
-        }
-
-        .tree-submenu-item {
-            position: relative;
-            padding-left: 24px;
-            margin-bottom: 2px;
-        }
-
-        .tree-submenu-item::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 16px;
-            height: 22px;
-            border-left: 2px solid var(--tree-line);
-            border-bottom: 2px solid var(--tree-line);
-            border-bottom-left-radius: 12px;
-        }
-
-        .submenu-link {
+        .sidebar-sublink {
             display: flex;
             align-items: center;
-            padding: 8px 14px;
+            gap: 0.55rem;
+            padding: 0.42rem 0.65rem;
             color: var(--text-muted);
             text-decoration: none;
             font-weight: 500;
-            font-size: 0.9rem;
-            border-radius: 10px;
-            transition: all 0.2s ease;
+            font-size: 0.83rem;
+            border-radius: 8px;
+            transition: all 0.15s ease;
         }
 
-        .submenu-link:hover {
+        .sidebar-sublink:hover {
             color: var(--text-main);
             background-color: var(--hover-bg);
         }
 
-        .submenu-link.active {
+        .sidebar-sublink.active {
+            background-color: var(--active-item-bg);
+            color: var(--active-item-color);
+            font-weight: 600;
+            box-shadow: var(--active-item-shadow);
+        }
+
+        .sublink-icon {
+            font-size: 0.95rem;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+        }
+
+        /* --- DOLNA SEKCJA / PROFIL --- */
+        .sidebar-footer {
+            padding: 0.85rem;
+            border-top: 1px solid var(--sidebar-border);
+            background-color: var(--sidebar-bg);
+        }
+
+        .user-profile-widget {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            padding: 0.5rem 0.65rem;
+            background-color: var(--hover-bg);
+            border: 1px solid var(--sidebar-border);
+            border-radius: 12px;
+        }
+
+        .user-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        .user-meta {
+            flex-grow: 1;
+            min-width: 0;
+        }
+
+        .user-name {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.2;
+        }
+
+        .user-role {
+            font-size: 0.70rem;
+            color: var(--text-muted);
+            line-height: 1.1;
+        }
+
+        .user-actions {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            flex-shrink: 0;
+        }
+
+        .sidebar-action-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 7px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.88rem;
+            transition: all 0.15s ease;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .sidebar-action-btn:hover {
             background-color: var(--active-item-bg);
             color: var(--text-main);
-            font-weight: 600;
             box-shadow: var(--active-item-shadow);
         }
 
@@ -391,153 +517,167 @@
     <nav class="sidebar" id="sidebar">
         
         <!-- Marka / Logo -->
-        <a href="{% if user.is_authenticated %}{% url 'home' %}{% else %}{% url 'login' %}{% endif %}" class="sidebar-brand">
-            <div class="bg-primary text-white rounded-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 34px; height: 34px;">
-                <i class="bi bi-shield-lock-fill"></i>
-            </div>
-            <span>Data Hub & Vault</span>
-            <button class="btn btn-sm btn-link text-body d-lg-none ms-auto text-decoration-none fs-5 p-0" id="closeSidebarBtn">✕</button>
-        </a>
+        <div class="sidebar-header">
+            <a href="{% if user.is_authenticated %}{% url 'home' %}{% else %}{% url 'login' %}{% endif %}" class="sidebar-brand">
+                <div class="sidebar-brand-icon">
+                    <i class="bi bi-stack"></i>
+                </div>
+                <div>
+                    <span class="brand-title">Data Hub</span>
+                    <span class="brand-subtitle">Kolekcje & Portfolio</span>
+                </div>
+            </a>
+            <button class="btn btn-sm btn-link text-body d-lg-none ms-auto text-decoration-none fs-5 p-0" id="closeSidebarBtn" aria-label="Zamknij menu">✕</button>
+        </div>
 
-        <!-- Menu nawigacji -->
-        <ul class="sidebar-menu">
-            
-            {% if user.is_authenticated %}
-                <!-- Strona Główna -->
-                <li class="menu-item mb-1">
-                    <a href="{% url 'home' %}" class="sidebar-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
-                        <i class="bi bi-house-door sidebar-icon"></i>
-                        <span>Strona Główna</span>
-                    </a>
-                </li>
+        <!-- Menu nawigacji (scrollowalne) -->
+        <div class="sidebar-scrollable">
+            <ul class="sidebar-menu">
+                
+                {% if user.is_authenticated %}
+                    <!-- SEKCJA 1: GŁÓWNE -->
+                    <li class="sidebar-section-label">GŁÓWNE</li>
+                    <li class="menu-item">
+                        <a href="{% url 'home' %}" class="sidebar-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+                            <i class="bi bi-grid-1x2 sidebar-icon"></i>
+                            <span>Strona Główna</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'cv_view' %}" class="sidebar-link {% if request.resolver_match.url_name == 'cv_view' %}active{% endif %}">
+                            <i class="bi bi-file-earmark-person sidebar-icon"></i>
+                            <span>Moje CV</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'portfolio_gallery' %}" class="sidebar-link {% if request.resolver_match.url_name == 'portfolio_gallery' %}active{% endif %}">
+                            <i class="bi bi-camera sidebar-icon"></i>
+                            <span>Portfolio Foto</span>
+                        </a>
+                    </li>
 
-                <!-- Moje CV -->
-                <li class="menu-item mb-1">
-                    <a href="{% url 'cv_view' %}" class="sidebar-link {% if request.resolver_match.url_name == 'cv_view' %}active{% endif %}">
-                        <i class="bi bi-file-earmark-person sidebar-icon text-primary"></i>
-                        <span>Moje CV</span>
-                    </a>
-                </li>
+                    <!-- SEKCJA 2: KOLEKCJE -->
+                    <li class="sidebar-section-label mt-3 d-flex align-items-center justify-content-between">
+                        <span>KOLEKCJE</span>
+                        <span class="badge rounded-pill" style="background: var(--badge-bg); color: var(--badge-color); font-size: 0.65rem;">8</span>
+                    </li>
+                    <li class="menu-item">
+                        <a href="#kolekcjeCollapse" class="sidebar-link {% if 'kolekcje' in request.path %}active-parent{% endif %}" data-bs-toggle="collapse" aria-expanded="{% if 'kolekcje' in request.path %}true{% else %}true{% endif %}">
+                            <i class="bi bi-collection sidebar-icon"></i>
+                            <span>Zbiory & Archiwa</span>
+                            <i class="bi bi-chevron-down sidebar-chevron"></i>
+                        </a>
+                        
+                        <!-- Nowoczesne podmenu z mini-ikonami -->
+                        <div class="collapse show" id="kolekcjeCollapse">
+                            <ul class="sidebar-submenu">
+                                <li>
+                                    <a href="{% url 'book_list' %}" class="sidebar-sublink {% if request.resolver_match.url_name == 'book_list' %}active{% endif %}">
+                                        <span class="sublink-icon">📖</span>
+                                        <span>Książki</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{% url 'vinyl_list' %}" class="sidebar-sublink {% if request.resolver_match.url_name == 'vinyl_list' %}active{% endif %}">
+                                        <span class="sublink-icon">🎵</span>
+                                        <span>Płyty winylowe</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{% url 'porcelain_list' %}" class="sidebar-sublink {% if request.resolver_match.url_name == 'porcelain_list' %}active{% endif %}">
+                                        <span class="sublink-icon">☕</span>
+                                        <span>Porcelana</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{% url 'video_game_list' %}" class="sidebar-sublink {% if request.resolver_match.url_name == 'video_game_list' %}active{% endif %}">
+                                        <span class="sublink-icon">🎮</span>
+                                        <span>Gry wideo</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{% url 'digital_game_list' %}" class="sidebar-sublink {% if request.resolver_match.url_name == 'digital_game_list' %}active{% endif %}">
+                                        <span class="sublink-icon">☁️</span>
+                                        <span>Gry cyfrowe</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{% url 'board_game_list' %}" class="sidebar-sublink {% if request.resolver_match.url_name == 'board_game_list' %}active{% endif %}">
+                                        <span class="sublink-icon">🎲</span>
+                                        <span>Gry planszowe</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{% url 'console_list' %}" class="sidebar-sublink {% if request.resolver_match.url_name == 'console_list' %}active{% endif %}">
+                                        <span class="sublink-icon">🕹️</span>
+                                        <span>Konsole i Akcesoria</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{% url 'antique_list' %}" class="sidebar-sublink {% if request.resolver_match.url_name == 'antique_list' %}active{% endif %}">
+                                        <span class="sublink-icon">🕰️</span>
+                                        <span>Inne Antyki</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
 
-                <!-- Portfolio Foto -->
-                <li class="menu-item mb-1">
-                    <a href="{% url 'portfolio_gallery' %}" class="sidebar-link {% if request.resolver_match.url_name == 'portfolio_gallery' %}active{% endif %}">
-                        <i class="bi bi-camera sidebar-icon text-info"></i>
-                        <span>Portfolio Foto</span>
-                    </a>
-                </li>
-
-                <!-- Użytkownicy / Dostęp -->
-                <li class="menu-item mb-1">
-                    <a href="{% url 'user_list' %}" class="sidebar-link {% if 'uzytkownicy' in request.path %}active{% endif %}">
-                        <i class="bi bi-people sidebar-icon text-success"></i>
-                        <span>Użytkownicy</span>
-                    </a>
-                </li>
-
-                {% if user.is_superuser or user.is_staff %}
-                    <!-- Kopia Zapasowa (Eksport ZIP) -->
-                    <li class="menu-item mb-1">
-                        <a href="{% url 'download_backup_zip' %}" class="sidebar-link text-decoration-none" title="Pobierz archiwum ZIP z bazą i wszystkimi zdjęciami">
-                            <i class="bi bi-cloud-arrow-down sidebar-icon text-info"></i>
+                    <!-- SEKCJA 3: SYSTEM -->
+                    <li class="sidebar-section-label mt-3">SYSTEM</li>
+                    <li class="menu-item">
+                        <a href="{% url 'user_list' %}" class="sidebar-link {% if 'uzytkownicy' in request.path %}active{% endif %}">
+                            <i class="bi bi-people sidebar-icon"></i>
+                            <span>Użytkownicy</span>
+                        </a>
+                    </li>
+                    {% if user.is_superuser or user.is_staff %}
+                    <li class="menu-item">
+                        <a href="{% url 'download_backup_zip' %}" class="sidebar-link" title="Pobierz archiwum ZIP z bazą i zdjęciami">
+                            <i class="bi bi-cloud-arrow-down sidebar-icon"></i>
                             <span>Kopia zapasowa</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                {% else %}
+                    <li class="sidebar-section-label">DOSTĘP</li>
+                    <li class="menu-item">
+                        <a href="{% url 'login' %}" class="sidebar-link active">
+                            <i class="bi bi-box-arrow-in-right sidebar-icon"></i>
+                            <span>Panel Logowania</span>
                         </a>
                     </li>
                 {% endif %}
 
-                <!-- Rozwijane menu: Kolekcje -->
-                <li class="menu-item mt-2">
-                    <a href="#kolekcjeSubmenu" class="sidebar-link {% if 'kolekcje' in request.path %}active-parent{% endif %}" data-bs-toggle="collapse" aria-expanded="{% if 'kolekcje' in request.path %}true{% else %}false{% endif %}">
-                        <i class="bi bi-collection sidebar-icon text-warning"></i>
-                        <span>Kolekcje</span>
-                        <i class="bi bi-chevron-down sidebar-chevron"></i>
-                    </a>
-                    
-                    <!-- Drzewko podkategorii -->
-                    <ul class="collapse {% if 'kolekcje' in request.path %}show{% endif %} tree-submenu" id="kolekcjeSubmenu">
-                        <li class="tree-submenu-item">
-                            <a href="{% url 'porcelain_list' %}" class="submenu-link {% if request.resolver_match.url_name == 'porcelain_list' %}active{% endif %}">
-                                <span>Porcelana</span>
-                            </a>
-                        </li>
-                        <li class="tree-submenu-item">
-                            <a href="{% url 'vinyl_list' %}" class="submenu-link {% if request.resolver_match.url_name == 'vinyl_list' %}active{% endif %}">
-                                <span>Płyty winylowe</span>
-                            </a>
-                        </li>
-                        <li class="tree-submenu-item">
-                            <a href="{% url 'video_game_list' %}" class="submenu-link {% if request.resolver_match.url_name == 'video_game_list' %}active{% endif %}">
-                                <span>Gry wideo</span>
-                            </a>
-                        </li>
-                        <li class="tree-submenu-item">
-                            <a href="{% url 'digital_game_list' %}" class="submenu-link {% if request.resolver_match.url_name == 'digital_game_list' %}active{% endif %}">
-                                <span>Gry cyfrowe</span>
-                            </a>
-                        </li>
-                        <li class="tree-submenu-item">
-                            <a href="{% url 'board_game_list' %}" class="submenu-link {% if request.resolver_match.url_name == 'board_game_list' %}active{% endif %}">
-                                <span>Gry planszowe</span>
-                            </a>
-                        </li>
-                        <li class="tree-submenu-item">
-                            <a href="{% url 'book_list' %}" class="submenu-link {% if request.resolver_match.url_name == 'book_list' %}active{% endif %}">
-                                <span>Książki</span>
-                            </a>
-                        </li>
-                        <li class="tree-submenu-item">
-                            <a href="{% url 'console_list' %}" class="submenu-link {% if request.resolver_match.url_name == 'console_list' %}active{% endif %}">
-                                <span>Konsole i Akcesoria</span>
-                            </a>
-                        </li>
-                        <li class="tree-submenu-item">
-                            <a href="{% url 'antique_list' %}" class="submenu-link {% if request.resolver_match.url_name == 'antique_list' %}active{% endif %}">
-                                <span>Inne Antyki</span>
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-            {% else %}
-                <li class="menu-item mb-1">
-                    <a href="{% url 'login' %}" class="sidebar-link active">
-                        <i class="bi bi-box-arrow-in-right sidebar-icon text-primary"></i>
-                        <span>Panel Logowania</span>
-                    </a>
-                </li>
-            {% endif %}
+            </ul>
+        </div>
 
-        </ul>
-
-        <!-- Dolna sekcja: Motyw + Profil użytkownika / Logowanie -->
-        <div class="mt-auto pt-3" style="border-top: 1px solid var(--sidebar-border);">
-            
-            <!-- Przełącznik motywu -->
-            <button id="themeToggleBtn" class="btn w-100 d-flex align-items-center justify-content-center gap-2 mb-3 py-2 rounded-3 shadow-none" style="background-color: var(--hover-bg); color: var(--text-main); border: none;">
-                <span id="themeIcon">🌙</span>
-                <span id="themeText" class="small fw-semibold">Tryb ciemny</span>
-            </button>
-            
-            <!-- Stan Autoryzacji -->
+        <!-- Dolna sekcja: Zintegrowany Widget Profilu & Motywu -->
+        <div class="sidebar-footer">
             {% if user.is_authenticated %}
-                <div class="d-flex align-items-center justify-content-between gap-2 p-2 rounded-3" style="background-color: var(--hover-bg);">
-                    <div class="d-flex align-items-center gap-2 overflow-hidden">
-                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold flex-shrink-0" style="width: 36px; height: 36px; font-size: 0.85rem;">
-                            {{ user.username|slice:":2"|upper }}
-                        </div>
-                        <div class="overflow-hidden">
-                            <div class="small fw-bold text-truncate" style="color: var(--text-main);">{{ user.username }}</div>
-                            <div class="text-truncate" style="font-size: 0.72rem; color: var(--text-muted);">
-                                {% if user.is_superuser or user.is_staff %}Administrator{% else %}Użytkownik{% endif %}
-                            </div>
-                        </div>
+                <div class="user-profile-widget">
+                    <div class="user-avatar">
+                        {{ user.username|slice:":2"|upper }}
                     </div>
-                    <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-danger border-0 rounded-circle p-2 flex-shrink-0" title="Wyloguj się">
-                        <i class="bi bi-box-arrow-right"></i>
-                    </a>
+                    <div class="user-meta">
+                        <div class="user-name" title="{{ user.username }}">{{ user.username }}</div>
+                        <div class="user-role">{% if user.is_superuser or user.is_staff %}Administrator{% else %}Użytkownik{% endif %}</div>
+                    </div>
+                    <div class="user-actions">
+                        <button id="themeToggleBtn" class="sidebar-action-btn" title="Zmień motyw" aria-label="Zmień motyw">
+                            <span id="themeIcon">🌙</span>
+                        </button>
+                        <a href="{% url 'logout' %}" class="sidebar-action-btn text-danger" title="Wyloguj się" aria-label="Wyloguj się">
+                            <i class="bi bi-box-arrow-right"></i>
+                        </a>
+                    </div>
                 </div>
             {% else %}
-                <div class="d-grid gap-2">
-                    <a href="{% url 'login' %}" class="btn btn-primary btn-sm rounded-3 fw-semibold">
+                <div class="d-flex align-items-center justify-content-between gap-2 p-1">
+                    <button id="themeToggleBtn" class="sidebar-action-btn" title="Zmień motyw">
+                        <span id="themeIcon">🌙</span>
+                    </button>
+                    <a href="{% url 'login' %}" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold flex-grow-1">
                         <i class="bi bi-box-arrow-in-right me-1"></i> Logowanie
                     </a>
                 </div>
