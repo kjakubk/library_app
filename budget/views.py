@@ -690,29 +690,51 @@ def import_csv_confirm(request):
         return redirect('import_csv')
 
     account = get_object_or_404(Account, pk=account_id)
-    selected_indices = request.POST.getlist('selected_rows')
+    
+    # Obsługa pojedynczego pakietu JSON (wydajne dla setek/tysięcy rekordów)
+    payload_str = request.POST.get('import_payload')
+    items_to_import = []
 
-    if not selected_indices:
+    if payload_str:
+        try:
+            parsed_items = json.loads(payload_str)
+            for item in parsed_items:
+                idx = item.get('idx')
+                cat_id = item.get('cat_id')
+                if idx is not None and 0 <= idx < len(session_rows):
+                    items_to_import.append((idx, cat_id))
+        except Exception:
+            items_to_import = []
+
+    # Fallback dla klasycznego POST
+    if not items_to_import:
+        selected_indices = request.POST.getlist('selected_rows')
+        for idx_str in selected_indices:
+            try:
+                idx = int(idx_str)
+                if 0 <= idx < len(session_rows):
+                    cat_id = request.POST.get(f'category_{idx}')
+                    items_to_import.append((idx, cat_id))
+            except (ValueError, TypeError):
+                continue
+
+    if not items_to_import:
         messages.warning(request, 'Nie zaznaczono żadnych transakcji do zaimportowania.')
         return redirect('import_csv')
 
     imported_count = 0
     with db_atomic.atomic():
-        for idx_str in selected_indices:
-            try:
-                idx = int(idx_str)
-                row = session_rows[idx]
-            except (ValueError, IndexError):
-                continue
+        for idx, cat_id in items_to_import:
+            row = session_rows[idx]
 
-            # Sprawdzenie czy użytkownik wybrał inną kategorię
-            cat_id = request.POST.get(f'category_{idx}') or row.get('category_id')
+            # Sprawdzenie kategorii
+            final_cat_id = cat_id or row.get('category_id')
             cat = None
-            if cat_id:
-                cat = Category.objects.filter(pk=cat_id).first()
+            if final_cat_id:
+                cat = Category.objects.filter(pk=final_cat_id).first()
 
             t_date = parse_date_str(row['date'])
-            t_amount = Decimal(row['amount'])
+            t_amount = Decimal(str(row['amount']))
             t_type = row['type']
             t_title = row['title']
 

@@ -125,8 +125,9 @@
             </div>
         </div>
 
-        <form method="POST" action="{% url 'import_csv_confirm' %}">
+        <form method="POST" action="{% url 'import_csv_confirm' %}" id="confirmImportForm">
             {% csrf_token %}
+            <input type="hidden" name="import_payload" id="importPayload">
 
             <div class="card bg-body border shadow-sm rounded-4 overflow-hidden mb-4">
                 <div class="card-header bg-body border-bottom px-4 py-3 d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2">
@@ -183,7 +184,7 @@
                                         <div class="fw-bold text-body small">{{ r.title }}</div>
                                     </td>
                                     <td style="min-width: 180px;">
-                                        <select name="category_{{ forloop.counter0 }}" class="form-select form-select-sm rounded-pill shadow-none">
+                                        <select name="category_{{ forloop.counter0 }}" class="form-select form-select-sm rounded-pill shadow-none category-select">
                                             <option value="">-- Bez kategorii --</option>
                                             {% for cat in categories %}
                                                 {% if cat.category_type == r.type %}
@@ -221,6 +222,7 @@
             const rowCheckboxes = document.querySelectorAll('.row-checkbox');
             const toggleAllBtn = document.getElementById('toggleAllBtn');
             const selectOnlyNewBtn = document.getElementById('selectOnlyNewBtn');
+            const confirmForm = document.getElementById('confirmImportForm');
 
             if (masterCheckbox) {
                 masterCheckbox.addEventListener('change', function() {
@@ -238,14 +240,32 @@
 
             if (selectOnlyNewBtn) {
                 selectOnlyNewBtn.addEventListener('click', function() {
-                    document.querySelectorAll('tr').forEach(tr => {
+                    document.querySelectorAll('tbody tr').forEach(tr => {
                         const cb = tr.querySelector('.row-checkbox');
                         if (cb) {
-                            // Jeśli wiersz ma klasę ostrzegawczą duplikatu, odznacz go
                             const isDup = tr.classList.contains('table-warning') || tr.querySelector('.badge.bg-warning');
                             cb.checked = !isDup;
                         }
                     });
+                });
+            }
+
+            if (confirmForm) {
+                confirmForm.addEventListener('submit', function() {
+                    const items = [];
+                    document.querySelectorAll('tbody tr').forEach(tr => {
+                        const cb = tr.querySelector('.row-checkbox');
+                        if (cb && cb.checked) {
+                            const rowId = cb.value;
+                            const catSelect = tr.querySelector('.category-select');
+                            const catVal = catSelect ? catSelect.value : '';
+                            items.push({
+                                idx: parseInt(rowId),
+                                cat_id: catVal ? parseInt(catVal) : null
+                            });
+                        }
+                    });
+                    document.getElementById('importPayload').value = JSON.stringify(items);
                 });
             }
         });

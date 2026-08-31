@@ -185,3 +185,8 @@ LOGOUT_REDIRECT_URL = 'login'
 # Dozwolone loginy lub emaile rozdzielone przecinkami. Administratorzy i superuserzy mają dostęp automatyczny.
 whitelist_env = os.getenv('AUTH_WHITELIST', 'jakub,admin,postgres')
 AUTH_WHITELIST = [item.strip().lower() for item in whitelist_env.split(',') if item.strip()]
+
+# Upload limits (dla masowych importów wyciągów bankowych z tysiącami transakcji)
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 100000
+DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50 MB
