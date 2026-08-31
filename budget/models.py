@@ -61,9 +61,9 @@ class Category(models.Model):
     category_type = models.CharField(max_length=10, choices=CATEGORY_TYPES, default='expense', verbose_name="Typ kategorii")
     icon = models.CharField(max_length=50, default='bi-tag', verbose_name="Ikona (Bootstrap lub Emoji)")
     color = models.CharField(max_length=30, default='#3b82f6', verbose_name="Kolor kafelka")
-    default_budget_limit = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), verbose_name="Domyślny stały limit miesięczny (PLN)")
+    default_budget_limit = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), blank=True, verbose_name="Domyślny stały limit miesięczny (PLN)")
     is_default = models.BooleanField(default=False, verbose_name="Kategoria systemowa")
-    order = models.IntegerField(default=0, verbose_name="Kolejność")
+    order = models.IntegerField(default=0, blank=True, verbose_name="Kolejność")
 
     class Meta:
         verbose_name = "Kategoria"

@@ -548,8 +548,9 @@ def category_create(request):
         cat = form.save()
         messages.success(request, f'Dodano kategorię: {cat.name}')
     else:
-        messages.error(request, 'Błąd podczas tworzenia kategorii.')
-    return redirect('budget_settings')
+        err_list = [f"{field}: {errs[0]}" if field != '__all__' else errs[0] for field, errs in form.errors.items()]
+        messages.error(request, f'Błąd podczas tworzenia kategorii: {", ".join(err_list)}')
+    return redirect('/budzet/ustawienia/?tab=categories')
 
 
 @login_required
@@ -559,7 +560,7 @@ def category_delete(request, pk):
     name = cat.name
     cat.delete()
     messages.info(request, f'Usunięto kategorię: {name}')
-    return redirect('budget_settings')
+    return redirect('/budzet/ustawienia/?tab=categories')
 
 
 @login_required
@@ -585,7 +586,7 @@ def budget_goal_save(request):
     )
     msg_suffix = " (i ustawiono jako stały limit na kolejne miesiące)" if apply_to_future else ""
     messages.success(request, f'Zapisano limit dla: {category.name} ({amount:,.2f} PLN){msg_suffix}')
-    return redirect(f'/budzet/ustawienia/?year={year}&month={month}')
+    return redirect(f'/budzet/ustawienia/?year={year}&month={month}&tab=limits')
 
 
 @login_required
@@ -595,7 +596,7 @@ def budget_goal_delete(request, pk):
     y, m = b.year, b.month
     b.delete()
     messages.info(request, 'Usunięto miesięczny limit budżetowy.')
-    return redirect(f'/budzet/ustawienia/?year={y}&month={m}')
+    return redirect(f'/budzet/ustawienia/?year={y}&month={m}&tab=limits')
 
 
 @login_required
@@ -606,8 +607,9 @@ def recurring_payment_create(request):
         rec = form.save()
         messages.success(request, f'Dodano płatność stałą / ratę: {rec.title}')
     else:
-        messages.error(request, 'Błąd podczas dodawania płatności stałej.')
-    return redirect('budget_settings')
+        err_list = [f"{field}: {errs[0]}" if field != '__all__' else errs[0] for field, errs in form.errors.items()]
+        messages.error(request, f'Błąd podczas dodawania płatności stałej: {", ".join(err_list)}')
+    return redirect('/budzet/ustawienia/?tab=recurring')
 
 
 @login_required

@@ -346,6 +346,10 @@
                                 <label class="form-label small text-muted text-uppercase fw-semibold">Kolor kafelka</label>
                                 {{ category_form.color }}
                             </div>
+                            <div class="mb-3">
+                                <label class="form-label small text-muted text-uppercase fw-semibold">Domyślny stały limit (opcjonalnie)</label>
+                                {{ category_form.default_budget_limit }}
+                            </div>
                             <button type="submit" class="btn btn-info rounded-pill px-4 w-100 fw-semibold shadow-sm text-dark">
                                 ➕ Dodaj kategorię
                             </button>
@@ -362,6 +366,11 @@
                                 <div class="badge rounded-pill p-2 px-3 text-body d-flex align-items-center gap-2" style="background-color: var(--bs-tertiary-bg); border: 1px solid var(--bs-border-color); font-size: 0.82rem;">
                                     <span class="rounded-circle" style="width: 10px; height: 10px; background-color: {{ cat.color }}; display: inline-block;"></span>
                                     <span>{{ cat.icon }} {{ cat.name }}</span>
+                                    {% if cat.default_budget_limit > 0 %}
+                                        <span class="badge bg-secondary bg-opacity-25 text-body rounded-pill ms-1" style="font-size: 0.68rem;" title="Stały limit miesięczny">
+                                            {{ cat.default_budget_limit|floatformat:0 }} zł
+                                        </span>
+                                    {% endif %}
                                     <form method="POST" action="{% url 'category_delete' cat.id %}" class="d-inline ms-1">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-link text-muted p-0" style="font-size: 0.75rem;" onclick="return confirm('Czy usunąć kategorię {{ cat.name }}?')">
@@ -397,4 +406,17 @@
     </div>
 
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    if (tabParam) {
+        const triggerEl = document.querySelector(`#${tabParam}-tab`);
+        if (triggerEl) {
+            bootstrap.Tab.getOrCreateInstance(triggerEl).show();
+        }
+    }
+});
+</script>
 {% endblock %}

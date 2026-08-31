@@ -85,6 +85,31 @@ class AccountForm(forms.ModelForm):
 
 
 class CategoryForm(forms.ModelForm):
+    default_budget_limit = forms.DecimalField(
+        required=False,
+        initial=Decimal('0.00'),
+        label="Domyślny stały limit miesięczny (PLN)",
+        widget=forms.NumberInput(attrs={'class': 'form-control rounded-3 shadow-none', 'step': '1.00', 'placeholder': 'np. 500.00 (opcjonalnie)'})
+    )
+    order = forms.IntegerField(
+        required=False,
+        initial=0,
+        label="Kolejność",
+        widget=forms.NumberInput(attrs={'class': 'form-control rounded-3 shadow-none', 'placeholder': '0'})
+    )
+    icon = forms.CharField(
+        required=False,
+        initial='🏷️',
+        label="Ikona / Emoji",
+        widget=forms.TextInput(attrs={'class': 'form-control rounded-3 shadow-none', 'placeholder': 'Emoji np. 🛒, 🚗, 🍕 lub bi-tag'})
+    )
+    color = forms.CharField(
+        required=False,
+        initial='#3b82f6',
+        label="Kolor kafelka",
+        widget=forms.TextInput(attrs={'class': 'form-control form-control-color rounded-3 shadow-none', 'type': 'color'})
+    )
+
     class Meta:
         model = Category
         fields = [
@@ -98,11 +123,23 @@ class CategoryForm(forms.ModelForm):
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control rounded-3 shadow-none', 'placeholder': 'np. Paliwo, Prezenty, Inwestycje...'}),
             'category_type': forms.Select(attrs={'class': 'form-select rounded-3 shadow-none'}),
-            'icon': forms.TextInput(attrs={'class': 'form-control rounded-3 shadow-none', 'placeholder': 'Emoji np. 🛒, 🚗, 🍕 lub klasa bi-tag'}),
-            'color': forms.TextInput(attrs={'class': 'form-control form-control-color rounded-3 shadow-none', 'type': 'color'}),
-            'default_budget_limit': forms.NumberInput(attrs={'class': 'form-control rounded-3 shadow-none', 'step': '1.00', 'placeholder': 'Domyślny stały limit miesięczny'}),
-            'order': forms.NumberInput(attrs={'class': 'form-control rounded-3 shadow-none'}),
         }
+
+    def clean_default_budget_limit(self):
+        val = self.cleaned_data.get('default_budget_limit')
+        return val if val is not None else Decimal('0.00')
+
+    def clean_order(self):
+        val = self.cleaned_data.get('order')
+        return val if val is not None else 0
+
+    def clean_icon(self):
+        val = self.cleaned_data.get('icon')
+        return val if val else '🏷️'
+
+    def clean_color(self):
+        val = self.cleaned_data.get('color')
+        return val if val else '#3b82f6'
 
 
 class MonthlyBudgetForm(forms.ModelForm):
