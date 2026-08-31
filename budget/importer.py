@@ -174,11 +174,11 @@ def parse_bank_csv(file_bytes, account):
     if date_col is None: date_col = 0
     if amount_col is None and len(headers) > 2: amount_col = 2
 
-    parsed_transactions = []
-    
-    existing_txs = list(
-        Transaction.objects.filter(account=account).values_list('date', 'amount', 'transaction_type', 'title')
+    from collections import Counter
+    existing_txs_list = list(
+        Transaction.objects.filter(account=account).values_list('date', 'amount', 'transaction_type')
     )
+    existing_counts = Counter(existing_txs_list)
 
     for row_idx, row in enumerate(reader):
         if not row:
@@ -229,11 +229,13 @@ def parse_bank_csv(file_bytes, account):
 
         category = match_category(full_title, t_type)
 
-        is_duplicate = False
-        for ex_date, ex_amount, ex_type, ex_title in existing_txs:
-            if ex_date == tx_date and ex_amount == amount and ex_type == t_type:
-                is_duplicate = True
-                break
+        # Precyzyjne wykrywanie duplikatu (metoda puli)
+        tx_key = (tx_date, amount, t_type)
+        if existing_counts[tx_key] > 0:
+            is_duplicate = True
+            existing_counts[tx_key] -= 1  # Zużywamy jedno dopasowanie z bazy
+        else:
+            is_duplicate = False
 
         parsed_transactions.append({
             'row_id': row_idx,
