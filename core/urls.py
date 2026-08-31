@@ -38,6 +38,7 @@ urlpatterns = [
     path('uzytkownicy/<int:pk>/haslo/', portfolio_views.user_change_password_view, name='user_change_password'),
     path('kopia-zapasowa/pobierz/', portfolio_views.download_backup_zip, name='download_backup_zip'),
     path('kolekcje/', include('library.urls')),
+    path('budzet/', include('budget.urls')),
 ]
 
 if settings.DEBUG:

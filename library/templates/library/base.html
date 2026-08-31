@@ -623,7 +623,34 @@
                         </div>
                     </li>
 
-                    <!-- SEKCJA 3: SYSTEM -->
+                    <!-- SEKCJA 3: FINANSE & BUDŻET -->
+                    <li class="sidebar-section-label mt-3">FINANSE</li>
+                    <li class="menu-item">
+                        <a href="{% url 'budget_dashboard' %}" class="sidebar-link {% if '/budzet/' in request.path and 'transakcje' not in request.path and 'konta' not in request.path and 'ustawienia' not in request.path %}active{% endif %}">
+                            <i class="bi bi-wallet2 sidebar-icon text-success"></i>
+                            <span>Budżet Domowy</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'transaction_list' %}" class="sidebar-link {% if 'budzet/transakcje' in request.path %}active{% endif %}">
+                            <i class="bi bi-receipt sidebar-icon"></i>
+                            <span>Transakcje</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'account_list' %}" class="sidebar-link {% if 'budzet/konta' in request.path %}active{% endif %}">
+                            <i class="bi bi-credit-card-2-front sidebar-icon"></i>
+                            <span>Konta & Portfele</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'budget_settings' %}" class="sidebar-link {% if 'budzet/ustawienia' in request.path %}active{% endif %}">
+                            <i class="bi bi-sliders sidebar-icon"></i>
+                            <span>Limity & Rachunki</span>
+                        </a>
+                    </li>
+
+                    <!-- SEKCJA 4: SYSTEM -->
                     <li class="sidebar-section-label mt-3">SYSTEM</li>
                     <li class="menu-item">
                         <a href="{% url 'user_list' %}" class="sidebar-link {% if 'uzytkownicy' in request.path %}active{% endif %}">
@@ -883,6 +910,16 @@
                             <div class="overflow-hidden">
                                 <span class="fw-bold small d-block text-truncate">Antyki</span>
                                 <span class="text-muted text-truncate d-block" style="font-size: 0.68rem;">Ozdoby & meble</span>
+                            </div>
+                        </a>
+                    </div>
+                    <!-- Finanse & Budżet -->
+                    <div class="col-12 mt-2">
+                        <a href="{% url 'budget_dashboard' %}" class="d-flex align-items-center gap-3 p-2.5 rounded-3 border bg-success bg-opacity-10 text-decoration-none text-body shadow-sm h-100 transition-all {% if '/budzet/' in request.path %}border-success{% endif %}">
+                            <span class="fs-4">💰</span>
+                            <div class="overflow-hidden">
+                                <span class="fw-bold small d-block text-truncate text-success">Budżet Domowy & Finanse</span>
+                                <span class="text-muted text-truncate d-block" style="font-size: 0.68rem;">Konta, wydatki, przychody i limity</span>
                             </div>
                         </a>
                     </div>

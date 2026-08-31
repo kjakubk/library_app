@@ -1,0 +1,299 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Ustawienia Budżetu, Limity & Kategorie - Data Hub{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-2 px-md-4 py-3 py-md-4 mb-5">
+
+    <!-- Nagłówek -->
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <a href="{% url 'budget_dashboard' %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                    <i class="bi bi-arrow-left"></i> Pulpit
+                </a>
+                <h2 class="h4 fw-bold mb-0 text-body">Konfiguracja Finansów</h2>
+            </div>
+            <p class="text-muted small mb-0">Zarządzaj miesięcznymi limitami budżetowymi, stałymi opłatami i kategoriami.</p>
+        </div>
+    </div>
+
+    <!-- Zakładki (Tabs) -->
+    <ul class="nav nav-pills gap-2 mb-4 bg-body border p-1.5 rounded-pill shadow-sm d-inline-flex" id="budgetSettingsTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active rounded-pill px-4 py-2 small fw-semibold" id="limits-tab" data-bs-toggle="pill" data-bs-target="#limits-pane" type="button" role="tab">
+                <i class="bi bi-bullseye me-1"></i> Limity Miesięczne
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill px-4 py-2 small fw-semibold" id="recurring-tab" data-bs-toggle="pill" data-bs-target="#recurring-pane" type="button" role="tab">
+                <i class="bi bi-calendar-check me-1"></i> Stałe Rachunki
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill px-4 py-2 small fw-semibold" id="categories-tab" data-bs-toggle="pill" data-bs-target="#categories-pane" type="button" role="tab">
+                <i class="bi bi-tags me-1"></i> Kategorie
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="budgetSettingsTabsContent">
+
+        <!-- =========================================
+             ZAKŁADKA 1: LIMITY MIESIĘCZNE
+             ========================================= -->
+        <div class="tab-pane fade show active" id="limits-pane" role="tabpanel">
+            <div class="row g-4">
+                <!-- Lewa kolumna: Formularz dodania/aktualizacji limitu -->
+                <div class="col-12 col-lg-5">
+                    <div class="card bg-body border shadow-sm rounded-4 p-4">
+                        <h5 class="fw-bold mb-3 text-body fs-6 d-flex align-items-center gap-2">
+                            <i class="bi bi-plus-circle text-primary"></i> Ustal limit na kategorię
+                        </h5>
+                        <form method="POST" action="{% url 'budget_goal_save' %}">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="form-label small text-muted text-uppercase fw-semibold">Kategoria wydatków</label>
+                                {{ budget_form.category }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small text-muted text-uppercase fw-semibold">Maksymalny limit (PLN)</label>
+                                {{ budget_form.amount_limit }}
+                            </div>
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label small text-muted text-uppercase fw-semibold">Miesiąc</label>
+                                    {{ budget_form.month }}
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small text-muted text-uppercase fw-semibold">Rok</label>
+                                    {{ budget_form.year }}
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary rounded-pill px-4 w-100 fw-semibold shadow-sm">
+                                💾 Zapisz limit budżetowy
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Prawa kolumna: Lista zdefiniowanych limitów -->
+                <div class="col-12 col-lg-7">
+                    <div class="card bg-body border shadow-sm rounded-4 p-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h5 class="fw-bold mb-0 text-body fs-6">
+                                Zdefiniowane limity ({{ month_name }} {{ current_year }})
+                            </h5>
+                            <!-- Wybór miesiąca -->
+                            <form method="GET" action="" class="d-flex align-items-center gap-1">
+                                <select name="month" class="form-select form-select-sm rounded-pill shadow-none" onchange="this.form.submit()">
+                                    {% for m_num, m_name in polish_months %}
+                                        <option value="{{ m_num }}" {% if m_num == current_month %}selected{% endif %}>{{ m_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+                        </div>
+
+                        <div class="d-flex flex-column gap-3">
+                            {% for b in monthly_budgets %}
+                                <div class="p-3 rounded-3 border bg-body-tertiary">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="fw-bold text-body">
+                                            {{ b.category.icon }} {{ b.category.name }}
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="fw-bold text-primary">{{ b.amount_limit|floatformat:2 }} PLN</span>
+                                            <form method="POST" action="{% url 'budget_goal_delete' b.id %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-link text-danger p-0 ms-2" title="Usuń limit" onclick="return confirm('Czy na pewno usunąć ten limit?')">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    <div class="progress rounded-pill" style="height: 6px;">
+                                        <div class="progress-bar {% if b.percentage_used >= 100 %}bg-danger{% elif b.percentage_used >= 80 %}bg-warning{% else %}bg-success{% endif %}" style="width: {{ b.percentage_used }}%;"></div>
+                                    </div>
+                                    <div class="d-flex justify-content-between text-muted small mt-1" style="font-size: 0.72rem;">
+                                        <span>Wydano: {{ b.spent_amount|floatformat:2 }} PLN ({{ b.percentage_used|floatformat:0 }}%)</span>
+                                        <span>Pozostało: {{ b.remaining_amount|floatformat:2 }} PLN</span>
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <div class="text-center py-4 text-muted small">
+                                    Brak limitów dla wybranego miesiąca. Użyj formularza po lewej stronie.
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =========================================
+             ZAKŁADKA 2: PŁATNOŚCI STAŁE
+             ========================================= -->
+        <div class="tab-pane fade" id="recurring-pane" role="tabpanel">
+            <div class="row g-4">
+                <!-- Lewa kolumna: Dodaj stałą opłatę -->
+                <div class="col-12 col-lg-5">
+                    <div class="card bg-body border shadow-sm rounded-4 p-4">
+                        <h5 class="fw-bold mb-3 text-body fs-6 d-flex align-items-center gap-2">
+                            <i class="bi bi-plus-circle text-warning"></i> Dodaj stałą opłatę / abonament
+                        </h5>
+                        <form method="POST" action="{% url 'recurring_payment_create' %}">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="form-label small text-muted text-uppercase fw-semibold">Nazwa opłaty</label>
+                                {{ recurring_form.title }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small text-muted text-uppercase fw-semibold">Kwota (PLN)</label>
+                                {{ recurring_form.amount }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small text-muted text-uppercase fw-semibold">Kategoria</label>
+                                {{ recurring_form.category }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small text-muted text-uppercase fw-semibold">Domyślne konto</label>
+                                {{ recurring_form.account }}
+                            </div>
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label small text-muted text-uppercase fw-semibold">Częstotliwość</label>
+                                    {{ recurring_form.frequency }}
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small text-muted text-uppercase fw-semibold">Dzień m-ca (1-31)</label>
+                                    {{ recurring_form.due_day }}
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-warning rounded-pill px-4 w-100 fw-semibold shadow-sm text-dark">
+                                💾 Dodaj płatność stałą
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Prawa kolumna: Lista stałych opłat -->
+                <div class="col-12 col-lg-7">
+                    <div class="card bg-body border shadow-sm rounded-4 p-4">
+                        <h5 class="fw-bold mb-3 text-body fs-6">
+                            Twoje zdefiniowane płatności cykliczne
+                        </h5>
+                        <div class="d-flex flex-column gap-2">
+                            {% for rec in recurring_payments %}
+                                <div class="d-flex align-items-center justify-content-between p-3 rounded-3 border bg-body-tertiary">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="fs-4">{{ rec.category.icon|default:'📑' }}</span>
+                                        <div>
+                                            <div class="fw-bold text-body small">{{ rec.title }}</div>
+                                            <div class="text-muted" style="font-size: 0.72rem;">
+                                                Dzień: <strong>{{ rec.due_day }}</strong> • {{ rec.get_frequency_display }} • Konto: {{ rec.account.name|default:'—' }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="fw-bold text-body">{{ rec.amount|floatformat:2 }} PLN</span>
+                                        <form method="POST" action="{% url 'recurring_payment_delete' rec.id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-link text-danger p-0" title="Usuń" onclick="return confirm('Czy na pewno usunąć tę stałą opłatę?')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <div class="text-center py-4 text-muted small">
+                                    Brak zdefiniowanych płatności stałych (np. Czynsz, Internet, Netflix).
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =========================================
+             ZAKŁADKA 3: KATEGORIE
+             ========================================= -->
+        <div class="tab-pane fade" id="categories-pane" role="tabpanel">
+            <div class="row g-4">
+                <!-- Lewa kolumna: Dodaj kategorię -->
+                <div class="col-12 col-lg-4">
+                    <div class="card bg-body border shadow-sm rounded-4 p-4">
+                        <h5 class="fw-bold mb-3 text-body fs-6 d-flex align-items-center gap-2">
+                            <i class="bi bi-tag-fill text-info"></i> Nowa kategoria
+                        </h5>
+                        <form method="POST" action="{% url 'category_create' %}">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="form-label small text-muted text-uppercase fw-semibold">Nazwa kategorii</label>
+                                {{ category_form.name }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small text-muted text-uppercase fw-semibold">Typ kategorii</label>
+                                {{ category_form.category_type }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small text-muted text-uppercase fw-semibold">Ikona / Emoji (np. 🍕, 🚗, bi-tag)</label>
+                                {{ category_form.icon }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small text-muted text-uppercase fw-semibold">Kolor kafelka</label>
+                                {{ category_form.color }}
+                            </div>
+                            <button type="submit" class="btn btn-info rounded-pill px-4 w-100 fw-semibold shadow-sm text-dark">
+                                ➕ Dodaj kategorię
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Prawa kolumna: Kategorie wydatków i przychodów -->
+                <div class="col-12 col-lg-8">
+                    <div class="card bg-body border shadow-sm rounded-4 p-4 mb-4">
+                        <h6 class="fw-bold text-danger mb-3">🔴 Kategorie Wydatków ({{ categories_expense.count }})</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for cat in categories_expense %}
+                                <div class="badge rounded-pill p-2 px-3 text-body d-flex align-items-center gap-2" style="background-color: var(--bs-tertiary-bg); border: 1px solid var(--bs-border-color); font-size: 0.82rem;">
+                                    <span class="rounded-circle" style="width: 10px; height: 10px; background-color: {{ cat.color }}; display: inline-block;"></span>
+                                    <span>{{ cat.icon }} {{ cat.name }}</span>
+                                    <form method="POST" action="{% url 'category_delete' cat.id %}" class="d-inline ms-1">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-link text-muted p-0" style="font-size: 0.75rem;" onclick="return confirm('Czy usunąć kategorię {{ cat.name }}?')">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="card bg-body border shadow-sm rounded-4 p-4">
+                        <h6 class="fw-bold text-success mb-3">🟢 Kategorie Przychodów ({{ categories_income.count }})</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for cat in categories_income %}
+                                <div class="badge rounded-pill p-2 px-3 text-body d-flex align-items-center gap-2" style="background-color: var(--bs-tertiary-bg); border: 1px solid var(--bs-border-color); font-size: 0.82rem;">
+                                    <span class="rounded-circle" style="width: 10px; height: 10px; background-color: {{ cat.color }}; display: inline-block;"></span>
+                                    <span>{{ cat.icon }} {{ cat.name }}</span>
+                                    <form method="POST" action="{% url 'category_delete' cat.id %}" class="d-inline ms-1">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-link text-muted p-0" style="font-size: 0.75rem;" onclick="return confirm('Czy usunąć kategorię {{ cat.name }}?')">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

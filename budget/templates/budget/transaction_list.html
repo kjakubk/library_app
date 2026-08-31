@@ -1,0 +1,213 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Wszystkie Transakcje - Budżet Domowy{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-2 px-md-4 py-3 py-md-4 mb-5">
+
+    <!-- Nagłówek -->
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <a href="{% url 'budget_dashboard' %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                    <i class="bi bi-arrow-left"></i> Pulpit
+                </a>
+                <h2 class="h4 fw-bold mb-0 text-body">Księga Transakcji</h2>
+            </div>
+            <p class="text-muted small mb-0">Historia wszystkich przychodów, wydatków i transferów.</p>
+        </div>
+
+        <div class="d-flex gap-2">
+            <a href="?{{ request.GET.urlencode }}&export=csv" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm fw-semibold">
+                <i class="bi bi-download me-1"></i> Eksportuj CSV
+            </a>
+            <a href="{% url 'transaction_create' %}" class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm fw-semibold">
+                <i class="bi bi-plus-lg me-1"></i> Dodaj transakcję
+            </a>
+        </div>
+    </div>
+
+    <!-- Pasek Filtrowania -->
+    <div class="card bg-body border shadow-sm rounded-4 p-3 mb-4">
+        <form method="GET" action="" class="row g-2 align-items-center">
+            <!-- Typ -->
+            <div class="col-6 col-md-2">
+                <select name="type" class="form-select form-select-sm rounded-3 shadow-none">
+                    <option value="">Wszystkie typy</option>
+                    <option value="expense" {% if selected_type == 'expense' %}selected{% endif %}>🔴 Tylko wydatki</option>
+                    <option value="income" {% if selected_type == 'income' %}selected{% endif %}>🟢 Tylko przychody</option>
+                    <option value="transfer" {% if selected_type == 'transfer' %}selected{% endif %}>⇄ Przelewy</option>
+                </select>
+            </div>
+
+            <!-- Konto -->
+            <div class="col-6 col-md-2">
+                <select name="account" class="form-select form-select-sm rounded-3 shadow-none">
+                    <option value="">Wszystkie konta</option>
+                    {% for acc in accounts %}
+                        <option value="{{ acc.id }}" {% if selected_account == acc.id|stringformat:"s" %}selected{% endif %}>{{ acc.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Kategoria -->
+            <div class="col-6 col-md-3">
+                <select name="category" class="form-select form-select-sm rounded-3 shadow-none">
+                    <option value="">Wszystkie kategorie</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat.id }}" {% if selected_category == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.icon }} {{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Wyszukiwarka -->
+            <div class="col-6 col-md-3">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-transparent border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="q" value="{{ search_query }}" class="form-control rounded-end-3 border-start-0 shadow-none" placeholder="Szukaj opisu...">
+                </div>
+            </div>
+
+            <!-- Przyciski filtru -->
+            <div class="col-12 col-md-2 d-flex gap-2 justify-content-end">
+                <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3 w-100 fw-semibold">Filtruj</button>
+                <a href="{% url 'transaction_list' %}" class="btn btn-sm btn-outline-secondary rounded-pill px-2" title="Wyczyść filtry"><i class="bi bi-arrow-counterclockwise"></i></a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Podsumowanie widocznych -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 px-2">
+        <div class="d-flex align-items-center gap-3 small">
+            <span>Przychody: <strong class="text-success">+{{ total_income|floatformat:2 }} PLN</strong></span>
+            <span>•</span>
+            <span>Wydatki: <strong class="text-danger">-{{ total_expense|floatformat:2 }} PLN</strong></span>
+            <span>•</span>
+            <span>Bilans: <strong class="{% if net_total >= 0 %}text-primary{% else %}text-danger{% endif %}">{{ net_total|floatformat:2 }} PLN</strong></span>
+        </div>
+        <span class="text-muted small">Znaleziono: <strong>{{ page_obj.paginator.count }}</strong> wpisów</span>
+    </div>
+
+    <!-- Tabela Transakcji -->
+    <div class="card bg-body border shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr class="small text-muted text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">
+                        <th class="ps-4">Data</th>
+                        <th>Tytuł / Notatka</th>
+                        <th>Kategoria</th>
+                        <th>Konto</th>
+                        <th class="text-center">Paragon</th>
+                        <th class="text-end pe-4">Kwota</th>
+                        <th class="text-center" style="width: 90px;">Akcje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in page_obj %}
+                        <tr>
+                            <td class="ps-4 text-muted small" style="white-space: nowrap;">
+                                {{ t.date|date:"d.m.Y" }}
+                            </td>
+                            <td>
+                                <div class="fw-bold text-body small">{{ t.title }}</div>
+                                {% if t.notes %}<div class="text-muted" style="font-size: 0.72rem;">{{ t.notes }}</div>{% endif %}
+                            </td>
+                            <td>
+                                {% if t.category %}
+                                    <span class="badge rounded-pill px-2.5 py-1 text-body" style="background-color: var(--bs-tertiary-bg); border: 1px solid var(--bs-border-color); font-size: 0.75rem;">
+                                        {{ t.category.icon }} {{ t.category.name }}
+                                    </span>
+                                {% elif t.transaction_type == 'transfer' %}
+                                    <span class="badge rounded-pill px-2.5 py-1 text-primary bg-primary bg-opacity-10" style="font-size: 0.75rem;">
+                                        ⇄ Przelew
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted small">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="small text-body">{{ t.account.name }}</span>
+                                {% if t.destination_account %}
+                                    <span class="text-muted small"> → {{ t.destination_account.name }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if t.receipt_image %}
+                                    <a href="{{ t.receipt_image.url }}" target="_blank" class="btn btn-sm btn-outline-info rounded-pill px-2 py-0" title="Podgląd paragonu">
+                                        <i class="bi bi-image"></i>
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted small">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-4">
+                                {% if t.transaction_type == 'income' %}
+                                    <span class="fw-bold text-success">+{{ t.amount|floatformat:2 }} PLN</span>
+                                {% elif t.transaction_type == 'expense' %}
+                                    <span class="fw-bold text-danger">-{{ t.amount|floatformat:2 }} PLN</span>
+                                {% else %}
+                                    <span class="fw-bold text-primary">{{ t.amount|floatformat:2 }} PLN</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center pe-3">
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-link text-muted p-0 shadow-none" data-bs-toggle="dropdown">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded-3 border-0">
+                                        <li><a class="dropdown-item small" href="{% url 'transaction_edit' t.id %}"><i class="bi bi-pencil me-2"></i>Edytuj</a></li>
+                                        <li>
+                                            <form method="POST" action="{% url 'transaction_delete' t.id %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                                <button type="submit" class="dropdown-item small text-danger" onclick="return confirm('Czy na pewno chcesz usunąć tę transakcję?')">
+                                                    <i class="bi bi-trash me-2"></i>Usuń
+                                                </button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-2 mb-2 d-block opacity-50"></i>
+                                Brak transakcji spełniających wybrane kryteria.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginacja -->
+        {% if page_obj.has_other_pages %}
+            <div class="card-footer bg-body border-top p-3 d-flex justify-content-center">
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item"><a class="page-link rounded-pill px-3 me-1" href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode }}">Poprzednia</a></li>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active"><span class="page-link rounded-circle mx-1">{{ num }}</span></li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item"><a class="page-link rounded-circle mx-1" href="?page={{ num }}&{{ request.GET.urlencode }}">{{ num }}</a></li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item"><a class="page-link rounded-pill px-3 ms-1" href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode }}">Następna</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

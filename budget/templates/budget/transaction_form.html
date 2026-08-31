@@ -1,0 +1,137 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - Budżet Domowy{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-2 px-md-4 py-4 mb-5 d-flex justify-content-center">
+
+    <div class="card bg-body shadow-sm border rounded-4 overflow-hidden w-100" style="max-width: 650px;">
+        <div class="card-header bg-body border-bottom px-4 py-3 d-flex align-items-center justify-content-between">
+            <h4 class="mb-0 fw-bold text-body fs-5 d-flex align-items-center gap-2">
+                💳 {{ title }}
+            </h4>
+            <a href="{% url 'budget_dashboard' %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">Anuluj</a>
+        </div>
+
+        <div class="card-body p-4 p-md-5">
+            <form method="POST" enctype="multipart/form-data" class="row g-3">
+                {% csrf_token %}
+
+                <!-- Typ transakcji -->
+                <div class="col-12">
+                    <label class="form-label fw-semibold small text-muted text-uppercase">Typ operacji</label>
+                    {{ form.transaction_type }}
+                </div>
+
+                <!-- Tytuł / Opis -->
+                <div class="col-12">
+                    <label class="form-label fw-semibold small text-muted text-uppercase">Tytuł / Odbiorca / Sklep <span class="text-danger">*</span></label>
+                    {{ form.title }}
+                </div>
+
+                <!-- Kwota + Data -->
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold small text-muted text-uppercase">Kwota (PLN) <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        {{ form.amount }}
+                        <span class="input-group-text bg-body-tertiary">PLN</span>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold small text-muted text-uppercase">Data operacji</label>
+                    {{ form.date }}
+                </div>
+
+                <!-- Konto źródłowe -->
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold small text-muted text-uppercase" id="accountLabel">Konto płatności</label>
+                    {{ form.account }}
+                </div>
+
+                <!-- Konto docelowe (tylko dla transferu) -->
+                <div class="col-12 col-md-6" id="destAccountWrap" style="display: none;">
+                    <label class="form-label fw-semibold small text-muted text-uppercase">Konto docelowe</label>
+                    {{ form.destination_account }}
+                </div>
+
+                <!-- Kategoria -->
+                <div class="col-12 col-md-6" id="categoryWrap">
+                    <label class="form-label fw-semibold small text-muted text-uppercase">Kategoria</label>
+                    {{ form.category }}
+                </div>
+
+                <!-- Notatki -->
+                <div class="col-12">
+                    <label class="form-label fw-semibold small text-muted text-uppercase">Notatki (opcjonalnie)</label>
+                    {{ form.notes }}
+                </div>
+
+                <!-- Paragon / Faktura -->
+                <div class="col-12">
+                    <label class="form-label fw-semibold small text-muted text-uppercase">📸 Zdjęcie paragonu / rachunku</label>
+                    {{ form.receipt_image }}
+                    {% if tx and tx.receipt_image %}
+                        <div class="mt-2 small text-muted">
+                            Obecny plik: <a href="{{ tx.receipt_image.url }}" target="_blank">Zobacz załącznik</a>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Błędy -->
+                {% if form.errors %}
+                    <div class="col-12">
+                        <div class="alert alert-danger rounded-3 py-2 small mb-0">
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                    <div><strong>{{ field.label }}:</strong> {{ error }}</div>
+                                {% endfor %}
+                            {% endfor %}
+                            {% for error in form.non_field_errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Przyciski -->
+                <div class="col-12 mt-4 d-flex justify-content-end gap-2 border-top pt-3">
+                    <a href="{% url 'budget_dashboard' %}" class="btn btn-outline-secondary rounded-pill px-4">Anuluj</a>
+                    <button type="submit" class="btn btn-primary rounded-pill px-5 fw-semibold shadow-sm">
+                        💾 Zapisz transakcję
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// Dynamiczne pokazywanie/ukrywanie pól w zależności od typu operacji
+document.addEventListener("DOMContentLoaded", function() {
+    const typeSelect = document.getElementById('id_transaction_type');
+    const destWrap = document.getElementById('destAccountWrap');
+    const catWrap = document.getElementById('categoryWrap');
+    const accLabel = document.getElementById('accountLabel');
+
+    function updateFields() {
+        const val = typeSelect.value;
+        if (val === 'transfer') {
+            destWrap.style.display = 'block';
+            catWrap.style.display = 'none';
+            accLabel.textContent = 'Konto źródłowe (Z)';
+        } else {
+            destWrap.style.display = 'none';
+            catWrap.style.display = 'block';
+            accLabel.textContent = val === 'income' ? 'Konto wpływu (Do)' : 'Konto płatności (Z)';
+        }
+    }
+
+    if (typeSelect) {
+        typeSelect.addEventListener('change', updateFields);
+        updateFields();
+    }
+});
+</script>
+{% endblock %}

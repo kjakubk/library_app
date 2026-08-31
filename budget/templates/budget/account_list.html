@@ -1,0 +1,104 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Konta i Portfele - Budżet Domowy{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-2 px-md-4 py-3 py-md-4 mb-5">
+
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <a href="{% url 'budget_dashboard' %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                    <i class="bi bi-arrow-left"></i> Pulpit
+                </a>
+                <h2 class="h4 fw-bold mb-0 text-body">Konta & Portfele</h2>
+            </div>
+            <p class="text-muted small mb-0">Zarządzaj swoimi rachunkami bankowymi, gotówką i kartami.</p>
+        </div>
+
+        <div class="d-flex gap-2">
+            <a href="{% url 'account_create' %}" class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm fw-semibold">
+                <i class="bi bi-plus-lg me-1"></i> Dodaj nowe konto
+            </a>
+        </div>
+    </div>
+
+    <!-- Pasek majątku -->
+    <div class="card bg-body border shadow-sm rounded-4 p-4 mb-4">
+        <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
+            <div>
+                <span class="text-muted small text-uppercase fw-semibold" style="letter-spacing: 0.5px;">Łączny stan majątku</span>
+                <h3 class="fw-bold text-body mb-0 mt-1">{{ total_wealth|floatformat:2 }} <span class="fs-6 text-muted fw-normal">PLN</span></h3>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'transaction_create' %}?type=transfer" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                    <i class="bi bi-arrow-left-right me-1"></i> Wykonaj przelew między kontami
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Siatka kont -->
+    <div class="row g-3">
+        {% for acc in accounts %}
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="card bg-body border shadow-sm rounded-4 h-100 p-4 position-relative overflow-hidden transition-hover">
+                    <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background-color: {{ acc.color }};"></div>
+                    
+                    <div class="d-flex align-items-start justify-content-between mb-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center text-white" style="width: 42px; height: 42px; background-color: {{ acc.color }};">
+                                <i class="bi {{ acc.icon }} fs-5"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-bold text-body mb-0 fs-6">{{ acc.name }}</h5>
+                                <span class="badge bg-body-tertiary border text-muted" style="font-size: 0.70rem;">{{ acc.get_account_type_display }}</span>
+                            </div>
+                        </div>
+
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-link text-muted p-0 shadow-none" data-bs-toggle="dropdown">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded-3 border-0">
+                                <li><a class="dropdown-item small" href="{% url 'account_edit' acc.id %}"><i class="bi bi-pencil me-2"></i>Edytuj konto</a></li>
+                                <li><a class="dropdown-item small" href="{% url 'transaction_list' %}?account={{ acc.id }}"><i class="bi bi-receipt me-2"></i>Historia transakcji</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form method="POST" action="{% url 'account_delete' acc.id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="dropdown-item small text-danger" onclick="return confirm('Czy na pewno chcesz usunąć to konto?')">
+                                            <i class="bi bi-trash me-2"></i>Usuń konto
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Saldo -->
+                    <div class="bg-body-tertiary p-3 rounded-3 mb-3">
+                        <span class="text-muted small d-block mb-1" style="font-size: 0.75rem;">Aktualne saldo:</span>
+                        <div class="fs-4 fw-bold {% if acc.current_balance >= 0 %}text-body{% else %}text-danger{% endif %}">
+                            {{ acc.current_balance|floatformat:2 }} <span class="fs-6 text-muted fw-normal">{{ acc.currency }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Informacje dodatkowe -->
+                    <div class="d-flex align-items-center justify-content-between text-muted small" style="font-size: 0.75rem;">
+                        <span>Początkowe: {{ acc.initial_balance|floatformat:2 }} {{ acc.currency }}</span>
+                        <span>Transakcji: <strong>{{ acc.transactions.count }}</strong></span>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12 text-center py-5 text-muted">
+                <i class="bi bi-wallet2 fs-1 mb-2 d-block opacity-50"></i>
+                Brak zdefiniowanych kont. Kliknij "+ Dodaj nowe konto", aby zacząć!
+            </div>
+        {% endfor %}
+    </div>
+
+</div>
+{% endblock %}
