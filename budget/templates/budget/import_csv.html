@@ -1,0 +1,229 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Import transakcji z wyciągu bankowego CSV - Budżet Domowy{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-2 px-md-4 py-3 py-md-4 mb-5">
+
+    <!-- Nagłówek -->
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <a href="{% url 'transaction_list' %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                    <i class="bi bi-arrow-left"></i> Transakcje
+                </a>
+                <h2 class="h4 fw-bold mb-0 text-body">Import Wyciągu Bankowego CSV</h2>
+            </div>
+            <p class="text-muted small mb-0">Wczytaj plik z banku, a system automatycznie rozpozna daty, kwoty i przypisze kategorie.</p>
+        </div>
+    </div>
+
+    {% if step == 'upload' %}
+        <!-- =========================================
+             KROK 1: FORMULARZ WGRANIA PLIKU CSV
+             ========================================= -->
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-8 col-xl-7">
+                
+                <div class="card bg-body border shadow-sm rounded-4 overflow-hidden mb-4">
+                    <div class="card-header bg-body border-bottom px-4 py-3">
+                        <h5 class="fw-bold mb-0 text-body fs-6 d-flex align-items-center gap-2">
+                            <i class="bi bi-file-earmark-spreadsheet-fill text-success fs-5"></i> Krok 1: Wybierz konto i plik CSV
+                        </h5>
+                    </div>
+
+                    <div class="card-body p-4 p-md-5">
+                        <form method="POST" enctype="multipart/form-data">
+                            {% csrf_token %}
+
+                            <!-- Wybór konta docelowego -->
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold small text-muted text-uppercase">Konto docelowe w aplikacji <span class="text-danger">*</span></label>
+                                <select name="account" class="form-select rounded-3 shadow-none p-2.5" required>
+                                    <option value="" disabled selected>-- Wybierz konto do którego przypisać operacje --</option>
+                                    {% for acc in accounts %}
+                                        <option value="{{ acc.id }}">{{ acc.name }} (Saldo: {{ acc.current_balance|floatformat:2 }} {{ acc.currency }})</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text small">Wszystkie zaimportowane transakcje zaktualizują saldo wybranego konta.</div>
+                            </div>
+
+                            <!-- Wgranie pliku CSV -->
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold small text-muted text-uppercase">Plik CSV pobrany z bankowości <span class="text-danger">*</span></label>
+                                <input type="file" name="csv_file" class="form-control rounded-3 shadow-none p-3" accept=".csv,text/csv,application/vnd.ms-excel" required>
+                                <div class="form-text small">Obsługiwane kodowanie polskich znaków (UTF-8, Windows-1250, CP1250, ISO-8859-2).</div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary rounded-pill px-5 py-2.5 fw-semibold shadow-sm w-100 d-flex align-items-center justify-content-center gap-2">
+                                <i class="bi bi-search"></i> Przeanalizuj plik i pokaż podgląd
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Obsługiwane banki -->
+                <div class="card bg-body-tertiary border shadow-sm rounded-4 p-4">
+                    <h6 class="fw-bold text-body small text-uppercase mb-3" style="letter-spacing: 0.5px;">Obsługiwane formaty wyciągów bankowych:</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge bg-body border text-body px-3 py-2 rounded-pill shadow-xs">🦁 ING Bank Śląski</span>
+                        <span class="badge bg-body border text-body px-3 py-2 rounded-pill shadow-xs">🔴 mBank</span>
+                        <span class="badge bg-body border text-body px-3 py-2 rounded-pill shadow-xs">🔵 PKO BP (iPKO)</span>
+                        <span class="badge bg-body border text-body px-3 py-2 rounded-pill shadow-xs">🟢 Santander Bank</span>
+                        <span class="badge bg-body border text-body px-3 py-2 rounded-pill shadow-xs">🟣 Bank Millennium</span>
+                        <span class="badge bg-body border text-body px-3 py-2 rounded-pill shadow-xs">🟡 Bank Pekao SA</span>
+                        <span class="badge bg-body border text-body px-3 py-2 rounded-pill shadow-xs">💳 Revolut</span>
+                        <span class="badge bg-body border text-body px-3 py-2 rounded-pill shadow-xs">⚙️ Dowolny inny CSV (Auto)</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    {% elif step == 'preview' %}
+        <!-- =========================================
+             KROK 2: PODGLĄD & ZATWIERDZENIE (DRY-RUN)
+             ========================================= -->
+        
+        <!-- Podsumowanie KPI pliku -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="card bg-body border shadow-sm rounded-4 p-3">
+                    <span class="text-muted small text-uppercase fw-semibold" style="font-size: 0.70rem;">Rozpoznano wierszy</span>
+                    <h4 class="fw-bold text-body mb-0 mt-1">{{ total_rows }}</h4>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card bg-body border shadow-sm rounded-4 p-3">
+                    <span class="text-muted small text-uppercase fw-semibold" style="font-size: 0.70rem;">Wydatki</span>
+                    <h4 class="fw-bold text-danger mb-0 mt-1">{{ expenses_count }}</h4>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card bg-body border shadow-sm rounded-4 p-3">
+                    <span class="text-muted small text-uppercase fw-semibold" style="font-size: 0.70rem;">Przychody</span>
+                    <h4 class="fw-bold text-success mb-0 mt-1">{{ incomes_count }}</h4>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card bg-body border shadow-sm rounded-4 p-3">
+                    <span class="text-muted small text-uppercase fw-semibold" style="font-size: 0.70rem;">Możliwe duplikaty</span>
+                    <h4 class="fw-bold {% if duplicates_count > 0 %}text-warning{% else %}text-muted{% endif %} mb-0 mt-1">{{ duplicates_count }}</h4>
+                </div>
+            </div>
+        </div>
+
+        <form method="POST" action="{% url 'import_csv_confirm' %}">
+            {% csrf_token %}
+
+            <div class="card bg-body border shadow-sm rounded-4 overflow-hidden mb-4">
+                <div class="card-header bg-body border-bottom px-4 py-3 d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-body fs-6">
+                            Konto docelowe: <span class="text-primary">{{ account.name }}</span>
+                        </h5>
+                        <span class="text-muted small">Odznacz transakcje, których nie chcesz importować, lub zmień ich kategorie.</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" id="toggleAllBtn">
+                            Zaznacz/Odznacz wszystkie
+                        </button>
+                        <button type="submit" class="btn btn-sm btn-success rounded-pill px-4 fw-semibold shadow-sm">
+                            <i class="bi bi-check-circle me-1"></i> Zatwierdź i zaimportuj
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive" style="max-height: 600px;">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr class="small text-muted text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">
+                                <th class="text-center ps-3" style="width: 40px;">
+                                    <input type="checkbox" class="form-check-input" id="masterCheckbox" checked>
+                                </th>
+                                <th>Status</th>
+                                <th>Data</th>
+                                <th>Tytuł / Kontrahent</th>
+                                <th>Kategoria (Auto)</th>
+                                <th class="text-end pe-4">Kwota</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in parsed_rows %}
+                                <tr class="{% if r.is_duplicate %}table-warning bg-opacity-25{% endif %}">
+                                    <td class="text-center ps-3">
+                                        <input type="checkbox" name="selected_rows" value="{{ forloop.counter0 }}" class="form-check-input row-checkbox" {% if r.selected %}checked{% endif %}>
+                                    </td>
+                                    <td>
+                                        {% if r.is_duplicate %}
+                                            <span class="badge bg-warning text-dark rounded-pill" title="Taka sama kwota i data już istnieją w bazie"><i class="bi bi-exclamation-triangle"></i> Duplikat?</span>
+                                        {% else %}
+                                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill">Nowa</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-muted small" style="white-space: nowrap;">
+                                        {{ r.date|date:"d.m.Y" }}
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold text-body small">{{ r.title }}</div>
+                                    </td>
+                                    <td style="min-width: 180px;">
+                                        <select name="category_{{ forloop.counter0 }}" class="form-select form-select-sm rounded-pill shadow-none">
+                                            <option value="">-- Bez kategorii --</option>
+                                            {% for cat in categories %}
+                                                {% if cat.category_type == r.type %}
+                                                    <option value="{{ cat.id }}" {% if r.category_id == cat.id %}selected{% endif %}>{{ cat.icon }} {{ cat.name }}</option>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        {% if r.type == 'income' %}
+                                            <span class="fw-bold text-success">+{{ r.amount|floatformat:2 }} PLN</span>
+                                        {% else %}
+                                            <span class="fw-bold text-danger">-{{ r.amount|floatformat:2 }} PLN</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card-footer bg-body border-top p-3 d-flex justify-content-between align-items-center">
+                    <a href="{% url 'import_csv' %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">Anuluj i wgraj inny plik</a>
+                    <button type="submit" class="btn btn-success rounded-pill px-5 fw-semibold shadow-sm">
+                        <i class="bi bi-cloud-arrow-up-fill me-1"></i> Zapisz wybrane transakcje
+                    </button>
+                </div>
+            </div>
+
+        </form>
+
+        <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const masterCheckbox = document.getElementById('masterCheckbox');
+            const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+            const toggleAllBtn = document.getElementById('toggleAllBtn');
+
+            if (masterCheckbox) {
+                masterCheckbox.addEventListener('change', function() {
+                    rowCheckboxes.forEach(cb => cb.checked = masterCheckbox.checked);
+                });
+            }
+
+            if (toggleAllBtn) {
+                toggleAllBtn.addEventListener('click', function() {
+                    const anyUnchecked = Array.from(rowCheckboxes).some(cb => !cb.checked);
+                    rowCheckboxes.forEach(cb => cb.checked = anyUnchecked);
+                    if (masterCheckbox) masterCheckbox.checked = anyUnchecked;
+                });
+            }
+        });
+        </script>
+
+    {% endif %}
+
+</div>
+{% endblock %}

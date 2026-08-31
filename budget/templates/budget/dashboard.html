@@ -39,7 +39,10 @@
             </form>
 
             <!-- Przyciski akcji -->
-            <div class="d-flex gap-2">
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{% url 'import_csv' %}" class="btn btn-outline-success btn-sm rounded-pill px-3 shadow-sm fw-semibold d-inline-flex align-items-center gap-1">
+                    <i class="bi bi-file-earmark-arrow-up"></i> Import CSV
+                </a>
                 <a href="{% url 'transaction_create' %}?type=expense" class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm fw-semibold d-inline-flex align-items-center gap-1">
                     <i class="bi bi-dash-circle"></i> Wydatek
                 </a>

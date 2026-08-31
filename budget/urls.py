@@ -10,6 +10,8 @@ urlpatterns = [
     path('transakcje/dodaj/', views.transaction_create, name='transaction_create'),
     path('transakcje/<int:pk>/edytuj/', views.transaction_edit, name='transaction_edit'),
     path('transakcje/<int:pk>/usun/', views.transaction_delete, name='transaction_delete'),
+    path('transakcje/import/', views.import_csv_view, name='import_csv'),
+    path('transakcje/import/zatwierdz/', views.import_csv_confirm, name='import_csv_confirm'),
 
     # Konta i portfele
     path('konta/', views.account_list, name='account_list'),

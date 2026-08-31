@@ -520,3 +520,120 @@ def recurring_payment_delete(request, pk):
     rec.delete()
     messages.info(request, f'Usunięto płatność stałą: {title}')
     return redirect('budget_settings')
+
+
+# ==========================================
+# IMPORT TRANSAKCJI Z PLIKÓW CSV BANKÓW
+# ==========================================
+
+@login_required
+def import_csv_view(request):
+    from .importer import parse_bank_csv, parse_date_str
+
+    accounts = Account.objects.filter(is_active=True)
+    categories = Category.objects.all()
+
+    if request.method == 'POST' and request.FILES.get('csv_file'):
+        account_id = request.POST.get('account')
+        account = get_object_or_404(Account, pk=account_id)
+        csv_file = request.FILES['csv_file']
+
+        file_bytes = csv_file.read()
+        parsed_rows = parse_bank_csv(file_bytes, account)
+
+        if not parsed_rows:
+            messages.warning(request, 'Nie znaleziono żadnych poprawnych transakcji w przesłanym pliku. Upewnij się, że plik ma format CSV.')
+            return redirect('import_csv')
+
+        # Zapisanie w sesji na potrzeby potwierdzenia
+        session_data = []
+        for r in parsed_rows:
+            session_data.append({
+                'date': r['date_str'],
+                'title': r['title'],
+                'amount': r['amount_str'],
+                'type': r['type'],
+                'category_id': r['category_id'],
+                'is_duplicate': r['is_duplicate'],
+            })
+        request.session['import_csv_rows'] = session_data
+        request.session['import_csv_account_id'] = account.id
+
+        total_rows = len(parsed_rows)
+        duplicates_count = sum(1 for r in parsed_rows if r['is_duplicate'])
+        expenses_count = sum(1 for r in parsed_rows if r['type'] == 'expense')
+        incomes_count = sum(1 for r in parsed_rows if r['type'] == 'income')
+
+        return render(request, 'budget/import_csv.html', {
+            'step': 'preview',
+            'account': account,
+            'parsed_rows': parsed_rows,
+            'categories': categories,
+            'total_rows': total_rows,
+            'duplicates_count': duplicates_count,
+            'expenses_count': expenses_count,
+            'incomes_count': incomes_count,
+        })
+
+    return render(request, 'budget/import_csv.html', {
+        'step': 'upload',
+        'accounts': accounts,
+    })
+
+
+@login_required
+@require_POST
+def import_csv_confirm(request):
+    from django.db import transaction as db_atomic
+    from .importer import parse_date_str
+
+    session_rows = request.session.get('import_csv_rows')
+    account_id = request.session.get('import_csv_account_id')
+
+    if not session_rows or not account_id:
+        messages.error(request, 'Sesja importu wygasła lub plik nie został przesłany. Rozpocznij import ponownie.')
+        return redirect('import_csv')
+
+    account = get_object_or_404(Account, pk=account_id)
+    selected_indices = request.POST.getlist('selected_rows')
+
+    if not selected_indices:
+        messages.warning(request, 'Nie zaznaczono żadnych transakcji do zaimportowania.')
+        return redirect('import_csv')
+
+    imported_count = 0
+    with db_atomic.atomic():
+        for idx_str in selected_indices:
+            try:
+                idx = int(idx_str)
+                row = session_rows[idx]
+            except (ValueError, IndexError):
+                continue
+
+            # Sprawdzenie czy użytkownik wybrał inną kategorię
+            cat_id = request.POST.get(f'category_{idx}') or row.get('category_id')
+            cat = None
+            if cat_id:
+                cat = Category.objects.filter(pk=cat_id).first()
+
+            t_date = parse_date_str(row['date'])
+            t_amount = Decimal(row['amount'])
+            t_type = row['type']
+            t_title = row['title']
+
+            Transaction.objects.create(
+                account=account,
+                category=cat,
+                transaction_type=t_type,
+                amount=t_amount,
+                date=t_date,
+                title=t_title,
+                notes="Zaimportowano z wyciągu bankowego CSV"
+            )
+            imported_count += 1
+
+    request.session.pop('import_csv_rows', None)
+    request.session.pop('import_csv_account_id', None)
+
+    messages.success(request, f'Sukces! Zaimportowano {imported_count} transakcji do konta "{account.name}".')
+    return redirect('transaction_list')
