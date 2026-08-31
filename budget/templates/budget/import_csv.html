@@ -40,13 +40,24 @@
                             <!-- Wybór konta docelowego -->
                             <div class="mb-4">
                                 <label class="form-label fw-semibold small text-muted text-uppercase">Konto docelowe w aplikacji <span class="text-danger">*</span></label>
-                                <select name="account" class="form-select rounded-3 shadow-none p-2.5" required>
-                                    <option value="" disabled selected>-- Wybierz konto do którego przypisać operacje --</option>
-                                    {% for acc in accounts %}
-                                        <option value="{{ acc.id }}">{{ acc.get_owner_display }} — {{ acc.name }} (Saldo: {{ acc.current_balance|floatformat:2 }} {{ acc.currency }})</option>
-                                    {% endfor %}
-                                </select>
-                                <div class="form-text small">Wszystkie zaimportowane transakcje zaktualizują saldo wybranego konta.</div>
+                                {% if accounts %}
+                                    <select name="account" class="form-select rounded-3 shadow-none p-2.5" required>
+                                        <option value="" disabled selected>-- Wybierz konto do którego przypisać operacje --</option>
+                                        {% for acc in accounts %}
+                                            <option value="{{ acc.id }}">{{ acc.get_owner_display }} — {{ acc.name }} (Saldo: {{ acc.current_balance|floatformat:2 }} {{ acc.currency }})</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text small">Wszystkie zaimportowane transakcje zaktualizują saldo wybranego konta.</div>
+                                {% else %}
+                                    <div class="alert alert-warning rounded-3 p-3 mb-0">
+                                        <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2">
+                                            <span><i class="bi bi-exclamation-triangle me-1"></i> Nie utworzono jeszcze konta w systemie.</span>
+                                            <a href="{% url 'account_create' %}" class="btn btn-sm btn-primary rounded-pill px-3">
+                                                <i class="bi bi-plus-lg me-1"></i> Dodaj pierwsze konto
+                                            </a>
+                                        </div>
+                                    </div>
+                                {% endif %}
                             </div>
 
                             <!-- Wgranie pliku CSV -->

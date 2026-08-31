@@ -46,6 +46,7 @@ def budget_dashboard(request):
     selected_owner = request.GET.get('owner', 'all')
     selected_account_id = request.GET.get('account')
 
+    ensure_default_accounts()
     all_active_accounts = Account.objects.filter(is_active=True)
 
     # 1. Podsumowanie per profil/właściciel konta
@@ -581,6 +582,40 @@ def recurring_payment_delete(request, pk):
     return redirect('budget_settings')
 
 
+def ensure_default_accounts():
+    if not Account.objects.filter(is_active=True).exists():
+        Account.objects.create(
+            name='Konto Prywatne (Jakub)',
+            owner='personal',
+            account_type='checking',
+            initial_balance=Decimal('0.00'),
+            currency='PLN',
+            icon='bi-person-badge',
+            color='#0284c7',
+            notes='Główne konto osobiste / ROR'
+        )
+        Account.objects.create(
+            name='Konto Firmowe (B2B / Działalność)',
+            owner='business',
+            account_type='checking',
+            initial_balance=Decimal('0.00'),
+            currency='PLN',
+            icon='bi-briefcase',
+            color='#8b5cf6',
+            notes='Rachunek firmowy / B2B'
+        )
+        Account.objects.create(
+            name='Konto Partnerki',
+            owner='partner',
+            account_type='checking',
+            initial_balance=Decimal('0.00'),
+            currency='PLN',
+            icon='bi-person-heart',
+            color='#ec4899',
+            notes='Rachunek bankowy partnerki'
+        )
+
+
 # ==========================================
 # IMPORT TRANSAKCJI Z PLIKÓW CSV BANKÓW
 # ==========================================
@@ -589,6 +624,7 @@ def recurring_payment_delete(request, pk):
 def import_csv_view(request):
     from .importer import parse_bank_csv, parse_date_str
 
+    ensure_default_accounts()
     accounts = Account.objects.filter(is_active=True)
     categories = Category.objects.all()
 
