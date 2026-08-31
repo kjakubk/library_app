@@ -48,9 +48,11 @@
                 <!-- Lewa kolumna: Formularz dodania/aktualizacji limitu -->
                 <div class="col-12 col-lg-5">
                     <div class="card bg-body border shadow-sm rounded-4 p-4">
-                        <h5 class="fw-bold mb-3 text-body fs-6 d-flex align-items-center gap-2">
-                            <i class="bi bi-plus-circle text-primary"></i> Ustal limit na kategorię
+                        <h5 class="fw-bold mb-2 text-body fs-6 d-flex align-items-center gap-2">
+                            <i class="bi bi-bullseye text-primary"></i> Ustal limit na kategorię
                         </h5>
+                        <p class="text-muted small mb-3">Limity przenoszą się automatycznie na kolejne miesiące. Możesz je dostosować dla jednego miesiąca lub zapisać na stałe.</p>
+
                         <form method="POST" action="{% url 'budget_goal_save' %}">
                             {% csrf_token %}
                             <div class="mb-3">
@@ -71,6 +73,14 @@
                                     {{ budget_form.year }}
                                 </div>
                             </div>
+                            <div class="form-check form-switch mb-4 p-3 bg-body-tertiary rounded-3 border">
+                                {{ budget_form.apply_to_all_future }}
+                                <label class="form-check-label small fw-semibold text-body ms-2" for="{{ budget_form.apply_to_all_future.id_for_label }}">
+                                    Ustaw jako stały limit na kolejne miesiące
+                                </label>
+                                <div class="text-muted" style="font-size: 0.70rem; margin-left: 2.2rem;">Jeśli odznaczone, limit będzie obowiązywał tylko w wybranym miesiącu.</div>
+                            </div>
+
                             <button type="submit" class="btn btn-primary rounded-pill px-4 w-100 fw-semibold shadow-sm">
                                 💾 Zapisz limit budżetowy
                             </button>
@@ -81,10 +91,15 @@
                 <!-- Prawa kolumna: Lista zdefiniowanych limitów -->
                 <div class="col-12 col-lg-7">
                     <div class="card bg-body border shadow-sm rounded-4 p-4">
-                        <div class="d-flex align-items-center justify-content-between mb-3">
-                            <h5 class="fw-bold mb-0 text-body fs-6">
-                                Zdefiniowane limity ({{ month_name }} {{ current_year }})
-                            </h5>
+                        <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-2 mb-3">
+                            <div>
+                                <h5 class="fw-bold mb-0 text-body fs-6">
+                                    Limity w {{ month_name }} {{ current_year }}
+                                </h5>
+                                <span class="text-muted small" style="font-size: 0.75rem;">
+                                    Suma limitów: <strong class="text-body">{{ total_budget_limit|floatformat:2 }} PLN</strong> • Wydano: <strong class="text-danger">{{ total_budget_spent|floatformat:2 }} PLN</strong>
+                                </span>
+                            </div>
                             <!-- Wybór miesiąca -->
                             <form method="GET" action="" class="d-flex align-items-center gap-1">
                                 <select name="month" class="form-select form-select-sm rounded-pill shadow-none" onchange="this.form.submit()">
@@ -96,33 +111,40 @@
                         </div>
 
                         <div class="d-flex flex-column gap-3">
-                            {% for b in monthly_budgets %}
+                            {% for b in budget_items %}
                                 <div class="p-3 rounded-3 border bg-body-tertiary">
                                     <div class="d-flex align-items-center justify-content-between mb-2">
-                                        <div class="fw-bold text-body">
-                                            {{ b.category.icon }} {{ b.category.name }}
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="fw-bold text-body">{{ b.category.icon }} {{ b.category.name }}</span>
+                                            {% if b.is_custom_month %}
+                                                <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary" style="font-size: 0.68rem;" title="Modyfikacja tylko w tym miesiącu">Modyfikacja w tym m-cu</span>
+                                            {% else %}
+                                                <span class="badge rounded-pill bg-secondary bg-opacity-10 text-secondary" style="font-size: 0.68rem;" title="Stały limit przenoszony automatycznie">Stały domyślny</span>
+                                            {% endif %}
                                         </div>
                                         <div class="d-flex align-items-center gap-2">
-                                            <span class="fw-bold text-primary">{{ b.amount_limit|floatformat:2 }} PLN</span>
-                                            <form method="POST" action="{% url 'budget_goal_delete' b.id %}">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-sm btn-link text-danger p-0 ms-2" title="Usuń limit" onclick="return confirm('Czy na pewno usunąć ten limit?')">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </form>
+                                            <span class="fw-bold text-body">{{ b.limit|floatformat:2 }} PLN</span>
+                                            {% if b.budget_pk %}
+                                                <form method="POST" action="{% url 'budget_goal_delete' b.budget_pk %}">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-link text-danger p-0 ms-1" title="Usuń modyfikację dla tego miesiąca (przywróć stały)" onclick="return confirm('Przywrócić stały limit?')">
+                                                        <i class="bi bi-x-circle"></i>
+                                                    </button>
+                                                </form>
+                                            {% endif %}
                                         </div>
                                     </div>
                                     <div class="progress rounded-pill" style="height: 6px;">
-                                        <div class="progress-bar {% if b.percentage_used >= 100 %}bg-danger{% elif b.percentage_used >= 80 %}bg-warning{% else %}bg-success{% endif %}" style="width: {{ b.percentage_used }}%;"></div>
+                                        <div class="progress-bar {% if b.percentage >= 100 %}bg-danger{% elif b.percentage >= 80 %}bg-warning{% else %}bg-success{% endif %}" style="width: {{ b.percentage }}%;"></div>
                                     </div>
-                                    <div class="d-flex justify-content-between text-muted small mt-1" style="font-size: 0.72rem;">
-                                        <span>Wydano: {{ b.spent_amount|floatformat:2 }} PLN ({{ b.percentage_used|floatformat:0 }}%)</span>
-                                        <span>Pozostało: {{ b.remaining_amount|floatformat:2 }} PLN</span>
+                                    <div class="d-flex justify-content-between text-muted small mt-1.5" style="font-size: 0.72rem;">
+                                        <span>Wydano: <strong>{{ b.spent|floatformat:2 }} PLN</strong> ({{ b.percentage|floatformat:0 }}%)</span>
+                                        <span>Pozostało: <strong class="{% if b.is_exceeded %}text-danger{% else %}text-success{% endif %}">{{ b.remaining|floatformat:2 }} PLN</strong></span>
                                     </div>
                                 </div>
                             {% empty %}
                                 <div class="text-center py-4 text-muted small">
-                                    Brak limitów dla wybranego miesiąca. Użyj formularza po lewej stronie.
+                                    Brak zdefiniowanych limitów. Skonfiguruj domyślny limit dla kategorii po lewej stronie.
                                 </div>
                             {% endfor %}
                         </div>
@@ -132,33 +154,37 @@
         </div>
 
         <!-- =========================================
-             ZAKŁADKA 2: PŁATNOŚCI STAŁE
+             ZAKŁADKA 2: PŁATNOŚCI STAŁE & RATY
              ========================================= -->
         <div class="tab-pane fade" id="recurring-pane" role="tabpanel">
             <div class="row g-4">
-                <!-- Lewa kolumna: Dodaj stałą opłatę -->
+                <!-- Lewa kolumna: Dodaj stałą opłatę / Zobowiązanie ratalne -->
                 <div class="col-12 col-lg-5">
                     <div class="card bg-body border shadow-sm rounded-4 p-4">
-                        <h5 class="fw-bold mb-3 text-body fs-6 d-flex align-items-center gap-2">
-                            <i class="bi bi-plus-circle text-warning"></i> Dodaj stałą opłatę / abonament
+                        <h5 class="fw-bold mb-2 text-body fs-6 d-flex align-items-center gap-2">
+                            <i class="bi bi-plus-circle text-warning"></i> Dodaj opłatę, abonament lub ratę
                         </h5>
+                        <p class="text-muted small mb-3">Dla kredytów lub rat podaj datę spłaty lub liczbę rat, aby aplikacja śledziła postęp spłaty.</p>
+
                         <form method="POST" action="{% url 'recurring_payment_create' %}">
                             {% csrf_token %}
                             <div class="mb-3">
-                                <label class="form-label small text-muted text-uppercase fw-semibold">Nazwa opłaty</label>
+                                <label class="form-label small text-muted text-uppercase fw-semibold">Nazwa opłaty / Zobowiązania</label>
                                 {{ recurring_form.title }}
                             </div>
                             <div class="mb-3">
                                 <label class="form-label small text-muted text-uppercase fw-semibold">Kwota (PLN)</label>
                                 {{ recurring_form.amount }}
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label small text-muted text-uppercase fw-semibold">Kategoria</label>
-                                {{ recurring_form.category }}
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label small text-muted text-uppercase fw-semibold">Domyślne konto</label>
-                                {{ recurring_form.account }}
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label small text-muted text-uppercase fw-semibold">Kategoria</label>
+                                    {{ recurring_form.category }}
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small text-muted text-uppercase fw-semibold">Domyślne konto</label>
+                                    {{ recurring_form.account }}
+                                </div>
                             </div>
                             <div class="row g-2 mb-3">
                                 <div class="col-6">
@@ -170,44 +196,119 @@
                                     {{ recurring_form.due_day }}
                                 </div>
                             </div>
+
+                            <div class="p-3 bg-body-tertiary border rounded-3 mb-3">
+                                <h6 class="fw-bold text-body small mb-2 d-flex align-items-center gap-1.5">
+                                    <i class="bi bi-bank text-info"></i> Opcje spłaty rat / Zakończenie (opcjonalnie)
+                                </h6>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-6">
+                                        <label class="form-label small text-muted" style="font-size: 0.70rem;">Data spłaty / ostatniej raty</label>
+                                        {{ recurring_form.end_date }}
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label small text-muted" style="font-size: 0.70rem;">Łączna liczba rat</label>
+                                        {{ recurring_form.total_installments }}
+                                    </div>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-12">
+                                        <label class="form-label small text-muted" style="font-size: 0.70rem;">Data startu zobowiązania</label>
+                                        {{ recurring_form.start_date }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small text-muted text-uppercase fw-semibold">Notatki / Numer umowy</label>
+                                {{ recurring_form.notes }}
+                            </div>
+
+                            <div class="form-check form-switch mb-3">
+                                {{ recurring_form.is_paid_this_month }}
+                                <label class="form-check-label small fw-semibold text-body ms-2" for="{{ recurring_form.is_paid_this_month.id_for_label }}">
+                                    Opłacone w bieżącym miesiącu
+                                </label>
+                            </div>
+
                             <button type="submit" class="btn btn-warning rounded-pill px-4 w-100 fw-semibold shadow-sm text-dark">
-                                💾 Dodaj płatność stałą
+                                💾 Zapisz płatność stałą
                             </button>
                         </form>
                     </div>
                 </div>
 
-                <!-- Prawa kolumna: Lista stałych opłat -->
+                <!-- Prawa kolumna: Lista stałych opłat i rat -->
                 <div class="col-12 col-lg-7">
                     <div class="card bg-body border shadow-sm rounded-4 p-4">
-                        <h5 class="fw-bold mb-3 text-body fs-6">
-                            Twoje zdefiniowane płatności cykliczne
-                        </h5>
-                        <div class="d-flex flex-column gap-2">
-                            {% for rec in recurring_payments %}
-                                <div class="d-flex align-items-center justify-content-between p-3 rounded-3 border bg-body-tertiary">
-                                    <div class="d-flex align-items-center gap-3">
-                                        <span class="fs-4">{{ rec.category.icon|default:'📑' }}</span>
-                                        <div>
-                                            <div class="fw-bold text-body small">{{ rec.title }}</div>
-                                            <div class="text-muted" style="font-size: 0.72rem;">
-                                                Dzień: <strong>{{ rec.due_day }}</strong> • {{ rec.get_frequency_display }} • Konto: {{ rec.account.name|default:'—' }}
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div>
+                                <h5 class="fw-bold mb-0 text-body fs-6">
+                                    Zdefiniowane płatności i raty
+                                </h5>
+                                <span class="text-muted small">Status i zarządzanie spłatami w {{ month_name }} {{ current_year }}</span>
+                            </div>
+                        </div>
+
+                        <div class="d-flex flex-column gap-2.5">
+                            {% for item in recurring_items %}
+                                <div class="p-3 rounded-3 border bg-body-tertiary">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <span class="fs-4">{{ item.obj.category.icon|default:'📑' }}</span>
+                                            <div>
+                                                <div class="fw-bold text-body small">{{ item.obj.title }}</div>
+                                                <div class="text-muted" style="font-size: 0.72rem;">
+                                                    Dzień: <strong>{{ item.obj.due_day }}</strong> • {{ item.obj.get_frequency_display }} • Konto: {{ item.obj.account.name|default:'—' }}
+                                                </div>
                                             </div>
                                         </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="fw-bold text-body">{{ item.obj.amount|floatformat:2 }} PLN</span>
+                                            
+                                            <!-- Przycisk toggle opłacenia w tym miesiącu -->
+                                            <form method="POST" action="{% url 'recurring_payment_toggle_paid' item.obj.id %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="year" value="{{ current_year }}">
+                                                <input type="hidden" name="month" value="{{ current_month }}">
+                                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                                {% if item.is_paid %}
+                                                    <button type="submit" class="btn btn-sm btn-success rounded-pill px-2.5 py-1" style="font-size: 0.70rem;" title="Kliknij, aby odznaczyć/cofnąć opłacenie w tym miesiącu">
+                                                        <i class="bi bi-check2-circle me-1"></i> Opłacone
+                                                    </button>
+                                                {% else %}
+                                                    <button type="submit" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1" style="font-size: 0.70rem;" title="Kliknij, aby oznaczyć jako opłacone">
+                                                        <i class="bi bi-circle me-1"></i> Oznacz opłacone
+                                                    </button>
+                                                {% endif %}
+                                            </form>
+
+                                            <form method="POST" action="{% url 'recurring_payment_delete' item.obj.id %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-link text-danger p-0 ms-1" title="Usuń" onclick="return confirm('Czy na pewno usunąć tę opłatę?')">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
                                     </div>
-                                    <div class="d-flex align-items-center gap-3">
-                                        <span class="fw-bold text-body">{{ rec.amount|floatformat:2 }} PLN</span>
-                                        <form method="POST" action="{% url 'recurring_payment_delete' rec.id %}">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn btn-sm btn-link text-danger p-0" title="Usuń" onclick="return confirm('Czy na pewno usunąć tę stałą opłatę?')">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
-                                    </div>
+
+                                    {% if item.remaining_installments is not None %}
+                                        <div class="mt-2 pt-2 border-top">
+                                            <div class="d-flex align-items-center justify-content-between text-muted" style="font-size: 0.72rem;">
+                                                <span><i class="bi bi-bank text-info me-1"></i> Pozostało: <strong>{{ item.remaining_installments }} rat</strong> (Łącznie do spłaty: {{ item.remaining_amount|floatformat:2 }} PLN)</span>
+                                                {% if item.obj.end_date %}<span>Koniec: {{ item.obj.end_date|date:"m.Y" }}</span>{% endif %}
+                                            </div>
+                                            {% if item.progress_percentage is not None %}
+                                                <div class="progress rounded-pill mt-1" style="height: 5px;">
+                                                    <div class="progress-bar bg-info" style="width: {{ item.progress_percentage }}%;"></div>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
                                 </div>
                             {% empty %}
                                 <div class="text-center py-4 text-muted small">
-                                    Brak zdefiniowanych płatności stałych (np. Czynsz, Internet, Netflix).
+                                    Brak zdefiniowanych płatności stałych lub rat.
                                 </div>
                             {% endfor %}
                         </div>

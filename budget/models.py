@@ -61,17 +61,18 @@ class Category(models.Model):
     category_type = models.CharField(max_length=10, choices=CATEGORY_TYPES, default='expense', verbose_name="Typ kategorii")
     icon = models.CharField(max_length=50, default='bi-tag', verbose_name="Ikona (Bootstrap lub Emoji)")
     color = models.CharField(max_length=30, default='#3b82f6', verbose_name="Kolor kafelka")
+    default_budget_limit = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), verbose_name="Domyślny stały limit miesięczny (PLN)")
     is_default = models.BooleanField(default=False, verbose_name="Kategoria systemowa")
     order = models.IntegerField(default=0, verbose_name="Kolejność")
 
     class Meta:
         verbose_name = "Kategoria"
         verbose_name_plural = "Kategorie"
-        ordering = ['category_type', 'order', 'name']
+        ordering = ['order', 'name']
 
     def __str__(self):
-        prefix = "🔴" if self.category_type == 'expense' else "🟢"
-        return f"{prefix} {self.name}"
+        icon = self.icon if self.icon else ("🔴" if self.category_type == 'expense' else "🟢")
+        return f"{icon} {self.name}"
 
 
 class Transaction(models.Model):
@@ -93,7 +94,7 @@ class Transaction(models.Model):
         null=True,
         blank=True,
         related_name='incoming_transfers',
-        verbose_name="Konto docelowe (dla przelewów)"
+        verbose_name="Konto docelowe (tylko dla przelewów)"
     )
     category = models.ForeignKey(
         Category,
@@ -109,13 +110,38 @@ class Transaction(models.Model):
         default='expense',
         verbose_name="Typ transakcji"
     )
-    amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Kwota (PLN)")
-    date = models.DateField(default=timezone.now, verbose_name="Data transakcji")
-    title = models.CharField(max_length=200, verbose_name="Tytuł / Odbiorca / Opis")
-    notes = models.TextField(blank=True, null=True, verbose_name="Dodatkowe notatki")
-    receipt_image = models.ImageField(upload_to='budget/receipts/', blank=True, null=True, verbose_name="Zdjęcie paragonu / faktury")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Utworzono")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Zaktualizowano")
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        verbose_name="Kwota (PLN)"
+    )
+    date = models.DateField(
+        default=timezone.now,
+        verbose_name="Data transakcji"
+    )
+    title = models.CharField(
+        max_length=200,
+        verbose_name="Tytuł / Opis transakcji"
+    )
+    notes = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Notatki / Szczegóły"
+    )
+    receipt_image = models.ImageField(
+        upload_to='budget/receipts/%Y/%m/',
+        blank=True,
+        null=True,
+        verbose_name="Zdjęcie paragonu / Faktura"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Data dodania"
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Ostatnia zmiana"
+    )
 
     class Meta:
         verbose_name = "Transakcja"
@@ -192,21 +218,71 @@ class RecurringPayment(models.Model):
         ('yearly', 'Rocznie'),
     ]
 
-    title = models.CharField(max_length=150, verbose_name="Nazwa opłaty / Abonament")
-    amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Kwota (PLN)")
+    title = models.CharField(max_length=150, verbose_name="Nazwa opłaty / Zobowiązanie / Rata")
+    amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Kwota raty / opłaty (PLN)")
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Kategoria")
     account = models.ForeignKey(Account, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Domyślne konto płatności")
     frequency = models.CharField(max_length=20, choices=FREQUENCY_CHOICES, default='monthly', verbose_name="Częstotliwość")
     due_day = models.IntegerField(default=1, verbose_name="Dzień płatności (1-31)")
+    start_date = models.DateField(default=timezone.now, verbose_name="Data rozpoczęcia")
+    end_date = models.DateField(null=True, blank=True, verbose_name="Data zakończenia / ostatniej raty (opcjonalnie)")
+    total_installments = models.IntegerField(null=True, blank=True, verbose_name="Całkowita liczba rat (opcjonalnie)")
     is_active = models.BooleanField(default=True, verbose_name="Aktywna płatność")
     last_paid_date = models.DateField(null=True, blank=True, verbose_name="Data ostatniej opłaty")
-    notes = models.TextField(blank=True, null=True, verbose_name="Notatki / Numer umowy")
+    notes = models.TextField(blank=True, null=True, verbose_name="Notatki / Numer umowy / Kredyt")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name = "Płatność cykliczna"
-        verbose_name_plural = "Płatności cykliczne"
+        verbose_name = "Płatność cykliczna / Zobowiązanie"
+        verbose_name_plural = "Płatności cykliczne i Zobowiązania"
         ordering = ['due_day', 'title']
 
     def __str__(self):
-        return f"{self.title} ({self.amount:,.2f} PLN, dzień: {self.due_day})"
+        return f"{self.title} ({self.amount:,.2f} PLN / {self.get_frequency_display()})"
+
+    def is_paid_in_month(self, year, month):
+        """Sprawdza czy płatność została oznaczona jako opłacona w danym miesiącu."""
+        if not self.last_paid_date:
+            return False
+        return self.last_paid_date.year == year and self.last_paid_date.month == month
+
+    def get_remaining_installments(self, current_year=None, current_month=None):
+        """Zwraca liczbę rat/miesięcy pozostałych do końca spłaty."""
+        today = timezone.now().date()
+        c_year = current_year or today.year
+        c_month = current_month or today.month
+
+        if self.end_date:
+            months = (self.end_date.year - c_year) * 12 + (self.end_date.month - c_month) + 1
+            return max(0, months)
+        elif self.total_installments and self.start_date:
+            elapsed = (c_year - self.start_date.year) * 12 + (c_month - self.start_date.month)
+            remaining = self.total_installments - max(0, elapsed)
+            return max(0, remaining)
+        return None
+
+    def get_remaining_amount(self, current_year=None, current_month=None):
+        """Zwraca łączną kwotę pozostałą do całkowitej spłaty."""
+        rem = self.get_remaining_installments(current_year, current_month)
+        if rem is not None:
+            return Decimal(rem) * self.amount
+        return None
+
+    def get_progress_percentage(self, current_year=None, current_month=None):
+        """Zwraca procent spłaconych rat."""
+        today = timezone.now().date()
+        c_year = current_year or today.year
+        c_month = current_month or today.month
+
+        if self.total_installments and self.total_installments > 0:
+            rem = self.get_remaining_installments(c_year, c_month)
+            if rem is not None:
+                paid = self.total_installments - rem
+                return min(100.0, max(0.0, (paid / self.total_installments) * 100))
+        elif self.end_date and self.start_date:
+            total_months = (self.end_date.year - self.start_date.year) * 12 + (self.end_date.month - self.start_date.month) + 1
+            rem = self.get_remaining_installments(c_year, c_month)
+            if total_months > 0 and rem is not None:
+                paid = total_months - rem
+                return min(100.0, max(0.0, (paid / total_months) * 100))
+        return None

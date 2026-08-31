@@ -157,42 +157,20 @@ def budget_dashboard(request):
         trend_incomes.append(float(inc))
         trend_expenses.append(float(exp))
 
-    # 5. Limity budżetowe na dany miesiąc
-    monthly_budgets = MonthlyBudget.objects.filter(
-        year=current_year,
-        month=current_month
-    ).select_related('category')
-
-    budget_items = []
-    total_budget_limit = Decimal('0.00')
-    total_budget_spent = Decimal('0.00')
-
-    for b in monthly_budgets:
-        spent = b.spent_amount
-        total_budget_limit += b.amount_limit
-        total_budget_spent += spent
-        budget_items.append({
-            'obj': b,
-            'spent': spent,
-            'limit': b.amount_limit,
-            'percentage': b.percentage_used,
-            'remaining': b.remaining_amount,
-            'is_exceeded': b.is_exceeded,
-        })
+    # 5. Limity budżetowe (z automatycznym przenoszeniem z miesiąca na miesiąc)
+    budget_items, total_budget_limit, total_budget_spent = get_effective_budget_items(current_year, current_month)
 
     # 6. Ostatnie transakcje (dla wybranych kont)
     recent_transactions = Transaction.objects.filter(
         account__in=filtered_accounts
     ).select_related('account', 'destination_account', 'category')[:8]
 
-    # 7. Płatności stałe i rachunki
+    # 7. Płatności stałe, rachunki i zobowiązania ratalne
     recurring_payments = RecurringPayment.objects.filter(is_active=True).select_related('category', 'account')
     recurring_items = []
     
     for rec in recurring_payments:
-        is_paid = False
-        if rec.last_paid_date and rec.last_paid_date.year == current_year and rec.last_paid_date.month == current_month:
-            is_paid = True
+        is_paid = rec.is_paid_in_month(current_year, current_month)
         
         due_date = None
         try:
@@ -200,10 +178,18 @@ def budget_dashboard(request):
         except Exception:
             pass
 
+        remaining_inst = rec.get_remaining_installments(current_year, current_month)
+        remaining_amt = rec.get_remaining_amount(current_year, current_month)
+        progress_pct = rec.get_progress_percentage(current_year, current_month)
+
         recurring_items.append({
             'obj': rec,
             'is_paid': is_paid,
             'due_date': due_date,
+            'remaining_installments': remaining_inst,
+            'remaining_amount': remaining_amt,
+            'progress_percentage': progress_pct,
+            'has_installments': (remaining_inst is not None),
         })
 
     # Szybki formularz transakcji
@@ -441,6 +427,71 @@ def account_delete(request, pk):
 
 
 # ==========================================
+def get_effective_budget_items(year, month):
+    """
+    Pobiera limity dla wszystkich kategorii wydatków na dany miesiąc.
+    Jeśli dla danego miesiąca nie ma wpisu MonthlyBudget, dziedziczy limit
+    z default_budget_limit kategorii lub z ostatniego skonfigurowanego miesiąca.
+    """
+    categories = Category.objects.filter(category_type='expense').order_by('order', 'name')
+    explicit_budgets = {b.category_id: b for b in MonthlyBudget.objects.filter(year=year, month=month)}
+
+    budget_items = []
+    total_budget_limit = Decimal('0.00')
+    total_budget_spent = Decimal('0.00')
+
+    for cat in categories:
+        explicit_b = explicit_budgets.get(cat.id)
+        is_custom_month = False
+        budget_pk = None
+
+        if explicit_b:
+            amount_limit = explicit_b.amount_limit
+            is_custom_month = True
+            budget_pk = explicit_b.pk
+        elif cat.default_budget_limit > 0:
+            amount_limit = cat.default_budget_limit
+        else:
+            # Szukamy ostatniego znanego limitu z przeszłości
+            past_b = MonthlyBudget.objects.filter(
+                category=cat,
+                year__lte=year
+            ).exclude(year=year, month__gt=month).order_by('-year', '-month').first()
+            if past_b and past_b.amount_limit > 0:
+                amount_limit = past_b.amount_limit
+            else:
+                amount_limit = Decimal('0.00')
+
+        spent = Transaction.objects.filter(
+            category=cat,
+            transaction_type='expense',
+            date__year=year,
+            date__month=month
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+        if amount_limit > 0 or spent > 0:
+            total_budget_limit += amount_limit
+            total_budget_spent += spent
+            percentage = 0.0
+            if amount_limit > 0:
+                percentage = min(100.0, float((spent / amount_limit) * 100))
+
+            budget_items.append({
+                'category': cat,
+                'category_id': cat.id,
+                'limit': amount_limit,
+                'spent': spent,
+                'percentage': percentage,
+                'remaining': amount_limit - spent,
+                'is_exceeded': spent > amount_limit,
+                'is_custom_month': is_custom_month,
+                'budget_pk': budget_pk,
+            })
+
+    return budget_items, total_budget_limit, total_budget_spent
+
+
+# ==========================================
 # USTAWIENIA, LIMITY BUDŻETOWE & PŁATNOŚCI STAŁE
 # ==========================================
 
@@ -453,8 +504,19 @@ def budget_settings(request):
     categories_expense = Category.objects.filter(category_type='expense')
     categories_income = Category.objects.filter(category_type='income')
     
-    monthly_budgets = MonthlyBudget.objects.filter(year=current_year, month=current_month).select_related('category')
+    budget_items, total_budget_limit, total_budget_spent = get_effective_budget_items(current_year, current_month)
     recurring_payments = RecurringPayment.objects.all().select_related('category', 'account')
+
+    # Przygotowanie danych rat i statusu opłacenia dla płatności stałych
+    recurring_items = []
+    for rec in recurring_payments:
+        recurring_items.append({
+            'obj': rec,
+            'is_paid': rec.is_paid_in_month(current_year, current_month),
+            'remaining_installments': rec.get_remaining_installments(current_year, current_month),
+            'remaining_amount': rec.get_remaining_amount(current_year, current_month),
+            'progress_percentage': rec.get_progress_percentage(current_year, current_month),
+        })
 
     category_form = CategoryForm()
     budget_form = MonthlyBudgetForm(initial={'year': current_year, 'month': current_month})
@@ -463,8 +525,10 @@ def budget_settings(request):
     context = {
         'categories_expense': categories_expense,
         'categories_income': categories_income,
-        'monthly_budgets': monthly_budgets,
-        'recurring_payments': recurring_payments,
+        'budget_items': budget_items,
+        'total_budget_limit': total_budget_limit,
+        'total_budget_spent': total_budget_spent,
+        'recurring_items': recurring_items,
         'current_year': current_year,
         'current_month': current_month,
         'month_name': dict(POLISH_MONTHS).get(current_month, ''),
@@ -505,15 +569,22 @@ def budget_goal_save(request):
     year = int(request.POST.get('year', timezone.now().year))
     month = int(request.POST.get('month', timezone.now().month))
     amount = Decimal(request.POST.get('amount_limit', '0.00'))
+    apply_to_future = request.POST.get('apply_to_all_future') == 'on' or request.POST.get('apply_to_all_future') == '1'
 
     category = get_object_or_404(Category, pk=category_id)
+
+    if apply_to_future:
+        category.default_budget_limit = amount
+        category.save()
+
     budget_obj, created = MonthlyBudget.objects.update_or_create(
         category=category,
         year=year,
         month=month,
         defaults={'amount_limit': amount}
     )
-    messages.success(request, f'Zapisano limit dla: {category.name} ({amount:,.2f} PLN)')
+    msg_suffix = " (i ustawiono jako stały limit na kolejne miesiące)" if apply_to_future else ""
+    messages.success(request, f'Zapisano limit dla: {category.name} ({amount:,.2f} PLN){msg_suffix}')
     return redirect(f'/budzet/ustawienia/?year={year}&month={month}')
 
 
@@ -523,7 +594,7 @@ def budget_goal_delete(request, pk):
     b = get_object_or_404(MonthlyBudget, pk=pk)
     y, m = b.year, b.month
     b.delete()
-    messages.info(request, 'Usunięto limit budżetowy.')
+    messages.info(request, 'Usunięto miesięczny limit budżetowy.')
     return redirect(f'/budzet/ustawienia/?year={y}&month={m}')
 
 
@@ -533,7 +604,7 @@ def recurring_payment_create(request):
     form = RecurringPaymentForm(request.POST)
     if form.is_valid():
         rec = form.save()
-        messages.success(request, f'Dodano płatność stałą: {rec.title}')
+        messages.success(request, f'Dodano płatność stałą / ratę: {rec.title}')
     else:
         messages.error(request, 'Błąd podczas dodawania płatności stałej.')
     return redirect('budget_settings')
@@ -544,29 +615,50 @@ def recurring_payment_create(request):
 def recurring_payment_toggle_paid(request, pk):
     rec = get_object_or_404(RecurringPayment, pk=pk)
     today = timezone.now().date()
+
+    target_year = int(request.POST.get('year', today.year))
+    target_month = int(request.POST.get('month', today.month))
     
-    # Jeśli oznaczono jako opłacone, twórz automatycznie transakcję wydatku
-    if not (rec.last_paid_date and rec.last_paid_date.year == today.year and rec.last_paid_date.month == today.month):
-        rec.last_paid_date = today
+    # Sprawdzamy czy w docelowym miesiącu jest już opłacona
+    if not rec.is_paid_in_month(target_year, target_month):
+        target_day = min(rec.due_day, 28)
+        try:
+            paid_date = date(target_year, target_month, target_day)
+        except Exception:
+            paid_date = today
+
+        rec.last_paid_date = paid_date
         rec.save()
 
-        # Tworzymy transakcję wydatku
+        # Tworzymy transakcję wydatku (o ile jeszcze nie istnieje)
         if rec.account:
-            Transaction.objects.create(
-                account=rec.account,
-                category=rec.category,
-                transaction_type='expense',
-                amount=rec.amount,
-                date=today,
-                title=f"[Stała opłata] {rec.title}",
-                notes=f"Automatyczny wpis z listy opłat cyklicznych ({rec.get_frequency_display()})"
-            )
-            messages.success(request, f'Oznaczono jako opłacone i dodano wydatek {rec.amount:,.2f} PLN!')
+            tx_title = f"[Stała opłata] {rec.title}"
+            if not Transaction.objects.filter(account=rec.account, title=tx_title, date__year=target_year, date__month=target_month).exists():
+                Transaction.objects.create(
+                    account=rec.account,
+                    category=rec.category,
+                    transaction_type='expense',
+                    amount=rec.amount,
+                    date=paid_date,
+                    title=tx_title,
+                    notes=f"Automatyczny wpis z listy opłat cyklicznych ({rec.get_frequency_display()})"
+                )
+                messages.success(request, f'Oznaczono jako opłacone w {target_month:02d}/{target_year} i dodano wydatek {rec.amount:,.2f} PLN!')
+            else:
+                messages.success(request, f'Oznaczono płatność "{rec.title}" jako opłaconą.')
         else:
-            messages.success(request, f'Oznaczono płatność "{rec.title}" jako opłaconą w tym miesiącu.')
+            messages.success(request, f'Oznaczono płatność "{rec.title}" jako opłaconą.')
     else:
         rec.last_paid_date = None
         rec.save()
+
+        # Usuwamy automatycznie wygenerowany wydatek z tego miesiąca
+        Transaction.objects.filter(
+            account=rec.account,
+            title=f"[Stała opłata] {rec.title}",
+            date__year=target_year,
+            date__month=target_month
+        ).delete()
         messages.info(request, f'Cofnięto status opłacenia dla "{rec.title}".')
 
     return redirect(request.POST.get('next') or 'budget_dashboard')

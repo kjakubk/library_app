@@ -92,6 +92,7 @@ class CategoryForm(forms.ModelForm):
             'category_type',
             'icon',
             'color',
+            'default_budget_limit',
             'order',
         ]
         widgets = {
@@ -99,11 +100,19 @@ class CategoryForm(forms.ModelForm):
             'category_type': forms.Select(attrs={'class': 'form-select rounded-3 shadow-none'}),
             'icon': forms.TextInput(attrs={'class': 'form-control rounded-3 shadow-none', 'placeholder': 'Emoji np. 🛒, 🚗, 🍕 lub klasa bi-tag'}),
             'color': forms.TextInput(attrs={'class': 'form-control form-control-color rounded-3 shadow-none', 'type': 'color'}),
+            'default_budget_limit': forms.NumberInput(attrs={'class': 'form-control rounded-3 shadow-none', 'step': '1.00', 'placeholder': 'Domyślny stały limit miesięczny'}),
             'order': forms.NumberInput(attrs={'class': 'form-control rounded-3 shadow-none'}),
         }
 
 
 class MonthlyBudgetForm(forms.ModelForm):
+    apply_to_all_future = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="Ustaw ten limit jako stały i przenieś automatycznie na kolejne miesiące",
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+
     class Meta:
         model = MonthlyBudget
         fields = [
@@ -125,6 +134,12 @@ class MonthlyBudgetForm(forms.ModelForm):
 
 
 class RecurringPaymentForm(forms.ModelForm):
+    is_paid_this_month = forms.BooleanField(
+        required=False,
+        label="Oznacz jako opłacone w bieżącym miesiącu",
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+
     class Meta:
         model = RecurringPayment
         fields = [
@@ -134,16 +149,42 @@ class RecurringPaymentForm(forms.ModelForm):
             'account',
             'frequency',
             'due_day',
+            'start_date',
+            'end_date',
+            'total_installments',
             'is_active',
             'notes',
         ]
         widgets = {
-            'title': forms.TextInput(attrs={'class': 'form-control rounded-3 shadow-none', 'placeholder': 'np. Czynsz, Internet, Spotify, Netflix...'}),
+            'title': forms.TextInput(attrs={'class': 'form-control rounded-3 shadow-none', 'placeholder': 'np. Czynsz, Kredyt hipoteczny, Raty za auto, Netflix...'}),
             'amount': forms.NumberInput(attrs={'class': 'form-control rounded-3 shadow-none', 'step': '0.01'}),
             'category': forms.Select(attrs={'class': 'form-select rounded-3 shadow-none'}),
             'account': forms.Select(attrs={'class': 'form-select rounded-3 shadow-none'}),
             'frequency': forms.Select(attrs={'class': 'form-select rounded-3 shadow-none'}),
             'due_day': forms.NumberInput(attrs={'class': 'form-control rounded-3 shadow-none', 'min': 1, 'max': 31}),
+            'start_date': forms.DateInput(attrs={'class': 'form-control rounded-3 shadow-none', 'type': 'date'}),
+            'end_date': forms.DateInput(attrs={'class': 'form-control rounded-3 shadow-none', 'type': 'date'}),
+            'total_installments': forms.NumberInput(attrs={'class': 'form-control rounded-3 shadow-none', 'min': 1, 'placeholder': 'np. 24 raty (opcjonalnie)'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'notes': forms.Textarea(attrs={'class': 'form-control rounded-3 shadow-none', 'rows': 2, 'placeholder': 'Opcjonalne szczegóły...'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control rounded-3 shadow-none', 'rows': 2, 'placeholder': 'Opcjonalne szczegóły, numer umowy kredytowej...'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            today = timezone.now().date()
+            self.fields['is_paid_this_month'].initial = self.instance.is_paid_in_month(today.year, today.month)
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        is_paid = self.cleaned_data.get('is_paid_this_month')
+        today = timezone.now().date()
+        if is_paid:
+            if not instance.is_paid_in_month(today.year, today.month):
+                instance.last_paid_date = today
+        else:
+            if instance.is_paid_in_month(today.year, today.month):
+                instance.last_paid_date = None
+        if commit:
+            instance.save()
+        return instance
