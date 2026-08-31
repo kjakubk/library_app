@@ -73,12 +73,16 @@
                                     {{ budget_form.year }}
                                 </div>
                             </div>
-                            <div class="form-check form-switch mb-4 p-3 bg-body-tertiary rounded-3 border">
-                                {{ budget_form.apply_to_all_future }}
-                                <label class="form-check-label small fw-semibold text-body ms-2" for="{{ budget_form.apply_to_all_future.id_for_label }}">
-                                    Ustaw jako stały limit na kolejne miesiące
-                                </label>
-                                <div class="text-muted" style="font-size: 0.70rem; margin-left: 2.2rem;">Jeśli odznaczone, limit będzie obowiązywał tylko w wybranym miesiącu.</div>
+                            <div class="p-3 bg-body-tertiary rounded-3 border mb-4">
+                                <div class="form-check form-switch mb-1">
+                                    {{ budget_form.apply_to_all_future }}
+                                    <label class="form-check-label small fw-semibold text-body ms-1" for="{{ budget_form.apply_to_all_future.id_for_label }}">
+                                        Ustaw jako stały limit na kolejne miesiące
+                                    </label>
+                                </div>
+                                <div class="text-muted small ps-4 ms-2" style="font-size: 0.70rem;">
+                                    Jeśli odznaczone, limit będzie obowiązywał tylko w wybranym miesiącu.
+                                </div>
                             </div>
 
                             <button type="submit" class="btn btn-primary rounded-pill px-4 w-100 fw-semibold shadow-sm">
@@ -224,11 +228,13 @@
                                 {{ recurring_form.notes }}
                             </div>
 
-                            <div class="form-check form-switch mb-3">
-                                {{ recurring_form.is_paid_this_month }}
-                                <label class="form-check-label small fw-semibold text-body ms-2" for="{{ recurring_form.is_paid_this_month.id_for_label }}">
-                                    Opłacone w bieżącym miesiącu
-                                </label>
+                            <div class="p-3 bg-body-tertiary rounded-3 border mb-4">
+                                <div class="form-check form-switch mb-0">
+                                    {{ recurring_form.is_paid_this_month }}
+                                    <label class="form-check-label small fw-semibold text-body ms-1" for="{{ recurring_form.is_paid_this_month.id_for_label }}">
+                                        Opłacone w bieżącym miesiącu
+                                    </label>
+                                </div>
                             </div>
 
                             <button type="submit" class="btn btn-warning rounded-pill px-4 w-100 fw-semibold shadow-sm text-dark">
