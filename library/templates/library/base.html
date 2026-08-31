@@ -920,12 +920,22 @@
                         </a>
                     </div>
                     <!-- Finanse & Budżet -->
-                    <div class="col-12 mt-2">
-                        <a href="{% url 'budget_dashboard' %}" class="d-flex align-items-center gap-3 p-2.5 rounded-3 border bg-success bg-opacity-10 text-decoration-none text-body shadow-sm h-100 transition-all {% if '/budzet/' in request.path %}border-success{% endif %}">
+                    <div class="col-6 mt-2">
+                        <a href="{% url 'budget_dashboard' %}" class="d-flex align-items-center gap-2 p-2.5 rounded-3 border bg-success bg-opacity-10 text-decoration-none text-body shadow-sm h-100 transition-all {% if '/budzet/' in request.path and 'planowane' not in request.path %}border-success{% endif %}">
                             <span class="fs-4">💰</span>
                             <div class="overflow-hidden">
-                                <span class="fw-bold small d-block text-truncate text-success">Budżet Domowy & Finanse</span>
-                                <span class="text-muted text-truncate d-block" style="font-size: 0.68rem;">Konta, wydatki, przychody i limity</span>
+                                <span class="fw-bold small d-block text-truncate text-success">Budżet</span>
+                                <span class="text-muted text-truncate d-block" style="font-size: 0.68rem;">Finanse & konta</span>
+                            </div>
+                        </a>
+                    </div>
+                    <!-- Planowane Zakupy -->
+                    <div class="col-6 mt-2">
+                        <a href="{% url 'planned_expense_list' %}" class="d-flex align-items-center gap-2 p-2.5 rounded-3 border bg-warning bg-opacity-10 text-decoration-none text-body shadow-sm h-100 transition-all {% if 'planowane' in request.path %}border-warning{% endif %}">
+                            <span class="fs-4">🎯</span>
+                            <div class="overflow-hidden">
+                                <span class="fw-bold small d-block text-truncate text-warning">Planowane</span>
+                                <span class="text-muted text-truncate d-block" style="font-size: 0.68rem;">Cele & wishlist</span>
                             </div>
                         </a>
                     </div>
