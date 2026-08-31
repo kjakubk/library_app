@@ -286,3 +286,57 @@ class RecurringPayment(models.Model):
                 paid = total_months - rem
                 return min(100.0, max(0.0, (paid / total_months) * 100))
         return None
+
+
+class PlannedExpense(models.Model):
+    PRIORITY_CHOICES = [
+        ('low', '🟢 Niski'),
+        ('medium', '🟡 Średni'),
+        ('high', '🔴 Wysoki / Pilny'),
+    ]
+    STATUS_CHOICES = [
+        ('planned', 'Do kupienia'),
+        ('purchased', 'Kupione / Zrealizowane'),
+        ('cancelled', 'Anulowane'),
+    ]
+
+    title = models.CharField(max_length=150, verbose_name="Nazwa planowanego zakupu (np. Sofa, Telewizor, Buty)")
+    estimated_amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Orientacyjna cena (PLN)")
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Kategoria")
+    target_account = models.ForeignKey(Account, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Docelowe konto / Źródło")
+    target_date = models.DateField(null=True, blank=True, verbose_name="Planowany termin zakupu (opcjonalnie)")
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium', verbose_name="Priorytet")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='planned', verbose_name="Status")
+    url = models.URLField(max_length=500, blank=True, null=True, verbose_name="Link do oferty / sklepu / Ceneo")
+    notes = models.TextField(blank=True, null=True, verbose_name="Notatki / Wymiary / Sklep")
+    saved_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), blank=True, verbose_name="Zaoszczędzono na ten cel (PLN)")
+    purchased_date = models.DateField(null=True, blank=True, verbose_name="Data realizacji zakupu")
+    transaction = models.ForeignKey(
+        Transaction,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='planned_expenses',
+        verbose_name="Powiązana transakcja wydatku"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Data dodania")
+
+    class Meta:
+        verbose_name = "Planowany wydatek / Cel zakupowy"
+        verbose_name_plural = "Planowane wydatki i Cele"
+        ordering = ['status', '-priority', 'target_date', '-created_at']
+
+    def __str__(self):
+        return f"{self.title} (~{self.estimated_amount:,.2f} PLN)"
+
+    @property
+    def percentage_saved(self):
+        if self.estimated_amount > 0 and self.saved_amount > 0:
+            pct = (self.saved_amount / self.estimated_amount) * 100
+            return min(float(pct), 100.0)
+        return 0.0
+
+    @property
+    def is_purchased(self):
+        return self.status == 'purchased'
+

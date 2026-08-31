@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Account, Category, Transaction, MonthlyBudget, RecurringPayment
+from .models import Account, Category, Transaction, MonthlyBudget, RecurringPayment, PlannedExpense
 
 
 @admin.register(Account)
@@ -36,3 +36,11 @@ class RecurringPaymentAdmin(admin.ModelAdmin):
     list_display = ('title', 'amount', 'category', 'account', 'frequency', 'due_day', 'is_active', 'last_paid_date')
     list_filter = ('frequency', 'is_active', 'account')
     search_fields = ('title', 'notes')
+
+
+@admin.register(PlannedExpense)
+class PlannedExpenseAdmin(admin.ModelAdmin):
+    list_display = ('title', 'estimated_amount', 'category', 'priority', 'status', 'target_date', 'saved_amount', 'created_at')
+    list_filter = ('status', 'priority', 'category')
+    search_fields = ('title', 'notes', 'url')
+

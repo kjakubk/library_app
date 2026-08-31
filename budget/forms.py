@@ -1,5 +1,5 @@
 from django import forms
-from .models import Transaction, Account, Category, MonthlyBudget, RecurringPayment
+from .models import Transaction, Account, Category, MonthlyBudget, RecurringPayment, PlannedExpense
 from decimal import Decimal
 
 
@@ -225,3 +225,37 @@ class RecurringPaymentForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+class PlannedExpenseForm(forms.ModelForm):
+    class Meta:
+        model = PlannedExpense
+        fields = [
+            'title',
+            'estimated_amount',
+            'category',
+            'target_account',
+            'priority',
+            'target_date',
+            'url',
+            'notes',
+            'saved_amount',
+            'status',
+        ]
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control rounded-3 shadow-none', 'placeholder': 'np. Nowa sofa do salonu, Buty zimowe, Telewizor 65"...'}),
+            'estimated_amount': forms.NumberInput(attrs={'class': 'form-control rounded-3 shadow-none', 'step': '0.01', 'placeholder': 'np. 2500.00'}),
+            'category': forms.Select(attrs={'class': 'form-select rounded-3 shadow-none'}),
+            'target_account': forms.Select(attrs={'class': 'form-select rounded-3 shadow-none'}),
+            'priority': forms.Select(attrs={'class': 'form-select rounded-3 shadow-none'}),
+            'target_date': forms.DateInput(attrs={'class': 'form-control rounded-3 shadow-none', 'type': 'date'}),
+            'url': forms.URLInput(attrs={'class': 'form-control rounded-3 shadow-none', 'placeholder': 'https://...'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control rounded-3 shadow-none', 'rows': 2, 'placeholder': 'Wymiary, kolor, specyfikacja, sklep...'}),
+            'saved_amount': forms.NumberInput(attrs={'class': 'form-control rounded-3 shadow-none', 'step': '0.01', 'placeholder': '0.00'}),
+            'status': forms.Select(attrs={'class': 'form-select rounded-3 shadow-none'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['category'].queryset = Category.objects.filter(category_type='expense')
+

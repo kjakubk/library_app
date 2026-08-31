@@ -1,0 +1,341 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Planowane Wydatki & Cele Zakupowe - Data Hub{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-2 px-md-4 py-3 py-md-4 mb-5">
+
+    <!-- Nagłówek -->
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <a href="{% url 'budget_dashboard' %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                    <i class="bi bi-arrow-left"></i> Pulpit
+                </a>
+                <div class="rounded-3 p-2 text-white d-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px; background: linear-gradient(135deg, #f59e0b, #d97706);">
+                    <i class="bi bi-cart-check fs-5"></i>
+                </div>
+                <h2 class="h4 fw-bold mb-0 text-body">Planowane Wydatki & Cele Zakupowe</h2>
+            </div>
+            <p class="text-muted small mb-0">Planuj przyszłe większe zakupy (np. sofa, telewizor, buty, sprzęt) wraz z orientacyjną ceną i terminem.</p>
+        </div>
+
+        <button type="button" class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm fw-semibold d-lg-none" data-bs-toggle="collapse" data-bs-target="#newPlanCollapse">
+            <i class="bi bi-plus-circle me-1"></i> Dodaj zakup
+        </button>
+    </div>
+
+    <!-- =========================================
+         KAFELKI PODSUMOWANIA (KPIs)
+         ========================================= -->
+    <div class="row g-3 mb-4">
+        <!-- Do kupienia (łączna kwota) -->
+        <div class="col-12 col-sm-6 col-xl-4">
+            <div class="card bg-body border shadow-sm rounded-4 p-3 h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small text-uppercase fw-semibold" style="font-size: 0.70rem;">Łącznie do kupienia</span>
+                        <h3 class="fw-bold text-body mb-0 mt-1 fs-4">{{ total_planned_amount|floatformat:2 }} <span class="fs-6 text-muted">PLN</span></h3>
+                        <span class="text-warning small fw-semibold" style="font-size: 0.75rem;">
+                            <i class="bi bi-basket me-1"></i>{{ planned_count }} pozycji na liście
+                        </span>
+                    </div>
+                    <div class="rounded-circle p-3 bg-warning bg-opacity-10 text-warning d-flex align-items-center justify-content-center">
+                        <i class="bi bi-cart-plus fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Zgromadzone oszczędności na cele -->
+        <div class="col-12 col-sm-6 col-xl-4">
+            <div class="card bg-body border shadow-sm rounded-4 p-3 h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small text-uppercase fw-semibold" style="font-size: 0.70rem;">Zaoszczędzone na cele</span>
+                        <h3 class="fw-bold text-success mb-0 mt-1 fs-4">{{ total_saved_amount|floatformat:2 }} <span class="fs-6 text-muted">PLN</span></h3>
+                        <span class="text-muted small" style="font-size: 0.75rem;">
+                            Środki odłożone na realizację
+                        </span>
+                    </div>
+                    <div class="rounded-circle p-3 bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center">
+                        <i class="bi bi-piggy-bank fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Zrealizowane cele -->
+        <div class="col-12 col-sm-12 col-xl-4">
+            <div class="card bg-body border shadow-sm rounded-4 p-3 h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-muted small text-uppercase fw-semibold" style="font-size: 0.70rem;">Kupione / Zrealizowane</span>
+                        <h3 class="fw-bold text-primary mb-0 mt-1 fs-4">{{ purchased_count }} <span class="fs-6 text-muted">zakupów</span></h3>
+                        <span class="text-muted small" style="font-size: 0.75rem;">
+                            Przeniesione do transakcji
+                        </span>
+                    </div>
+                    <div class="rounded-circle p-3 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center">
+                        <i class="bi bi-check2-all fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================
+         GŁÓWNY UKŁAD: FORMULARZ + LISTA
+         ========================================= -->
+    <div class="row g-4">
+        
+        <!-- Lewa kolumna: Formularz dodawania nowego planu -->
+        <div class="col-12 col-lg-4">
+            <div class="collapse d-lg-block" id="newPlanCollapse">
+                <div class="card bg-body border shadow-sm rounded-4 p-4 sticky-lg-top" style="top: 80px;">
+                    <h5 class="fw-bold mb-3 text-body fs-6 d-flex align-items-center gap-2">
+                        <i class="bi bi-plus-circle text-warning"></i> Zaplanuj nowy zakup
+                    </h5>
+
+                    <form method="POST" action="{% url 'planned_expense_create' %}">
+                        {% csrf_token %}
+
+                        <!-- Nazwa zakupu -->
+                        <div class="mb-3">
+                            <label class="form-label small text-muted text-uppercase fw-semibold">Nazwa zakupu / Przedmiotu <span class="text-danger">*</span></label>
+                            {{ form.title }}
+                        </div>
+
+                        <!-- Szacowana cena -->
+                        <div class="mb-3">
+                            <label class="form-label small text-muted text-uppercase fw-semibold">Orientacyjna cena (PLN) <span class="text-danger">*</span></label>
+                            {{ form.estimated_amount }}
+                        </div>
+
+                        <!-- Kategoria & Konto -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small text-muted text-uppercase fw-semibold">Kategoria</label>
+                                {{ form.category }}
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small text-muted text-uppercase fw-semibold">Konto</label>
+                                {{ form.target_account }}
+                            </div>
+                        </div>
+
+                        <!-- Priorytet & Termin -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small text-muted text-uppercase fw-semibold">Priorytet</label>
+                                {{ form.priority }}
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small text-muted text-uppercase fw-semibold">Planowany termin</label>
+                                {{ form.target_date }}
+                            </div>
+                        </div>
+
+                        <!-- Link do sklepu / oferty -->
+                        <div class="mb-3">
+                            <label class="form-label small text-muted text-uppercase fw-semibold">Link do oferty / sklepu</label>
+                            {{ form.url }}
+                        </div>
+
+                        <!-- Odłożona kwota -->
+                        <div class="mb-3">
+                            <label class="form-label small text-muted text-uppercase fw-semibold">Już zaoszczędzono (opcjonalnie)</label>
+                            {{ form.saved_amount }}
+                        </div>
+
+                        <!-- Notatki -->
+                        <div class="mb-4">
+                            <label class="form-label small text-muted text-uppercase fw-semibold">Notatki / Parametry</label>
+                            {{ form.notes }}
+                        </div>
+
+                        <button type="submit" class="btn btn-warning rounded-pill px-4 w-100 fw-semibold shadow-sm text-dark">
+                            💾 Dodaj do listy zakupów
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Prawa kolumna: Filtry & Lista planów -->
+        <div class="col-12 col-lg-8">
+            <div class="card bg-body border shadow-sm rounded-4 p-4">
+                
+                <!-- Pasek filtrów -->
+                <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3 mb-4 pb-3 border-bottom">
+                    <!-- Zakładki statusu -->
+                    <div class="btn-group p-1 bg-body-tertiary rounded-pill border shadow-none" role="group">
+                        <a href="?status=planned{% if priority_filter %}&priority={{ priority_filter }}{% endif %}" class="btn btn-sm rounded-pill px-3 {% if status_filter == 'planned' %}btn-primary shadow-sm{% else %}btn-link text-body text-decoration-none{% endif %}">
+                            Do kupienia ({{ planned_count }})
+                        </a>
+                        <a href="?status=purchased{% if priority_filter %}&priority={{ priority_filter }}{% endif %}" class="btn btn-sm rounded-pill px-3 {% if status_filter == 'purchased' %}btn-primary shadow-sm{% else %}btn-link text-body text-decoration-none{% endif %}">
+                            Kupione ({{ purchased_count }})
+                        </a>
+                        <a href="?status=all{% if priority_filter %}&priority={{ priority_filter }}{% endif %}" class="btn btn-sm rounded-pill px-3 {% if status_filter == 'all' %}btn-primary shadow-sm{% else %}btn-link text-body text-decoration-none{% endif %}">
+                            Wszystkie
+                        </a>
+                    </div>
+
+                    <!-- Filtr priorytetu -->
+                    <form method="GET" action="" class="d-flex align-items-center gap-1">
+                        <input type="hidden" name="status" value="{{ status_filter }}">
+                        <select name="priority" class="form-select form-select-sm rounded-pill shadow-none" onchange="this.form.submit()">
+                            <option value="">Wszystkie priorytety</option>
+                            <option value="high" {% if priority_filter == 'high' %}selected{% endif %}>🔴 Wysoki / Pilny</option>
+                            <option value="medium" {% if priority_filter == 'medium' %}selected{% endif %}>🟡 Średni</option>
+                            <option value="low" {% if priority_filter == 'low' %}selected{% endif %}>🟢 Niski</option>
+                        </select>
+                    </form>
+                </div>
+
+                <!-- Lista kafelków planowanych zakupów -->
+                <div class="row g-3">
+                    {% for p in expenses %}
+                        <div class="col-12 col-md-6">
+                            <div class="card bg-body border shadow-sm rounded-4 p-3.5 h-100 d-flex flex-column justify-content-between transition-all {% if p.status == 'purchased' %}opacity-75 bg-body-tertiary{% endif %}">
+                                <div>
+                                    <!-- Górny pasek kafelka: Kategoria + Priorytet / Status -->
+                                    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                                        <span class="badge rounded-pill px-2.5 py-1 text-body" style="background-color: var(--bs-tertiary-bg); border: 1px solid var(--bs-border-color); font-size: 0.75rem;">
+                                            {{ p.category.icon|default:'🏷️' }} {{ p.category.name|default:'Inne' }}
+                                        </span>
+
+                                        {% if p.status == 'purchased' %}
+                                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2.5 py-1" style="font-size: 0.72rem;">
+                                                <i class="bi bi-check2-circle me-1"></i> Kupione ({{ p.purchased_date|date:"d.m.Y" }})
+                                            </span>
+                                        {% elif p.priority == 'high' %}
+                                            <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2.5 py-1" style="font-size: 0.72rem;">
+                                                🔴 Pilne / Wysoki
+                                            </span>
+                                        {% elif p.priority == 'medium' %}
+                                            <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-2.5 py-1" style="font-size: 0.72rem;">
+                                                🟡 Średni
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-2.5 py-1" style="font-size: 0.72rem;">
+                                                🟢 Niski
+                                            </span>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Tytuł i cena -->
+                                    <h6 class="fw-bold text-body mb-1 fs-6 text-truncate" title="{{ p.title }}">{{ p.title }}</h6>
+                                    <div class="d-flex align-items-baseline gap-2 mb-2">
+                                        <span class="fw-bold text-primary fs-5">~{{ p.estimated_amount|floatformat:2 }} PLN</span>
+                                        {% if p.target_date %}
+                                            <span class="text-muted small" style="font-size: 0.72rem;">
+                                                <i class="bi bi-calendar3 me-1"></i>{{ p.target_date|date:"d.m.Y" }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Notatki / Opis -->
+                                    {% if p.notes %}
+                                        <p class="text-muted small mb-2" style="font-size: 0.75rem; line-height: 1.35;">{{ p.notes|truncatechars:90 }}</p>
+                                    {% endif %}
+
+                                    <!-- Link do sklepu -->
+                                    {% if p.url %}
+                                        <div class="mb-2">
+                                            <a href="{{ p.url }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-link p-0 text-decoration-none small text-info text-truncate d-inline-block" style="max-width: 100%; font-size: 0.75rem;">
+                                                <i class="bi bi-box-arrow-up-right me-1"></i> Zobacz w sklepie / ofercie
+                                            </a>
+                                        </div>
+                                    {% endif %}
+
+                                    <!-- Pasek postępu odkładania środków (jeśli > 0) -->
+                                    {% if p.saved_amount > 0 and p.status == 'planned' %}
+                                        <div class="mb-3 mt-2">
+                                            <div class="d-flex justify-content-between text-muted small mb-1" style="font-size: 0.70rem;">
+                                                <span>Odłożono: <strong>{{ p.saved_amount|floatformat:2 }} PLN</strong></span>
+                                                <span>{{ p.percentage_saved|floatformat:0 }}%</span>
+                                            </div>
+                                            <div class="progress rounded-pill" style="height: 5px;">
+                                                <div class="progress-bar bg-success rounded-pill" style="width: {{ p.percentage_saved }}%;"></div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Dolny pasek akcji -->
+                                <div class="pt-3 mt-2 border-top d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-1">
+                                        <a href="{% url 'planned_expense_edit' p.id %}" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1" style="font-size: 0.72rem;">
+                                            <i class="bi bi-pencil me-1"></i> Edytuj
+                                        </a>
+                                        <form method="POST" action="{% url 'planned_expense_delete' p.id %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-link text-danger p-0 ms-1" title="Usuń" onclick="return confirm('Czy na pewno usunąć ten planowany zakup?')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+
+                                    {% if p.status == 'planned' %}
+                                        <!-- Przycisk Kupione / Zrealizuj z modalem wyboru konta -->
+                                        <button type="button" class="btn btn-sm btn-success rounded-pill px-3 py-1 shadow-sm fw-semibold" style="font-size: 0.75rem;" data-bs-toggle="modal" data-bs-target="#fulfillModal{{ p.id }}">
+                                            <i class="bi bi-check2 me-1"></i> Kupione!
+                                        </button>
+
+                                        <!-- Modal realizacji zakupu -->
+                                        <div class="modal fade" id="fulfillModal{{ p.id }}" tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered modal-sm">
+                                                <div class="modal-content rounded-4 border-0 shadow">
+                                                    <div class="modal-header border-bottom px-3 py-2.5">
+                                                        <h6 class="modal-title fw-bold text-body fs-6">Zrealizuj zakup</h6>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+                                                    </div>
+                                                    <form method="POST" action="{% url 'planned_expense_fulfill' p.id %}">
+                                                        {% csrf_token %}
+                                                        <div class="modal-body p-3">
+                                                            <div class="mb-2 fw-semibold small text-body">{{ p.title }}</div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label small text-muted text-uppercase fw-semibold">Rzeczywista kwota (PLN)</label>
+                                                                <input type="number" step="0.01" name="amount" value="{{ p.estimated_amount }}" class="form-control rounded-3 shadow-none fw-bold" required>
+                                                            </div>
+                                                            <div class="mb-2">
+                                                                <label class="form-label small text-muted text-uppercase fw-semibold">Konto płatności</label>
+                                                                <select name="account" class="form-select rounded-3 shadow-none">
+                                                                    {% for acc in accounts %}
+                                                                        <option value="{{ acc.id }}" {% if p.target_account_id == acc.id %}selected{% endif %}>{{ acc.name }} ({{ acc.current_balance|floatformat:2 }} PLN)</option>
+                                                                    {% endfor %}
+                                                                </select>
+                                                                <div class="text-muted mt-1" style="font-size: 0.68rem;">Automatycznie zarejestruje wydatek w wybranym koncie.</div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer border-top px-3 py-2">
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" data-bs-dismiss="modal">Anuluj</button>
+                                                            <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 fw-semibold">Kupiono & Zaksięguj</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="col-12 text-center py-5 text-muted">
+                            <i class="bi bi-cart-x fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                            <h6 class="fw-bold text-body">Brak planowanych zakupów</h6>
+                            <p class="small mb-3">Dodaj swoje pierwsze cele zakupowe, korzystając z formularza po lewej stronie.</p>
+                        </div>
+                    {% endfor %}
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

@@ -626,7 +626,7 @@
                     <!-- SEKCJA 3: FINANSE & BUDŻET -->
                     <li class="sidebar-section-label mt-3">FINANSE</li>
                     <li class="menu-item">
-                        <a href="{% url 'budget_dashboard' %}" class="sidebar-link {% if '/budzet/' in request.path and 'transakcje' not in request.path and 'konta' not in request.path and 'ustawienia' not in request.path %}active{% endif %}">
+                        <a href="{% url 'budget_dashboard' %}" class="sidebar-link {% if '/budzet/' in request.path and 'transakcje' not in request.path and 'konta' not in request.path and 'ustawienia' not in request.path and 'planowane' not in request.path %}active{% endif %}">
                             <i class="bi bi-wallet2 sidebar-icon text-success"></i>
                             <span>Budżet Domowy</span>
                         </a>
@@ -635,6 +635,12 @@
                         <a href="{% url 'transaction_list' %}" class="sidebar-link {% if 'budzet/transakcje' in request.path %}active{% endif %}">
                             <i class="bi bi-receipt sidebar-icon"></i>
                             <span>Transakcje</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <a href="{% url 'planned_expense_list' %}" class="sidebar-link {% if 'budzet/planowane' in request.path %}active{% endif %}">
+                            <i class="bi bi-cart-check sidebar-icon text-warning"></i>
+                            <span>Planowane Zakupy</span>
                         </a>
                     </li>
                     <li class="menu-item">

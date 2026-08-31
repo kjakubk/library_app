@@ -30,4 +30,11 @@ urlpatterns = [
     path('platnosci-stale/dodaj/', views.recurring_payment_create, name='recurring_payment_create'),
     path('platnosci-stale/<int:pk>/oplac/', views.recurring_payment_toggle_paid, name='recurring_payment_toggle_paid'),
     path('platnosci-stale/<int:pk>/usun/', views.recurring_payment_delete, name='recurring_payment_delete'),
+
+    # Planowane wydatki & Cele zakupowe
+    path('planowane/', views.planned_expense_list, name='planned_expense_list'),
+    path('planowane/dodaj/', views.planned_expense_create, name='planned_expense_create'),
+    path('planowane/<int:pk>/edytuj/', views.planned_expense_edit, name='planned_expense_edit'),
+    path('planowane/<int:pk>/usun/', views.planned_expense_delete, name='planned_expense_delete'),
+    path('planowane/<int:pk>/zrealizuj/', views.planned_expense_fulfill, name='planned_expense_fulfill'),
 ]

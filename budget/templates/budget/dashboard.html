@@ -361,6 +361,65 @@
                 </div>
             </div>
 
+            <!-- Planowane Wydatki & Cele Zakupowe (Wishlist) -->
+            <div class="card bg-body border shadow-sm rounded-4 p-4 mt-4">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-body fs-6 d-flex align-items-center gap-2">
+                            <i class="bi bi-cart-check text-warning"></i> Planowane Zakupy & Cele
+                        </h5>
+                        <span class="text-muted small" style="font-size: 0.70rem;">Łącznie do kupienia: <strong class="text-body">{{ total_planned_amount|floatformat:2 }} PLN</strong></span>
+                    </div>
+                    <a href="{% url 'planned_expense_list' %}" class="btn btn-sm btn-outline-warning rounded-pill text-dark fw-semibold" style="font-size: 0.75rem;">+ Pełna lista</a>
+                </div>
+
+                {% if planned_expenses %}
+                    <div class="d-flex flex-column gap-2.5">
+                        {% for plan in planned_expenses %}
+                            <div class="p-2.5 rounded-3 border bg-body-tertiary transition-hover">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                        <span class="fs-5">{{ plan.category.icon|default:'🛒' }}</span>
+                                        <div class="overflow-hidden">
+                                            <div class="fw-bold text-body small text-truncate">{{ plan.title }}</div>
+                                            <div class="text-muted" style="font-size: 0.70rem;">
+                                                Szacunek: <strong class="text-primary">~{{ plan.estimated_amount|floatformat:2 }} PLN</strong>
+                                                {% if plan.target_date %} • <i class="bi bi-calendar3 me-0.5"></i>{{ plan.target_date|date:"d.m.Y" }}{% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <form method="POST" action="{% url 'planned_expense_fulfill' plan.id %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-success rounded-pill px-2.5 py-1" style="font-size: 0.72rem;" title="Oznacz jako kupione i przenieś do wydatków" onclick="return confirm('Czy oznaczyć {{ plan.title }} jako kupione?')">
+                                            <i class="bi bi-check2 me-1"></i> Kupione
+                                        </button>
+                                    </form>
+                                </div>
+
+                                {% if plan.saved_amount > 0 %}
+                                    <div class="mt-2 pt-1">
+                                        <div class="d-flex justify-content-between text-muted" style="font-size: 0.68rem;">
+                                            <span>Odłożono: {{ plan.saved_amount|floatformat:2 }} PLN</span>
+                                            <span>{{ plan.percentage_saved|floatformat:0 }}%</span>
+                                        </div>
+                                        <div class="progress rounded-pill" style="height: 4px;">
+                                            <div class="progress-bar bg-success rounded-pill" style="width: {{ plan.percentage_saved }}%;"></div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-3 text-muted">
+                        <p class="small mb-2">Brak planowanych zakupów.</p>
+                        <a href="{% url 'planned_expense_list' %}" class="btn btn-sm btn-outline-warning text-dark rounded-pill">Zaplanuj zakup (sofa, TV, buty...)</a>
+                    </div>
+                {% endif %}
+            </div>
+
         </div>
     </div>
 

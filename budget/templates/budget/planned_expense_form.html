@@ -1,0 +1,105 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - Data Hub{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-2 px-md-4 py-4 mb-5 d-flex justify-content-center">
+
+    <div class="card bg-body shadow-sm border rounded-4 overflow-hidden w-100" style="max-width: 650px;">
+        <div class="card-header bg-body border-bottom px-4 py-3 d-flex align-items-center justify-content-between">
+            <h4 class="mb-0 fw-bold text-body fs-5 d-flex align-items-center gap-2">
+                🎯 {{ title }}
+            </h4>
+            <a href="{% url 'planned_expense_list' %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">Anuluj</a>
+        </div>
+
+        <div class="card-body p-4 p-md-5">
+            <form method="POST" class="row g-3">
+                {% csrf_token %}
+
+                <!-- Nazwa zakupu -->
+                <div class="col-12">
+                    <label class="form-label fw-semibold small text-muted text-uppercase">Nazwa zakupu / Przedmiotu <span class="text-danger">*</span></label>
+                    {{ form.title }}
+                </div>
+
+                <!-- Szacowana kwota -->
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold small text-muted text-uppercase">Orientacyjna cena (PLN) <span class="text-danger">*</span></label>
+                    {{ form.estimated_amount }}
+                </div>
+
+                <!-- Kategoria -->
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold small text-muted text-uppercase">Kategoria</label>
+                    {{ form.category }}
+                </div>
+
+                <!-- Docelowe konto -->
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold small text-muted text-uppercase">Docelowe konto</label>
+                    {{ form.target_account }}
+                </div>
+
+                <!-- Priorytet -->
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold small text-muted text-uppercase">Priorytet</label>
+                    {{ form.priority }}
+                </div>
+
+                <!-- Planowany termin -->
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold small text-muted text-uppercase">Planowany termin zakupu</label>
+                    {{ form.target_date }}
+                </div>
+
+                <!-- Status -->
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold small text-muted text-uppercase">Status</label>
+                    {{ form.status }}
+                </div>
+
+                <!-- Już odłożono -->
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold small text-muted text-uppercase">Już zaoszczędzono (PLN)</label>
+                    {{ form.saved_amount }}
+                </div>
+
+                <!-- Link do oferty -->
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold small text-muted text-uppercase">Link do sklepu / oferty</label>
+                    {{ form.url }}
+                </div>
+
+                <!-- Notatki -->
+                <div class="col-12">
+                    <label class="form-label fw-semibold small text-muted text-uppercase">Notatki / Parametry / Wymiary</label>
+                    {{ form.notes }}
+                </div>
+
+                {% if form.errors %}
+                    <div class="col-12">
+                        <div class="alert alert-danger rounded-3 py-2 small mb-0">
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                    <div><strong>{{ field.label }}:</strong> {{ error }}</div>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Przyciski -->
+                <div class="col-12 mt-4 d-flex justify-content-end gap-2 border-top pt-3">
+                    <a href="{% url 'planned_expense_list' %}" class="btn btn-outline-secondary rounded-pill px-4">Anuluj</a>
+                    <button type="submit" class="btn btn-primary rounded-pill px-5 fw-semibold shadow-sm">
+                        💾 Zapisz zmiany
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

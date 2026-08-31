@@ -12,10 +12,13 @@ from django.db.models import Sum, Q
 from django.core.paginator import Paginator
 from django.utils import timezone
 
-from .models import Account, Category, Transaction, MonthlyBudget, RecurringPayment
+from .models import (
+    Account, Category, Transaction, MonthlyBudget,
+    RecurringPayment, PlannedExpense
+)
 from .forms import (
     TransactionForm, AccountForm, CategoryForm,
-    MonthlyBudgetForm, RecurringPaymentForm
+    MonthlyBudgetForm, RecurringPaymentForm, PlannedExpenseForm
 )
 
 
@@ -192,6 +195,10 @@ def budget_dashboard(request):
             'has_installments': (remaining_inst is not None),
         })
 
+    # 8. Planowane wydatki & Cele zakupowe (najbliższe cele)
+    planned_expenses = PlannedExpense.objects.filter(status='planned').select_related('category', 'target_account')[:5]
+    total_planned_amount = PlannedExpense.objects.filter(status='planned').aggregate(total=Sum('estimated_amount'))['total'] or Decimal('0.00')
+
     # Szybki formularz transakcji
     quick_form = TransactionForm(initial={'date': today})
 
@@ -222,6 +229,8 @@ def budget_dashboard(request):
         'total_budget_spent': total_budget_spent,
         'recent_transactions': recent_transactions,
         'recurring_items': recurring_items,
+        'planned_expenses': planned_expenses,
+        'total_planned_amount': total_planned_amount,
         'quick_form': quick_form,
     }
     return render(request, 'budget/dashboard.html', context)
@@ -848,3 +857,130 @@ def import_csv_confirm(request):
 
     messages.success(request, f'Sukces! Zaimportowano {imported_count} transakcji do konta "{account.name}".')
     return redirect('transaction_list')
+
+
+# ==========================================
+# PLANOWANE WYDATKI & CELE ZAKUPOWE
+# ==========================================
+
+@login_required
+def planned_expense_list(request):
+    expenses = PlannedExpense.objects.select_related('category', 'target_account', 'transaction')
+
+    status_filter = request.GET.get('status', 'planned')
+    if status_filter in ('planned', 'purchased', 'cancelled'):
+        expenses = expenses.filter(status=status_filter)
+
+    priority_filter = request.GET.get('priority')
+    if priority_filter in ('low', 'medium', 'high'):
+        expenses = expenses.filter(priority=priority_filter)
+
+    category_id = request.GET.get('category')
+    if category_id:
+        expenses = expenses.filter(category_id=category_id)
+
+    # Obliczenia podsumowujące
+    all_planned = PlannedExpense.objects.filter(status='planned')
+    total_planned_amount = all_planned.aggregate(total=Sum('estimated_amount'))['total'] or Decimal('0.00')
+    total_saved_amount = all_planned.aggregate(total=Sum('saved_amount'))['total'] or Decimal('0.00')
+    planned_count = all_planned.count()
+    purchased_count = PlannedExpense.objects.filter(status='purchased').count()
+
+    form = PlannedExpenseForm()
+    categories = Category.objects.filter(category_type='expense')
+    accounts = Account.objects.filter(is_active=True)
+
+    context = {
+        'expenses': expenses,
+        'status_filter': status_filter,
+        'priority_filter': priority_filter,
+        'total_planned_amount': total_planned_amount,
+        'total_saved_amount': total_saved_amount,
+        'planned_count': planned_count,
+        'purchased_count': purchased_count,
+        'form': form,
+        'categories': categories,
+        'accounts': accounts,
+    }
+    return render(request, 'budget/planned_expense_list.html', context)
+
+
+@login_required
+@require_POST
+def planned_expense_create(request):
+    form = PlannedExpenseForm(request.POST)
+    if form.is_valid():
+        item = form.save()
+        messages.success(request, f'Dodano planowany wydatek: "{item.title}" ({item.estimated_amount:,.2f} PLN)')
+    else:
+        err_list = [f"{field}: {errs[0]}" if field != '__all__' else errs[0] for field, errs in form.errors.items()]
+        messages.error(request, f'Błąd podczas dodawania planowanego wydatku: {", ".join(err_list)}')
+    return redirect('planned_expense_list')
+
+
+@login_required
+def planned_expense_edit(request, pk):
+    item = get_object_or_404(PlannedExpense, pk=pk)
+    if request.method == 'POST':
+        form = PlannedExpenseForm(request.POST, instance=item)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Zaktualizowano planowany zakup: "{item.title}"')
+            return redirect('planned_expense_list')
+    else:
+        form = PlannedExpenseForm(instance=item)
+
+    context = {
+        'form': form,
+        'item': item,
+        'title': f'Edycja: {item.title}',
+    }
+    return render(request, 'budget/planned_expense_form.html', context)
+
+
+@login_required
+@require_POST
+def planned_expense_delete(request, pk):
+    item = get_object_or_404(PlannedExpense, pk=pk)
+    title = item.title
+    item.delete()
+    messages.info(request, f'Usunięto planowany zakup: "{title}"')
+    return redirect('planned_expense_list')
+
+
+@login_required
+@require_POST
+def planned_expense_fulfill(request, pk):
+    item = get_object_or_404(PlannedExpense, pk=pk)
+    account_id = request.POST.get('account')
+    account = Account.objects.filter(pk=account_id).first() if account_id else item.target_account
+    
+    amount_str = request.POST.get('amount')
+    try:
+        actual_amount = Decimal(amount_str) if amount_str else item.estimated_amount
+    except Exception:
+        actual_amount = item.estimated_amount
+
+    today = timezone.now().date()
+    item.status = 'purchased'
+    item.purchased_date = today
+
+    # Jeśli wybrano konto, automatycznie tworzymy transakcję wydatku
+    if account:
+        tx = Transaction.objects.create(
+            account=account,
+            category=item.category,
+            transaction_type='expense',
+            amount=actual_amount,
+            date=today,
+            title=f"[Zakup] {item.title}",
+            notes=f"Zrealizowano planowany zakup: {item.title}"
+        )
+        item.transaction = tx
+        messages.success(request, f'Gratulacje! Zakup "{item.title}" został oznaczony jako zrealizowany i zaksięgowany ({actual_amount:,.2f} PLN).')
+    else:
+        messages.success(request, f'Zakup "{item.title}" został oznaczony jako zrealizowany!')
+
+    item.save()
+    return redirect(request.POST.get('next') or 'planned_expense_list')
+
