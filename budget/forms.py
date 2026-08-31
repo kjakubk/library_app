@@ -62,6 +62,7 @@ class AccountForm(forms.ModelForm):
         model = Account
         fields = [
             'name',
+            'owner',
             'account_type',
             'initial_balance',
             'currency',
@@ -71,7 +72,8 @@ class AccountForm(forms.ModelForm):
             'notes',
         ]
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control rounded-3 shadow-none', 'placeholder': 'np. mBank eKonto, Portfel, Oszczędności...'}),
+            'name': forms.TextInput(attrs={'class': 'form-control rounded-3 shadow-none', 'placeholder': 'np. mBank eKonto, ING Firmowe, Santander...'}),
+            'owner': forms.Select(attrs={'class': 'form-select rounded-3 shadow-none'}),
             'account_type': forms.Select(attrs={'class': 'form-select rounded-3 shadow-none'}),
             'initial_balance': forms.NumberInput(attrs={'class': 'form-control rounded-3 shadow-none', 'step': '0.01'}),
             'currency': forms.TextInput(attrs={'class': 'form-control rounded-3 shadow-none', 'placeholder': 'PLN'}),

@@ -19,9 +19,15 @@
                 {% csrf_token %}
 
                 <!-- Nazwa konta -->
-                <div class="col-12">
+                <div class="col-12 col-md-6">
                     <label class="form-label fw-semibold small text-muted text-uppercase">Nazwa konta / portfela <span class="text-danger">*</span></label>
                     {{ form.name }}
+                </div>
+
+                <!-- Właściciel / Profil -->
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold small text-muted text-uppercase">Właściciel / Profil <span class="text-danger">*</span></label>
+                    {{ form.owner }}
                 </div>
 
                 <!-- Typ konta -->

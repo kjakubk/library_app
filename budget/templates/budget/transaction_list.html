@@ -34,6 +34,17 @@
     <!-- Pasek Filtrowania -->
     <div class="card bg-body border shadow-sm rounded-4 p-3 mb-4">
         <form method="GET" action="" class="row g-2 align-items-center">
+            <!-- Profil / Właściciel -->
+            <div class="col-6 col-md-2">
+                <select name="owner" class="form-select form-select-sm rounded-3 shadow-none">
+                    <option value="">Wszystkie profile</option>
+                    <option value="personal" {% if selected_owner == 'personal' %}selected{% endif %}>👤 Moje prywatne</option>
+                    <option value="business" {% if selected_owner == 'business' %}selected{% endif %}>💼 Firmowe (B2B)</option>
+                    <option value="partner" {% if selected_owner == 'partner' %}selected{% endif %}>👩‍🦰 Partnerka</option>
+                    <option value="joint" {% if selected_owner == 'joint' %}selected{% endif %}>👥 Wspólne</option>
+                </select>
+            </div>
+
             <!-- Typ -->
             <div class="col-6 col-md-2">
                 <select name="type" class="form-select form-select-sm rounded-3 shadow-none">
@@ -55,7 +66,7 @@
             </div>
 
             <!-- Kategoria -->
-            <div class="col-6 col-md-3">
+            <div class="col-6 col-md-2">
                 <select name="category" class="form-select form-select-sm rounded-3 shadow-none">
                     <option value="">Wszystkie kategorie</option>
                     {% for cat in categories %}
@@ -65,10 +76,10 @@
             </div>
 
             <!-- Wyszukiwarka -->
-            <div class="col-6 col-md-3">
+            <div class="col-6 col-md-2">
                 <div class="input-group input-group-sm">
                     <span class="input-group-text bg-transparent border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" name="q" value="{{ search_query }}" class="form-control rounded-end-3 border-start-0 shadow-none" placeholder="Szukaj opisu...">
+                    <input type="text" name="q" value="{{ search_query }}" class="form-control rounded-end-3 border-start-0 shadow-none" placeholder="Szukaj...">
                 </div>
             </div>
 
@@ -101,7 +112,7 @@
                         <th class="ps-4">Data</th>
                         <th>Tytuł / Notatka</th>
                         <th>Kategoria</th>
-                        <th>Konto</th>
+                        <th>Konto / Profil</th>
                         <th class="text-center">Paragon</th>
                         <th class="text-end pe-4">Kwota</th>
                         <th class="text-center" style="width: 90px;">Akcje</th>
@@ -131,9 +142,18 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <span class="small text-body">{{ t.account.name }}</span>
+                                <div class="d-flex align-items-center gap-1.5">
+                                    <span class="small text-body fw-semibold">{{ t.account.name }}</span>
+                                    {% if t.account.owner == 'business' %}
+                                        <span class="badge rounded-pill bg-purple bg-opacity-10 text-purple" style="background-color: rgba(139, 92, 246, 0.12); color: #8b5cf6; font-size: 0.65rem;">Firma</span>
+                                    {% elif t.account.owner == 'partner' %}
+                                        <span class="badge rounded-pill" style="background-color: rgba(236, 72, 153, 0.12); color: #ec4899; font-size: 0.65rem;">Partnerka</span>
+                                    {% elif t.account.owner == 'personal' %}
+                                        <span class="badge rounded-pill" style="background-color: rgba(2, 132, 199, 0.12); color: #0284c7; font-size: 0.65rem;">Prywatne</span>
+                                    {% endif %}
+                                </div>
                                 {% if t.destination_account %}
-                                    <span class="text-muted small"> → {{ t.destination_account.name }}</span>
+                                    <div class="text-muted small" style="font-size: 0.70rem;"> → {{ t.destination_account.name }}</div>
                                 {% endif %}
                             </td>
                             <td class="text-center">

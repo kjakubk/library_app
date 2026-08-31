@@ -53,7 +53,10 @@
                             </div>
                             <div>
                                 <h5 class="fw-bold text-body mb-0 fs-6">{{ acc.name }}</h5>
-                                <span class="badge bg-body-tertiary border text-muted" style="font-size: 0.70rem;">{{ acc.get_account_type_display }}</span>
+                                <div class="d-flex align-items-center gap-1 mt-0.5">
+                                    <span class="badge bg-body-tertiary border text-muted" style="font-size: 0.70rem;">{{ acc.get_account_type_display }}</span>
+                                    <span class="badge rounded-pill" style="background-color: var(--bs-tertiary-bg); border: 1px solid var(--bs-border-color); font-size: 0.70rem;">{{ acc.get_owner_display }}</span>
+                                </div>
                             </div>
                         </div>
 

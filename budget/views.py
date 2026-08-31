@@ -42,12 +42,56 @@ def budget_dashboard(request):
 
     selected_date = date(current_year, current_month, 1)
 
-    # 1. Konta i majątek całkowity
-    accounts = Account.objects.filter(is_active=True)
-    total_wealth = sum(acc.current_balance for acc in accounts)
+    # Filtr właściciela konta (Profil: all, personal, business, partner, joint)
+    selected_owner = request.GET.get('owner', 'all')
+    selected_account_id = request.GET.get('account')
 
-    # 2. Transakcje z wybranego miesiąca
+    all_active_accounts = Account.objects.filter(is_active=True)
+
+    # 1. Podsumowanie per profil/właściciel konta
+    owner_profiles = [
+        ('all', '🌐 Wszystkie łącznie', '#0284c7', 'bi-globe2'),
+        ('personal', '👤 Moje prywatne', '#0284c7', 'bi-person'),
+        ('business', '💼 Moje firmowe (B2B)', '#8b5cf6', 'bi-briefcase'),
+        ('partner', '👩‍🦰 Konto partnerki', '#ec4899', 'bi-person-heart'),
+        ('joint', '👥 Wspólne domowe', '#10b981', 'bi-piggy-bank'),
+    ]
+
+    owner_breakdown = []
+    for code, label, color, icon in [
+        ('personal', 'Moje prywatne', '#0284c7', 'bi-person'),
+        ('business', 'Moje firmowe (B2B)', '#8b5cf6', 'bi-briefcase'),
+        ('partner', 'Konto partnerki', '#ec4899', 'bi-person-heart'),
+    ]:
+        owner_accs = all_active_accounts.filter(owner=code)
+        if owner_accs.exists():
+            w = sum(a.current_balance for a in owner_accs)
+            inc = Transaction.objects.filter(account__in=owner_accs, transaction_type='income', date__year=current_year, date__month=current_month).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+            exp = Transaction.objects.filter(account__in=owner_accs, transaction_type='expense', date__year=current_year, date__month=current_month).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+            owner_breakdown.append({
+                'code': code,
+                'label': label,
+                'color': color,
+                'icon': icon,
+                'wealth': w,
+                'income': inc,
+                'expense': exp,
+                'balance': inc - exp,
+                'accounts_count': owner_accs.count()
+            })
+
+    # Filtrowanie kont według wybranego profilu/konta
+    filtered_accounts = all_active_accounts
+    if selected_owner and selected_owner != 'all':
+        filtered_accounts = filtered_accounts.filter(owner=selected_owner)
+    if selected_account_id:
+        filtered_accounts = filtered_accounts.filter(pk=selected_account_id)
+
+    total_wealth = sum(acc.current_balance for acc in filtered_accounts)
+
+    # 2. Transakcje z wybranego miesiąca (dla wybranych kont)
     monthly_txs = Transaction.objects.filter(
+        account__in=filtered_accounts,
         date__year=current_year,
         date__month=current_month
     )
@@ -63,6 +107,7 @@ def budget_dashboard(request):
     # 3. Wykres kołowy: Podział wydatków wg kategorii w wybranym miesiącu
     category_expenses = (
         Transaction.objects.filter(
+            account__in=filtered_accounts,
             transaction_type='expense',
             date__year=current_year,
             date__month=current_month,
@@ -95,12 +140,14 @@ def budget_dashboard(request):
         trend_labels.append(f"{month_name} {y}")
 
         inc = Transaction.objects.filter(
+            account__in=filtered_accounts,
             transaction_type='income',
             date__year=y,
             date__month=m
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
 
         exp = Transaction.objects.filter(
+            account__in=filtered_accounts,
             transaction_type='expense',
             date__year=y,
             date__month=m
@@ -132,15 +179,16 @@ def budget_dashboard(request):
             'is_exceeded': b.is_exceeded,
         })
 
-    # 6. Ostatnie 8 transakcji
-    recent_transactions = Transaction.objects.select_related('account', 'destination_account', 'category')[:8]
+    # 6. Ostatnie transakcje (dla wybranych kont)
+    recent_transactions = Transaction.objects.filter(
+        account__in=filtered_accounts
+    ).select_related('account', 'destination_account', 'category')[:8]
 
     # 7. Płatności stałe i rachunki
     recurring_payments = RecurringPayment.objects.filter(is_active=True).select_related('category', 'account')
     recurring_items = []
     
     for rec in recurring_payments:
-        # Sprawdzamy czy w bieżącym miesiącu istnieje wydatek powiązany
         is_paid = False
         if rec.last_paid_date and rec.last_paid_date.year == current_year and rec.last_paid_date.month == current_month:
             is_paid = True
@@ -166,8 +214,12 @@ def budget_dashboard(request):
         'month_name': dict(POLISH_MONTHS).get(current_month, ''),
         'polish_months': POLISH_MONTHS,
         'years_list': [today.year - 1, today.year, today.year + 1],
+        'selected_owner': selected_owner,
+        'owner_profiles': owner_profiles,
+        'owner_breakdown': owner_breakdown,
         'total_wealth': total_wealth,
-        'accounts': accounts,
+        'accounts': filtered_accounts,
+        'all_accounts': all_active_accounts,
         'monthly_income': monthly_income,
         'monthly_expense': monthly_expense,
         'monthly_balance': monthly_balance,
@@ -192,7 +244,12 @@ def budget_dashboard(request):
 def transaction_list(request):
     transactions = Transaction.objects.select_related('account', 'destination_account', 'category')
 
-    # Filtrowanie
+    # Filtrowanie po profilu właściciela
+    owner = request.GET.get('owner')
+    if owner and owner != 'all':
+        transactions = transactions.filter(Q(account__owner=owner) | Q(destination_account__owner=owner))
+
+    # Filtrowanie po typie
     t_type = request.GET.get('type')
     if t_type in ('expense', 'income', 'transfer'):
         transactions = transactions.filter(transaction_type=t_type)
@@ -229,12 +286,13 @@ def transaction_list(request):
         response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
         response['Content-Disposition'] = f'attachment; filename="transakcje_{timezone.now().strftime("%Y%m%d_%H%M")}.csv"'
         writer = csv.writer(response, delimiter=';')
-        writer.writerow(['Data', 'Typ', 'Tytuł', 'Kwota (PLN)', 'Konto', 'Konto docelowe', 'Kategoria', 'Notatki'])
+        writer.writerow(['Data', 'Typ', 'Właściciel / Profil', 'Tytuł', 'Kwota (PLN)', 'Konto', 'Konto docelowe', 'Kategoria', 'Notatki'])
         
         for t in transactions:
             writer.writerow([
                 t.date.strftime('%Y-%m-%d'),
                 t.get_transaction_type_display(),
+                t.account.get_owner_display() if t.account else '',
                 t.title,
                 f"{t.amount:.2f}",
                 t.account.name if t.account else '',
@@ -264,6 +322,7 @@ def transaction_list(request):
         'net_total': net_total,
         'accounts': accounts,
         'categories': categories,
+        'selected_owner': owner,
         'selected_type': t_type,
         'selected_account': account_id,
         'selected_category': category_id,

@@ -43,7 +43,7 @@
                                 <select name="account" class="form-select rounded-3 shadow-none p-2.5" required>
                                     <option value="" disabled selected>-- Wybierz konto do którego przypisać operacje --</option>
                                     {% for acc in accounts %}
-                                        <option value="{{ acc.id }}">{{ acc.name }} (Saldo: {{ acc.current_balance|floatformat:2 }} {{ acc.currency }})</option>
+                                        <option value="{{ acc.id }}">{{ acc.get_owner_display }} — {{ acc.name }} (Saldo: {{ acc.current_balance|floatformat:2 }} {{ acc.currency }})</option>
                                     {% endfor %}
                                 </select>
                                 <div class="form-text small">Wszystkie zaimportowane transakcje zaktualizują saldo wybranego konta.</div>

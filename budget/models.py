@@ -14,7 +14,15 @@ class Account(models.Model):
         ('other', 'Inne'),
     ]
 
+    OWNER_CHOICES = [
+        ('personal', '👤 Moje prywatne (Jakub)'),
+        ('business', '💼 Moje firmowe (B2B / Działalność)'),
+        ('partner', '👩‍🦰 Konto partnerki'),
+        ('joint', '👥 Wspólne domowe'),
+    ]
+
     name = models.CharField(max_length=100, verbose_name="Nazwa konta / portfela")
+    owner = models.CharField(max_length=20, choices=OWNER_CHOICES, default='personal', verbose_name="Właściciel / Profil")
     account_type = models.CharField(max_length=20, choices=ACCOUNT_TYPES, default='checking', verbose_name="Typ konta")
     initial_balance = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), verbose_name="Saldo początkowe (PLN)")
     currency = models.CharField(max_length=10, default='PLN', verbose_name="Waluta")
@@ -27,7 +35,7 @@ class Account(models.Model):
     class Meta:
         verbose_name = "Konto / Portfel"
         verbose_name_plural = "Konta i Portfele"
-        ordering = ['-is_active', 'name']
+        ordering = ['owner', '-is_active', 'name']
 
     def __str__(self):
         return f"{self.name} ({self.current_balance:,.2f} {self.currency})"
