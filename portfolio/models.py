@@ -82,65 +82,138 @@ class Photo(models.Model):
             return []
         return [t.strip() for t in self.tags.split(',') if t.strip()]
 
+    def extract_exif(self):
+        """Pełna ekstrakcja metadanych EXIF z pliku zdjęcia (IFD0 + Exif Sub-IFD + _getexif)."""
+        if not self.image:
+            return
+
+        try:
+            from fractions import Fraction
+            from datetime import datetime as dt
+            from PIL import Image, ExifTags
+
+            img = Image.open(self.image.path)
+            raw_tags = {}
+
+            # 1. Główny IFD (Make, Model itp.)
+            exif = img.getexif()
+            if exif:
+                for k, v in exif.items():
+                    raw_tags[ExifTags.TAGS.get(k, k)] = v
+
+                # 2. Exif Sub-IFD (0x8769 - Ogniskowa, Przysłona, ISO, Czas, Obiektyw)
+                try:
+                    if hasattr(ExifTags, 'IFD') and hasattr(ExifTags.IFD, 'Exif'):
+                        sub = exif.get_ifd(ExifTags.IFD.Exif)
+                    else:
+                        sub = exif.get_ifd(0x8769)
+                    if sub:
+                        for k, v in sub.items():
+                            raw_tags[ExifTags.TAGS.get(k, k)] = v
+                except Exception:
+                    pass
+
+            # 3. Fallback do _getexif() jeśli dostępny
+            if hasattr(img, '_getexif') and callable(img._getexif):
+                g = img._getexif()
+                if g:
+                    for k, v in g.items():
+                        tag_name = ExifTags.TAGS.get(k, k)
+                        if tag_name not in raw_tags:
+                            raw_tags[tag_name] = v
+
+            update_fields = []
+
+            # Aparat
+            if not self.camera:
+                model = str(raw_tags.get('Model') or '').strip()
+                make = str(raw_tags.get('Make') or '').strip()
+                if model:
+                    if make and make.lower() not in model.lower():
+                        self.camera = f"{make} {model}".strip()
+                    else:
+                        self.camera = model
+                    update_fields.append('camera')
+
+            # Obiektyw
+            if not self.lens:
+                lens = raw_tags.get('LensModel') or raw_tags.get('LensSpecification') or raw_tags.get('Lens')
+                if lens:
+                    self.lens = str(lens).strip()
+                    update_fields.append('lens')
+
+            # ISO
+            if not self.iso:
+                iso_val = raw_tags.get('ISOSpeedRatings') or raw_tags.get('PhotographicSensitivity') or raw_tags.get('ISO')
+                if iso_val is not None:
+                    if isinstance(iso_val, (list, tuple)) and len(iso_val) > 0:
+                        self.iso = str(iso_val[0])
+                    else:
+                        self.iso = str(iso_val)
+                    update_fields.append('iso')
+
+            # Ogniskowa
+            if not self.focal_length:
+                focal = raw_tags.get('FocalLength')
+                if focal is not None:
+                    try:
+                        val = float(focal)
+                        self.focal_length = f"{int(val)}mm" if val.is_integer() else f"{val:.1f}mm"
+                    except Exception:
+                        self.focal_length = str(focal)
+                    update_fields.append('focal_length')
+
+            # Przysłona
+            if not self.aperture:
+                fnum = raw_tags.get('FNumber') or raw_tags.get('ApertureValue')
+                if fnum is not None:
+                    try:
+                        val = float(fnum)
+                        self.aperture = f"f/{val:.1f}".rstrip('0').rstrip('.') if val == int(val) else f"f/{val:.1f}"
+                    except Exception:
+                        self.aperture = str(fnum)
+                    update_fields.append('aperture')
+
+            # Czas naświetlania
+            if not self.shutter_speed:
+                exp = raw_tags.get('ExposureTime') or raw_tags.get('ShutterSpeedValue')
+                if exp is not None:
+                    try:
+                        val = float(exp)
+                        if 0 < val < 1.0:
+                            frac = Fraction(val).limit_denominator(10000)
+                            self.shutter_speed = f"1/{frac.denominator}s"
+                        else:
+                            self.shutter_speed = f"{int(val)}s" if val.is_integer() else f"{val:.1f}s"
+                    except Exception:
+                        self.shutter_speed = str(exp)
+                    update_fields.append('shutter_speed')
+
+            # Data wykonania
+            if not self.taken_at:
+                dt_str = raw_tags.get('DateTimeOriginal') or raw_tags.get('DateTimeDigitized') or raw_tags.get('DateTime')
+                if dt_str:
+                    for fmt in ('%Y:%m:%d %H:%M:%S', '%Y-%m-%d %H:%M:%S', '%Y:%m:%d', '%Y-%m-%d'):
+                        try:
+                            self.taken_at = dt.strptime(str(dt_str).strip(), fmt).date()
+                            update_fields.append('taken_at')
+                            break
+                        except Exception:
+                            pass
+
+            return update_fields
+        except Exception:
+            return []
+
     def save(self, *args, **kwargs):
+        is_new = self.pk is None
         super().save(*args, **kwargs)
 
-        # Ekstrakcja danych EXIF (tylko przy pierwszym zapisie gdy brakuje danych)
-        if self.image and not self.camera:
-            try:
-                from fractions import Fraction
-                img = Image.open(self.image.path)
-                exif_data = img.getexif()
-                if exif_data:
-                    update_fields = []
-                    for tag_id in exif_data:
-                        tag = TAGS.get(tag_id, tag_id)
-                        data = exif_data.get(tag_id)
-
-                        if tag == 'Model' and not self.camera:
-                            self.camera = str(data).strip()
-                            update_fields.append('camera')
-                        elif tag == 'LensModel' and not self.lens:
-                            self.lens = str(data).strip()
-                            update_fields.append('lens')
-                        elif tag == 'ISOSpeedRatings' and not self.iso:
-                            self.iso = str(data)
-                            update_fields.append('iso')
-                        elif tag == 'FocalLength' and not self.focal_length:
-                            try:
-                                self.focal_length = f"{int(float(data))}mm"
-                            except Exception:
-                                self.focal_length = str(data)
-                            update_fields.append('focal_length')
-                        elif tag == 'FNumber' and not self.aperture:
-                            try:
-                                self.aperture = f"f/{float(data):.1f}"
-                            except Exception:
-                                self.aperture = str(data)
-                            update_fields.append('aperture')
-                        elif tag == 'ExposureTime' and not self.shutter_speed:
-                            try:
-                                frac = Fraction(data).limit_denominator(10000)
-                                if frac.numerator == 1:
-                                    self.shutter_speed = f"1/{frac.denominator}s"
-                                else:
-                                    self.shutter_speed = f"{frac}s"
-                            except Exception:
-                                self.shutter_speed = str(data)
-                            update_fields.append('shutter_speed')
-                        elif tag == 'DateTimeOriginal' and not self.taken_at:
-                            try:
-                                from datetime import datetime as dt
-                                parsed = dt.strptime(str(data), '%Y:%m:%d %H:%M:%S')
-                                self.taken_at = parsed.date()
-                                update_fields.append('taken_at')
-                            except Exception:
-                                pass
-
-                    if update_fields:
-                        super().save(update_fields=update_fields)
-            except Exception:
-                pass
+        # Jeśli brakuje kluczowych pól EXIF, wyciągnij je z pliku
+        if self.image and (not self.camera or not self.iso or not self.focal_length or not self.aperture or not self.shutter_speed):
+            update_fields = self.extract_exif()
+            if update_fields:
+                super().save(update_fields=update_fields)
 
 
 class Experience(models.Model):
