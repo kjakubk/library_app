@@ -228,6 +228,24 @@ class RecurringPaymentForm(forms.ModelForm):
 
 
 class PlannedExpenseForm(forms.ModelForm):
+    priority = forms.ChoiceField(
+        choices=PlannedExpense.PRIORITY_CHOICES,
+        required=False,
+        initial='medium',
+        widget=forms.Select(attrs={'class': 'form-select rounded-3 shadow-none'})
+    )
+    status = forms.ChoiceField(
+        choices=PlannedExpense.STATUS_CHOICES,
+        required=False,
+        initial='planned',
+        widget=forms.Select(attrs={'class': 'form-select rounded-3 shadow-none'})
+    )
+    saved_amount = forms.DecimalField(
+        required=False,
+        initial=Decimal('0.00'),
+        widget=forms.NumberInput(attrs={'class': 'form-control rounded-3 shadow-none', 'step': '0.01', 'placeholder': '0.00'})
+    )
+
     class Meta:
         model = PlannedExpense
         fields = [
@@ -247,15 +265,25 @@ class PlannedExpenseForm(forms.ModelForm):
             'estimated_amount': forms.NumberInput(attrs={'class': 'form-control rounded-3 shadow-none', 'step': '0.01', 'placeholder': 'np. 2500.00'}),
             'category': forms.Select(attrs={'class': 'form-select rounded-3 shadow-none'}),
             'target_account': forms.Select(attrs={'class': 'form-select rounded-3 shadow-none'}),
-            'priority': forms.Select(attrs={'class': 'form-select rounded-3 shadow-none'}),
             'target_date': forms.DateInput(attrs={'class': 'form-control rounded-3 shadow-none', 'type': 'date'}),
             'url': forms.URLInput(attrs={'class': 'form-control rounded-3 shadow-none', 'placeholder': 'https://...'}),
             'notes': forms.Textarea(attrs={'class': 'form-control rounded-3 shadow-none', 'rows': 2, 'placeholder': 'Wymiary, kolor, specyfikacja, sklep...'}),
-            'saved_amount': forms.NumberInput(attrs={'class': 'form-control rounded-3 shadow-none', 'step': '0.01', 'placeholder': '0.00'}),
-            'status': forms.Select(attrs={'class': 'form-select rounded-3 shadow-none'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['category'].queryset = Category.objects.filter(category_type='expense')
+
+    def clean_status(self):
+        val = self.cleaned_data.get('status')
+        return val if val else 'planned'
+
+    def clean_priority(self):
+        val = self.cleaned_data.get('priority')
+        return val if val else 'medium'
+
+    def clean_saved_amount(self):
+        val = self.cleaned_data.get('saved_amount')
+        return val if val is not None else Decimal('0.00')
+
 
