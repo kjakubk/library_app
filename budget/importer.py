@@ -32,6 +32,12 @@ CATEGORY_KEYWORD_RULES = [
     # 👕 Ubrania & Zakupy
     (r'(zara|h&m|reserved|ccc|eobuwie|zalando|answear|modivo|cropp|house|mohito|sinsay|pepco|action|decathlon|ikea|castorama|leroy|obi|media markt|rtv euro|x-kom|morele)', 'Ubrania & Zakupy', 'expense'),
     
+    # 🏢 Faktura B2B / Kontrakt
+    (r'(faktura|kontrakt|b2b|gonito|uslugi programistyczne|usługi programistyczne|zlecenie|wynagrodzenie b2b|it services)', 'Faktura B2B / Kontrakt', 'income'),
+    
+    # 🏛️ Podatki, ZUS & Księgowość
+    (r'(zus|ubezpieczen|ubezpieczeń|urzad skarbowy|urząd skarbowy|vat-7|ppe|pit-5|podatek|cashdirector|ksiegow|księgow|infakt|wfirma)', 'Rachunki & Media', 'expense'),
+
     # 💼 Wynagrodzenie / Pensja
     (r'(wynagrodzenie|pensja|wyplata|wypłata|przelew wynagrodzenia|uposazenie|zaliczka na poczet wynagrodzenia|wynagrodzenie za prace)', 'Wynagrodzenie / Pensja', 'income'),
     
@@ -121,9 +127,12 @@ def parse_bank_csv(file_bytes, account):
     
     for i, line in enumerate(lines):
         line_clean = line.strip().lower()
-        if any(keyword in line_clean for keyword in ['data operacji', 'data transakcji', 'data księgowania', 'started date', 'data waluty', 'data']):
-            header_row = i
-            break
+        if delimiter in line_clean or ';' in line_clean or ',' in line_clean:
+            has_date = any(k in line_clean for k in ['data operacji', 'data transakcji', 'data księgowania', 'started date', 'data waluty', 'transaction date'])
+            has_amount_or_title = any(k in line_clean for k in ['kwota', 'amount', 'tytuł', 'opis operacji', 'saldo', 'odbiorca', 'obciążen', 'uznan'])
+            if has_date and has_amount_or_title:
+                header_row = i
+                break
 
     if header_row is not None:
         start_idx = header_row
@@ -174,6 +183,7 @@ def parse_bank_csv(file_bytes, account):
     if date_col is None: date_col = 0
     if amount_col is None and len(headers) > 2: amount_col = 2
 
+    parsed_transactions = []
     from collections import Counter
     existing_txs_list = list(
         Transaction.objects.filter(account=account).values_list('date', 'amount', 'transaction_type')
@@ -185,7 +195,10 @@ def parse_bank_csv(file_bytes, account):
             continue
 
         raw_date = row[date_col].strip() if (date_col is not None and date_col < len(row)) else ''
-        if not raw_date or not re.search(r'\d', raw_date):
+        if not raw_date:
+            continue
+        # Sprawdzamy czy wiersz zaczyna się od daty (format YYYY-MM-DD, DD.MM.YYYY itp.)
+        if not re.search(r'^\d{4}[-./]\d{1,2}[-./]\d{1,2}|^\d{1,2}[-./]\d{1,2}[-./]\d{2,4}', raw_date):
             continue
         tx_date = parse_date_str(raw_date)
 
