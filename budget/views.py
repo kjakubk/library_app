@@ -2,7 +2,6 @@ import csv
 import json
 from decimal import Decimal
 from datetime import datetime, date, timedelta
-from dateutil.relativedelta import relativedelta
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -89,8 +88,9 @@ def budget_dashboard(request):
     trend_expenses = []
 
     for i in range(5, -1, -1):
-        m_date = selected_date - relativedelta(months=i)
-        y, m = m_date.year, m_date.month
+        total_months = current_year * 12 + (current_month - 1) - i
+        y = total_months // 12
+        m = (total_months % 12) + 1
         month_name = dict(POLISH_MONTHS).get(m, '')[:3]
         trend_labels.append(f"{month_name} {y}")
 
